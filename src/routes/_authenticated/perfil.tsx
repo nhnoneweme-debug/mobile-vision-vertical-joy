@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { LogOut, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { ThemePicker } from "@/components/ThemePicker";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -96,6 +97,10 @@ function PerfilPage() {
               <span className="truncate">{email}</span>
             </div>
           )}
+        </div>
+
+        <div className="mt-6">
+          <ThemePicker />
         </div>
 
         <button
