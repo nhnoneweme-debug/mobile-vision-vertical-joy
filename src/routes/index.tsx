@@ -1,29 +1,70 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { Sparkles, ArrowRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Personal IA — Sua jornada de bem-estar" },
+      {
+        name: "description",
+        content:
+          "Personal IA transforma cuidar de si em uma jornada viva.",
+      },
     ],
   }),
-  component: Index,
+  ssr: false,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      throw redirect({ to: "/mapa" });
+    }
+  },
+  component: Splash,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Splash() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col justify-between overflow-hidden bg-background px-6 pb-10 pt-16">
+      {/* Ambient ember glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in oklab, var(--ember) 35%, transparent), transparent)",
+        }}
       />
+
+      <header className="relative z-10 flex flex-col items-center text-center">
+        <div className="ember-pulse grid h-16 w-16 place-items-center rounded-2xl bg-charcoal-800">
+          <Sparkles className="h-7 w-7 text-ember" strokeWidth={2.2} />
+        </div>
+        <p className="mt-6 font-display text-[11px] tracking-[0.4em] text-ember">
+          PERSONAL IA
+        </p>
+        <h1 className="mt-2 font-display text-5xl leading-[0.95] tracking-wide text-foreground">
+          Cuide de si <br /> como uma <br />
+          <span className="text-ember">jornada viva.</span>
+        </h1>
+        <p className="mt-5 max-w-xs text-base text-muted-foreground">
+          Treino, sono, mente e rotina em um mundo guiado por IA. Você não está
+          mais sozinho na consistência.
+        </p>
+      </header>
+
+      <footer className="relative z-10 flex flex-col gap-3">
+        <Link
+          to="/auth"
+          className="ember-glow flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 font-display text-lg tracking-widest text-primary-foreground active:scale-[0.99]"
+        >
+          ENTRAR NO MUNDO
+          <ArrowRight className="h-5 w-5" strokeWidth={2.6} />
+        </Link>
+        <p className="text-center font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+          NOVO POR AQUI? CRIE SUA CONTA NA PRÓXIMA TELA
+        </p>
+      </footer>
     </div>
   );
 }
