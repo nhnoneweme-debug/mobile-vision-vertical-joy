@@ -38,18 +38,19 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/mapa`,
+            emailRedirectTo: `${window.location.origin}/onboarding`,
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
         if (error) throw error;
-        toast.success("Avatar criado. Bem-vindo ao seu mundo.");
+        toast.success("Avatar criado. Hora do diagnóstico.");
+        navigate({ to: "/onboarding", replace: true });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("De volta à jornada.");
+        navigate({ to: "/mapa", replace: true });
       }
-      navigate({ to: "/mapa", replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Algo deu errado.";
       toast.error(msg);
