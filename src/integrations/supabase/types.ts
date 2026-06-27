@@ -16,30 +16,63 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          age: number | null
+          behavior_scores: Json | null
           behavioral_class: string
           created_at: string
+          days_per_week: number | null
           display_name: string
+          gender: string | null
+          goal: string | null
+          height_cm: number | null
           id: string
+          level: string | null
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
           streak: number
+          time_per_day_min: number | null
           updated_at: string
+          weight_kg: number | null
           xp: number
         }
         Insert: {
+          age?: number | null
+          behavior_scores?: Json | null
           behavioral_class?: string
           created_at?: string
+          days_per_week?: number | null
           display_name?: string
+          gender?: string | null
+          goal?: string | null
+          height_cm?: number | null
           id: string
+          level?: string | null
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
           streak?: number
+          time_per_day_min?: number | null
           updated_at?: string
+          weight_kg?: number | null
           xp?: number
         }
         Update: {
+          age?: number | null
+          behavior_scores?: Json | null
           behavioral_class?: string
           created_at?: string
+          days_per_week?: number | null
           display_name?: string
+          gender?: string | null
+          goal?: string | null
+          height_cm?: number | null
           id?: string
+          level?: string | null
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
           streak?: number
+          time_per_day_min?: number | null
           updated_at?: string
+          weight_kg?: number | null
           xp?: number
         }
         Relationships: []
