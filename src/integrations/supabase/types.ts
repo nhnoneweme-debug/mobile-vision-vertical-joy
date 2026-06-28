@@ -336,6 +336,33 @@ export type Database = {
         }
         Relationships: []
       }
+      score_snapshots: {
+        Row: {
+          breakdown: Json
+          created_at: string
+          id: string
+          score: number
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          score: number
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          score?: number
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
       skill_perks: {
         Row: {
           class: string
@@ -434,8 +461,10 @@ export type Database = {
     }
     Functions: {
       check_perk_unlocks: { Args: never; Returns: number }
+      compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       player_level: { Args: { _xp: number }; Returns: number }
+      save_weekly_score_snapshot: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
