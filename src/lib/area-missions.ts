@@ -93,6 +93,7 @@ export async function logAreaMission(
     area_slug: mission.area_slug,
   });
   if (error) throw error;
+  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
 }
 
 export async function undoLastAreaMission(logId: string): Promise<void> {

@@ -312,6 +312,71 @@ export type Database = {
         }
         Relationships: []
       }
+      skill_perks: {
+        Row: {
+          class: string
+          created_at: string
+          description: string
+          id: string
+          sort_order: number
+          tier: number
+          title: string
+          unlock_level: number
+          updated_at: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          description: string
+          id?: string
+          sort_order?: number
+          tier: number
+          title: string
+          unlock_level: number
+          updated_at?: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          description?: string
+          id?: string
+          sort_order?: number
+          tier?: number
+          title?: string
+          unlock_level?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_perks: {
+        Row: {
+          id: string
+          perk_id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          perk_id: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          perk_id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_perks_perk_id_fkey"
+            columns: ["perk_id"]
+            isOneToOne: false
+            referencedRelation: "skill_perks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xp_events: {
         Row: {
           amount: number
@@ -344,7 +409,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_perk_unlocks: { Args: never; Returns: number }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
+      player_level: { Args: { _xp: number }; Returns: number }
     }
     Enums: {
       [_ in never]: never
