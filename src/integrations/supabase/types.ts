@@ -127,6 +127,36 @@ export type Database = {
         }
         Relationships: []
       }
+      brasas_events: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          meta: Json | null
+          ref_id: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          ref_id?: string | null
+          source: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          ref_id?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       challenge_progress: {
         Row: {
           challenge_id: string
@@ -569,6 +599,7 @@ export type Database = {
           age: number | null
           behavior_scores: Json | null
           behavioral_class: string
+          brasas: number
           created_at: string
           days_per_week: number | null
           display_name: string
@@ -590,6 +621,7 @@ export type Database = {
           age?: number | null
           behavior_scores?: Json | null
           behavioral_class?: string
+          brasas?: number
           created_at?: string
           days_per_week?: number | null
           display_name?: string
@@ -611,6 +643,7 @@ export type Database = {
           age?: number | null
           behavior_scores?: Json | null
           behavioral_class?: string
+          brasas?: number
           created_at?: string
           days_per_week?: number | null
           display_name?: string
@@ -690,6 +723,45 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_items: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          payload: Json
+          price: number
+          required_level: number
+          slug: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          payload?: Json
+          price: number
+          required_level?: number
+          slug: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          payload?: Json
+          price?: number
+          required_level?: number
+          slug?: string
+        }
+        Relationships: []
+      }
       skill_perks: {
         Row: {
           class: string
@@ -725,6 +797,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      user_inventory: {
+        Row: {
+          acquired_at: string
+          equipped: boolean
+          id: string
+          item_id: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          equipped?: boolean
+          id?: string
+          item_id: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          equipped?: boolean
+          id?: string
+          item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "shop_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_perks: {
         Row: {
@@ -810,6 +914,10 @@ export type Database = {
     Functions: {
       check_perk_unlocks: { Args: never; Returns: number }
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
+      equip_inventory_item: {
+        Args: { _equip: boolean; _item_id: string }
+        Returns: boolean
+      }
       generate_friend_code: { Args: never; Returns: string }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       has_role: {
@@ -824,6 +932,7 @@ export type Database = {
         Returns: boolean
       }
       player_level: { Args: { _xp: number }; Returns: number }
+      purchase_shop_item: { Args: { _item_id: string }; Returns: Json }
       redeem_orientador_invite: { Args: { _code: string }; Returns: boolean }
       save_weekly_score_snapshot: { Args: never; Returns: number }
     }

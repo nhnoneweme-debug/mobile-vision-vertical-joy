@@ -33,6 +33,7 @@ type Profile = {
   behavioral_class: string;
   xp: number;
   streak: number;
+  brasas: number;
   goal: string | null;
   level: string | null;
   time_per_day_min: number | null;
@@ -51,7 +52,7 @@ function MapaPage() {
   const loadProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("display_name, behavioral_class, xp, streak, goal, level, time_per_day_min")
+      .select("display_name, behavioral_class, xp, streak, brasas, goal, level, time_per_day_min")
       .eq("id", uid)
       .maybeSingle();
     if (data) setProfile(data as Profile);
@@ -135,6 +136,7 @@ function MapaPage() {
         xp={xp % xpToNext}
         xpToNext={xpToNext}
         streak={streak}
+        brasas={profile?.brasas ?? 0}
       />
 
       <div className="px-4 pt-4">
