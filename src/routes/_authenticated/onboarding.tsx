@@ -110,6 +110,11 @@ function OnboardingPage() {
         })
         .eq("id", userData.user.id);
       if (error) throw error;
+      try {
+        await seedHabitsForClass(userData.user.id, result.class);
+      } catch {
+        // hábitos sugeridos são best-effort; não bloqueia onboarding
+      }
       toast.success("Bem-vindo ao mundo, " + avatar.display_name + ".");
       navigate({ to: "/mapa", replace: true });
     } catch (err) {
