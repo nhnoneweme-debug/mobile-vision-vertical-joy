@@ -156,10 +156,20 @@ function MapaPage() {
         </header>
 
         <div className="grid auto-rows-[120px] grid-cols-4 gap-3">
-          {AREAS.map((area) => (
-            <BentoArea key={area.slug} area={area} />
-          ))}
+          {AREAS.map((area) => {
+            const ap = areaProgress[area.slug];
+            const meta = ap ? areaLevelProgress(ap.xp) : null;
+            return (
+              <BentoArea
+                key={area.slug}
+                area={area}
+                level={meta?.level}
+                xpPct={meta?.pct}
+              />
+            );
+          })}
         </div>
+
       </section>
 
       <CheckinSheet
