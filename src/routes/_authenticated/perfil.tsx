@@ -79,6 +79,12 @@ function PerfilPage() {
       } catch {
         // silent
       }
+      try {
+        const ori = await isOrientador(userData.user.id);
+        if (active) setOrientador(ori);
+      } catch {
+        // silent
+      }
     })();
     return () => {
       active = false;
