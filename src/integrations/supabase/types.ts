@@ -62,6 +62,80 @@ export type Database = {
         }
         Relationships: []
       }
+      habit_logs: {
+        Row: {
+          created_at: string
+          habit_id: string
+          id: string
+          log_date: string
+          status: string
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          habit_id: string
+          id?: string
+          log_date?: string
+          status?: string
+          user_id: string
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string
+          habit_id?: string
+          id?: string
+          log_date?: string
+          status?: string
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          active: boolean
+          area_slug: string
+          created_at: string
+          icon: string
+          id: string
+          target_per_week: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          area_slug?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          target_per_week?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          area_slug?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          target_per_week?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -157,7 +231,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      habit_streak: { Args: { _habit_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never
