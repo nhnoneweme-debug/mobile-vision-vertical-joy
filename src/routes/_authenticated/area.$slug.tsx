@@ -1,4 +1,4 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -28,6 +28,9 @@ export const Route = createFileRoute("/_authenticated/area/$slug")({
     };
   },
   loader: ({ params }) => {
+    if (params.slug === "progresso") {
+      throw redirect({ to: "/progresso" });
+    }
     const area = getArea(params.slug);
     if (!area) throw notFound();
     return { area };

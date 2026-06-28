@@ -1,36 +1,39 @@
-# Fase 3 — Expansão do loop (4 etapas)
+# Fase 4 — Expansão completa (4 etapas sequenciais)
 
-Você pediu todas as 4 trilhas. Vou entregar uma de cada vez, sem misturar, validando antes de avançar.
+Você pediu todas. Entrego uma de cada vez, validando antes de avançar. Estimativa: 4 turnos.
 
-## Etapa 3.1 — Hábitos diários + streaks múltiplos *(começo agora)*
-Base que alimenta as outras três (cada hábito vira fonte de XP e gancho pras quests por área).
+## Etapa 4.1 — Personal IA Score + relatórios *(começo agora)*
+A base. Consolida tudo que já existe (XP, áreas, hábitos, streak) num **score único** de 0-1000 + relatório semanal.
 
-- Tabela `habits` (user_id, title, icon, area_slug, target_per_week, active) + `habit_logs` (habit_id, log_date unique por dia, status).
-- Trigger `award_habit_xp` (espelha `award_quest_xp`, +10 XP por log, não toca streak global).
-- Streak individual calculado por hábito (view ou função `habit_streak(habit_id)`).
-- UI: nova rota `_authenticated/habitos.tsx`, card `HabitRow` com toggle de check diário e mini-fogo de streak. Entrada no `BottomNav` e atalho na `mapa.tsx` (tile pequeno "Hábitos").
-- Seed: ao concluir onboarding, criar 3 hábitos sugeridos pela classe (ex.: Executor → "10 min foco", "Água 2L", "Mover o corpo").
+- View SQL `personal_ia_score` (peso: 30% XP global, 25% áreas, 25% hábitos consistentes, 20% streak).
+- Tabela `score_snapshots` (user_id, week_start, score, breakdown jsonb) + cron semanal (domingo 23h) que grava snapshot.
+- Rota `_authenticated/progresso.tsx`: anel grande com score atual, delta da semana, breakdown por dimensão (4 barras), sparkline 8 semanas, lista de áreas mais fortes/fracas.
+- Atualização do tile "Templo do Progresso" no mapa pra mostrar score.
 
-## Etapa 3.2 — Áreas com missões próprias
-- Tabela `area_missions` (area_slug, title, subtitle, xp, weekly_target, classe_affinity[]).
-- Tabela `area_progress` (user_id, area_slug, level, xp) com trigger somando XP de quests/hábitos por área.
-- `area.$slug.tsx` deixa de ser placeholder: lista 3-5 missões da semana + barra de nível da área.
-- `BentoArea` mostra nível e brasa proporcional ao progresso.
-- Seed inicial de 4 missões por área (40 missões), curadas por afinidade de classe.
+## Etapa 4.2 — Notificações + ritual diário
+Push browser + ritual de 3 toques (manhã + noite).
 
-## Etapa 3.3 — Skill tree + classes evolutivas
-- Tabela `skill_perks` (classe, tier, title, description, unlock_level) + `user_perks` (user_id, perk_id, unlocked_at).
-- Função `check_perk_unlocks(user_id)` chamada após `award_quest_xp`/`award_habit_xp`.
-- Títulos por tier: Aprendiz (1) → Executor (5) → Mestre Executor (15) → Arquiteto (30).
-- Rota `_authenticated/classe.tsx` com árvore vertical (tiers 1/5/10/15/20/30), perks bloqueados/desbloqueados, toast ao destravar.
+- Tabela `notification_prefs` (user_id, morning_hour, night_hour, push_enabled, push_subscription jsonb).
+- Service worker + Web Push API (VAPID keys via secret).
+- Server route `/api/public/hooks/morning-ritual` e `/api/public/hooks/night-review`, agendados via pg_cron por hora (escolhe usuários cujo prefs.morning_hour = hora atual).
+- Rota `_authenticated/ritual.tsx` com 3 cards (Quest do dia, Hábito chave, Intenção) de manhã e revisão noturna (3 reflexões + IA fecha o dia).
+- Toggle em `/perfil` pra ativar push e escolher horários.
 
-## Etapa 3.4 — Orientador (chat IA)
-- Server route `src/routes/api/chat.ts` usando Lovable AI Gateway (`google/gemini-3-flash-preview`), AI SDK + `requireSupabaseAuth`.
-- Contexto injetado: classe, XP, streak, último check-in, hábitos ativos, áreas em atraso.
-- Tabela `oracle_messages` (thread única por usuário, persistência em DB — o "Orientador" é uma entidade contínua, não threads).
-- Rota `_authenticated/area.orientador.tsx` vira chat real com AI Elements + markdown, composer fixo, scroll automático.
+## Etapa 4.3 — Social: amigos, grupos e desafios
+- Tabelas `friendships` (a, b, status), `groups` (name, owner, code), `group_members`, `challenges` (group_id, title, metric, target, ends_at), `challenge_progress`.
+- Rota `_authenticated/social.tsx` com 3 abas: Amigos | Grupos | Desafios. Adicionar amigo via código curto (`@aluno-xxxx`).
+- Ranking semanal por XP/streak dentro do grupo.
+- Notificação quando amigo te ultrapassa ou completa desafio.
+- Entry no `BottomNav`.
+
+## Etapa 4.4 — Modo Orientador (personal trainer)
+- Enum `app_role` (`player`, `orientador`, `admin`) + tabela `user_roles` + função `has_role` (padrão seguro, security definer).
+- Tabela `orientador_students` (orientador_id, student_id, status, invited_at).
+- Tabela `orientador_missions` (orientador_id, student_id, title, area_slug, xp_reward, due_at). Aparece como missão extra no mapa do aluno.
+- Rota `_authenticated/painel.tsx` (visível só pra role=orientador): lista de alunos com score, último check-in, alerta de inatividade (>3 dias sem quest), botão "enviar missão" e chat 1:1.
+- Upgrade de role via código de convite no perfil (sem privilégio escalável pelo cliente — validação por RPC).
 
 ## Aceite por etapa
-Cada etapa termina com: migration aprovada → UI funcional em 390px → loop testado (log de hábito soma XP / missão de área completa sobe nível da área / perk destrava / orientador responde com contexto real).
+Cada etapa termina com: migration aprovada → UI funcional em 390px → loop testado fim a fim no preview.
 
-**Vou começar pela 3.1 (Hábitos) assim que aprovar este plano.**
+**Começo pela 4.1 (Score + relatórios) assim que aprovar.**
