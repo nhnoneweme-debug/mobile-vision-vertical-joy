@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -40,6 +41,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRitualRoute = AuthenticatedRitualRouteImport.update({
+  id: '/ritual',
+  path: '/ritual',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProgressoRoute = AuthenticatedProgressoRouteImport.update({
   id: '/progresso',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/progresso': typeof AuthenticatedProgressoRoute
+  '/ritual': typeof AuthenticatedRitualRoute
   '/api/chat': typeof ApiChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/progresso': typeof AuthenticatedProgressoRoute
+  '/ritual': typeof AuthenticatedRitualRoute
   '/api/chat': typeof ApiChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
+  '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/perfil'
     | '/progresso'
+    | '/ritual'
     | '/api/chat'
     | '/area/$slug'
     | '/area/orientador'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/perfil'
     | '/progresso'
+    | '/ritual'
     | '/api/chat'
     | '/area/$slug'
     | '/area/orientador'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/perfil'
     | '/_authenticated/progresso'
+    | '/_authenticated/ritual'
     | '/api/chat'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ritual': {
+      id: '/_authenticated/ritual'
+      path: '/ritual'
+      fullPath: '/ritual'
+      preLoaderRoute: typeof AuthenticatedRitualRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/progresso': {
       id: '/_authenticated/progresso'
@@ -270,6 +289,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
+  AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
   AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
 }
@@ -281,6 +301,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
+  AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
   AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
 }

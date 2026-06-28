@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Sunrise, Moon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -143,6 +144,32 @@ function MapaPage() {
           <div className="h-32 animate-pulse rounded-2xl border border-border bg-charcoal-800" />
         )}
       </div>
+
+      <Link
+        to="/ritual"
+        className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-ember/30 bg-card px-4 py-3 active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-charcoal-900 text-ember">
+            {new Date().getHours() < 17 ? (
+              <Sunrise className="h-5 w-5" strokeWidth={2.2} />
+            ) : (
+              <Moon className="h-5 w-5" strokeWidth={2.2} />
+            )}
+          </div>
+          <div>
+            <p className="font-display text-[10px] tracking-[0.3em] text-ember">
+              RITUAL DIÁRIO
+            </p>
+            <p className="font-display text-base tracking-wide text-foreground">
+              {new Date().getHours() < 17 ? "Abrir o dia" : "Fechar o dia"} · +25 XP
+            </p>
+          </div>
+        </div>
+        <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+          ABRIR →
+        </span>
+      </Link>
 
       <section className="px-4 pb-6 pt-5">
         <header className="mb-3 flex items-center gap-3">
