@@ -78,11 +78,22 @@ function MapaPage() {
         const msg = err instanceof Error ? err.message : "Falha ao carregar quest";
         toast.error(msg);
       }
+      try {
+        const rows = await listAllAreaProgress(userData.user.id);
+        if (active) {
+          setAreaProgress(
+            Object.fromEntries(rows.map((r) => [r.area_slug, r])),
+          );
+        }
+      } catch {
+        /* non-blocking */
+      }
     })();
     return () => {
       active = false;
     };
   }, [loadProfile]);
+
 
   async function handleSubmitCheckin(effort: number, note: string) {
     if (!quest || !userId || submitting) return;
