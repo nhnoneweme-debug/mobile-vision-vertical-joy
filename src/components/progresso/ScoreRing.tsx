@@ -20,7 +20,7 @@ export function ScoreRing({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke="hsl(var(--charcoal-800))"
+          stroke="var(--charcoal-800)"
           strokeWidth={stroke}
           fill="none"
         />
@@ -28,7 +28,7 @@ export function ScoreRing({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke="hsl(var(--ember))"
+          stroke="var(--ember)"
           strokeWidth={stroke}
           strokeLinecap="round"
           fill="none"

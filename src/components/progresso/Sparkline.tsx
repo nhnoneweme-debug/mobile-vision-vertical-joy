@@ -39,12 +39,12 @@ export function Sparkline({
       <path
         d={path}
         fill="none"
-        stroke="hsl(var(--ember))"
+        stroke="var(--ember)"
         strokeWidth={2.5}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={lastX} cy={lastY} r={4} fill="hsl(var(--ember))" />
+      <circle cx={lastX} cy={lastY} r={4} fill="var(--ember)" />
     </svg>
   );
 }
