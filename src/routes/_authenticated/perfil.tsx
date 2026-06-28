@@ -181,6 +181,16 @@ function PerfilPage() {
         )}
 
         <div className="mt-6">
+          <div className="mb-3 flex items-center gap-3">
+            <h3 className="font-display text-sm tracking-[0.3em] text-foreground">
+              ÚLTIMAS MISSÕES
+            </h3>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <QuestHistory quests={recentQuests} />
+        </div>
+
+        <div className="mt-6">
           <ThemePicker />
         </div>
 
