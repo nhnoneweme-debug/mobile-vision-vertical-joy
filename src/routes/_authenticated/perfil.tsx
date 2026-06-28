@@ -54,6 +54,7 @@ function PerfilPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [recentQuests, setRecentQuests] = useState<DailyQuestRow[]>([]);
+  const [orientador, setOrientador] = useState(false);
 
   useEffect(() => {
     let active = true;
