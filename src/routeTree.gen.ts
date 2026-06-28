@@ -20,6 +20,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
+import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
@@ -79,6 +80,11 @@ const AuthenticatedMapaRoute = AuthenticatedMapaRouteImport.update({
   path: '/mapa',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLojaRoute = AuthenticatedLojaRouteImport.update({
+  id: '/loja',
+  path: '/loja',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   id: '/habitos',
   path: '/habitos',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
+  '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/classe'
     | '/habitos'
+    | '/loja'
     | '/mapa'
     | '/onboarding'
     | '/painel'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/classe'
     | '/habitos'
+    | '/loja'
     | '/mapa'
     | '/onboarding'
     | '/painel'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/classe'
     | '/_authenticated/habitos'
+    | '/_authenticated/loja'
     | '/_authenticated/mapa'
     | '/_authenticated/onboarding'
     | '/_authenticated/painel'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMapaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/loja': {
+      id: '/_authenticated/loja'
+      path: '/loja'
+      fullPath: '/loja'
+      preLoaderRoute: typeof AuthenticatedLojaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/habitos': {
       id: '/_authenticated/habitos'
       path: '/habitos'
@@ -323,6 +342,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
+  AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
@@ -337,6 +357,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
+  AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
