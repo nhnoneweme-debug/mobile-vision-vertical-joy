@@ -41,6 +41,16 @@ export function BottomNav() {
         </li>
         <li className="flex-1">
           <Link
+            to="/social"
+            className="group flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground transition-colors"
+            activeProps={{ className: "text-ember" }}
+          >
+            <Users className="h-5 w-5" strokeWidth={2.2} />
+            <span className="font-display text-[11px] tracking-[0.18em]">SOCIAL</span>
+          </Link>
+        </li>
+        <li className="flex-1">
+          <Link
             to="/perfil"
             className="group flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground transition-colors"
             activeProps={{ className: "text-ember" }}
