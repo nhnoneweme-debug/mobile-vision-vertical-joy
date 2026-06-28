@@ -4,9 +4,11 @@ import { LogOut, Mail, RotateCcw, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ThemePicker } from "@/components/ThemePicker";
+import { QuestHistory } from "@/components/profile/QuestHistory";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CLASS_META, type BehavioralClass } from "@/lib/behavior";
+import { listRecentQuests, type DailyQuestRow } from "@/lib/quests";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
@@ -46,6 +48,7 @@ function PerfilPage() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [recentQuests, setRecentQuests] = useState<DailyQuestRow[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +64,12 @@ function PerfilPage() {
         .eq("id", userData.user.id)
         .maybeSingle();
       if (active && data) setProfile(data as Profile);
+      try {
+        const recent = await listRecentQuests(userData.user.id, 7);
+        if (active) setRecentQuests(recent);
+      } catch {
+        // silent
+      }
     })();
     return () => {
       active = false;
@@ -170,6 +179,16 @@ function PerfilPage() {
             )}
           </div>
         )}
+
+        <div className="mt-6">
+          <div className="mb-3 flex items-center gap-3">
+            <h3 className="font-display text-sm tracking-[0.3em] text-foreground">
+              ÚLTIMAS MISSÕES
+            </h3>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <QuestHistory quests={recentQuests} />
+        </div>
 
         <div className="mt-6">
           <ThemePicker />
