@@ -43,16 +43,20 @@ export function BentoArea({
             <Icon className="h-5 w-5" strokeWidth={2.2} />
           )}
         </div>
-        {area.status === "ativo" && (
+        {showLevel ? (
+          <span className="rounded-md bg-ember/15 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
+            NV {level}
+          </span>
+        ) : area.status === "ativo" ? (
           <span className="rounded-md bg-ember/15 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
             ATIVO
           </span>
-        )}
-        {area.status === "novo" && (
+        ) : area.status === "novo" ? (
           <span className="rounded-md border border-border bg-charcoal-900 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-foreground">
             NOVO
           </span>
-        )}
+        ) : null}
+
       </div>
 
       <div className="mt-auto">
