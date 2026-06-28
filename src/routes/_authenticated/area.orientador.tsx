@@ -19,14 +19,16 @@ export const Route = createFileRoute("/_authenticated/area/orientador")({
   component: OrientadorPage,
 });
 
-type Row = { role: "user" | "assistant"; content: string };
+type Row = { role: string; content: string };
 
 function rowsToUI(rows: Row[]): UIMessage[] {
-  return rows.map((r, i) => ({
-    id: `db-${i}`,
-    role: r.role,
-    parts: [{ type: "text", text: r.content }],
-  }));
+  return rows
+    .filter((r) => r.role === "user" || r.role === "assistant")
+    .map((r, i) => ({
+      id: `db-${i}`,
+      role: r.role as "user" | "assistant",
+      parts: [{ type: "text", text: r.content }],
+    }));
 }
 
 function OrientadorPage() {
