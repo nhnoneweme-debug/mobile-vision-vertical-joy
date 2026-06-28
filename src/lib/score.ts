@@ -63,7 +63,7 @@ export async function saveCurrentSnapshot(
       user_id: userId,
       week_start: wk,
       score: current.score,
-      breakdown: current.breakdown as unknown as Record<string, unknown>,
+      breakdown: JSON.parse(JSON.stringify(current.breakdown)),
     },
     { onConflict: "user_id,week_start" },
   );
