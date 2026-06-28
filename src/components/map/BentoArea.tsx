@@ -14,9 +14,19 @@ const rowSpanClass: Record<number, string> = {
   2: "row-span-2",
 };
 
-export function BentoArea({ area }: { area: Area }) {
+export function BentoArea({
+  area,
+  level,
+  xpPct,
+}: {
+  area: Area;
+  level?: number;
+  xpPct?: number;
+}) {
   const Icon = area.icon;
   const locked = area.status === "bloqueado";
+  const showLevel = !locked && typeof level === "number" && level > 0;
+
 
   const content = (
     <>
