@@ -1,16 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { LogOut, Mail, RotateCcw, Target, GitBranch } from "lucide-react";
+import { LogOut, Mail, RotateCcw, Target, GitBranch, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ThemePicker } from "@/components/ThemePicker";
 import { QuestHistory } from "@/components/profile/QuestHistory";
 import { NotificationPrefsCard } from "@/components/profile/NotificationPrefsCard";
+import { OrientadorInbox } from "@/components/profile/OrientadorInbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CLASS_META, type BehavioralClass } from "@/lib/behavior";
 import { listRecentQuests, type DailyQuestRow } from "@/lib/quests";
+import { isOrientador } from "@/lib/orientador";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
