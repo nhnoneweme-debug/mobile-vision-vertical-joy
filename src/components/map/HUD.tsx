@@ -66,6 +66,22 @@ export function HUD({
           style={{ width: `${pct}%` }}
         />
       </div>
+
+      {typeof brasas === "number" && (
+        <Link
+          to="/loja"
+          className="mt-3 flex items-center justify-between rounded-xl border border-ember/20 bg-charcoal-800/60 px-3 py-2 active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2">
+            <Coins className="h-4 w-4 text-ember" strokeWidth={2.4} />
+            <span className="font-display text-base text-foreground">{brasas}</span>
+            <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+              BRASAS
+            </span>
+          </span>
+          <span className="font-display text-[10px] tracking-[0.3em] text-ember">FORJA →</span>
+        </Link>
+      )}
     </section>
   );
 }
