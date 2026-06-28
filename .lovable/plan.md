@@ -1,80 +1,86 @@
-# Fase 1 — Onboarding + Avatar + Oráculo do Diagnóstico
+# Fase 2 — Quests, Check-in Diário e XP Real
 
-Foco: transformar o signup numa **jornada de entrada no mundo Personal IA**. Logo após criar conta, o usuário passa por 3 módulos curtos que definem **quem é** (Avatar), **o que quer** (Objetivo) e **como é** (Classe Comportamental). No fim, o Oráculo entrega um diagnóstico inicial e desbloqueia o Mapa com a primeira Quest do Dia personalizada.
+Foco: transformar a Quest do Dia (hoje só visual) em um **loop de progressão real**. Usuário recebe quest diária persistida, faz check-in, ganha XP, sobe de nível, mantém streak. É o primeiro ciclo de gameplay funcional do Personal IA.
 
 ## Escopo
 
-### Fluxo
-1. **Signup** (já existe) → após criar conta, em vez de cair direto no `/mapa`, vai para `/onboarding`.
-2. **/onboarding** — wizard vertical de 3 módulos + 1 tela de diagnóstico final:
-   - **Módulo 1 — Avatar**: nome de exibição, idade, gênero (M/F/Outro/Prefiro não dizer), altura, peso, foto opcional (skip permitido nesta fase — só placeholder).
-   - **Módulo 2 — Objetivo**: foco principal (Emagrecer / Hipertrofia / Saúde geral / Performance / Mente & hábitos), nível atual (Iniciante / Intermediário / Avançado), tempo disponível por dia (15/30/45/60+ min), dias por semana (slider 1–7).
-   - **Módulo 3 — Classe Comportamental (Dynamic Intake)**: 6 perguntas adaptativas com escala 1–5 ou múltipla escolha, calculam a **classe** entre: `executor`, `estrategista`, `explorador`, `guardiao`, `visionario`. Algoritmo simples por pontuação por eixo.
-   - **Oráculo**: tela final com a classe revelada (animação ember-glow), descrição da classe, e CTA "Entrar no mundo".
-3. Após concluir, `onboarding_completed=true` no profile → `/mapa` libera e mostra Quest do Dia gerada a partir das respostas.
+### Fluxo principal
+1. Ao abrir `/mapa`, sistema garante que existe uma quest do dia para o usuário (cria se for o primeiro acesso do dia).
+2. Quest do Dia card mostra estado: **pendente** (CTA "Fazer check-in") ou **concluída** (badge + XP ganho, animação ember).
+3. Check-in abre bottom sheet com:
+   - Confirmação ("Você completou?")
+   - Campo opcional de nota curta (até 140 chars)
+   - Slider de esforço (1–5)
+4. Submit → grava `quest_checkins`, soma XP no profile, atualiza streak (incrementa se ontem teve check-in, reseta se quebrou), retorna animação +XP no HUD.
+5. Histórico básico em `/perfil` → últimas 7 quests com status.
 
-### Rotas
-- `src/routes/_authenticated/onboarding.tsx` — wizard com state local + step indicator.
-- Gate em `_authenticated/route.tsx`: se `profiles.onboarding_completed=false`, redireciona qualquer rota protegida para `/onboarding` (exceto a própria).
-- `/perfil` ganha botão "Refazer diagnóstico" (reset opcional).
-
-### Componentes
-- `OnboardingShell` — header com progresso (1/4 · 2/4 · 3/4 · Oráculo), botão voltar, animação de transição entre steps.
-- `AvatarStep`, `GoalStep`, `BehaviorStep`, `OracleReveal`.
-- `ScaleInput` (1–5 com slider/dots), `ChoiceGrid` (cards selecionáveis), `NumberStepper`.
-- `ClassBadge` reutilizável (usado no HUD e no Oráculo).
+### Telas / componentes
+- `QuestOfDayCard` (atualiza): aceita estado `pending | completed`, mostra XP ganho, botão check-in.
+- `CheckinSheet` — bottom sheet com formulário (esforço + nota).
+- `XPToast` — animação flutuante "+50 XP" quando completa.
+- `StreakBadge` no HUD com pulso quando atualiza.
+- `QuestHistory` — lista compacta no `/perfil` (data, área, esforço, XP).
 
 ### Backend (migration única)
-Estender `profiles`:
-- `age int`, `gender text`, `height_cm int`, `weight_kg numeric(5,2)`
-- `goal text` (enum-like), `level text`, `time_per_day_min int`, `days_per_week int`
-- `behavioral_class` já existe — passa a ser populado pelo cálculo
-- `behavior_scores jsonb` (guarda os 5 eixos para futura recalibração)
-- `onboarding_completed boolean default false`
-- `onboarding_completed_at timestamptz`
+Tabela `daily_quests`:
+- `id uuid pk`, `user_id uuid → auth.users on delete cascade`
+- `quest_date date` (YYYY-MM-DD na TZ do servidor)
+- `area_slug text`, `title text`, `subtitle text`, `xp_reward int`
+- `status text` default `'pending'` (`pending|completed|skipped`)
+- `completed_at timestamptz`, `effort int` (1–5), `note text`
+- `created_at`, `updated_at`
+- `unique(user_id, quest_date)`
 
-Tudo nullable + defaults seguros. RLS já cobre (usuário edita o próprio). Sem novas tabelas nesta fase.
+Tabela `xp_events` (audit + futuro feed):
+- `id`, `user_id`, `source text` ('quest'|'bonus'|'streak'), `amount int`, `ref_id uuid`, `created_at`
 
-### Lógica de classificação
-Função TS pura em `src/lib/behavior.ts`:
-- Input: 6 respostas (1–5 ou índice).
-- Output: `{ class: BehavioralClass, scores: Record<eixo, number> }`.
-- Eixos: `execucao`, `planejamento`, `exploracao`, `cuidado`, `visao`. Classe = eixo de maior score (com tiebreak determinístico).
+Triggers/funções:
+- `award_quest_xp()` — trigger AFTER UPDATE em `daily_quests` quando status muda para `completed`: insere `xp_events`, soma `xp` em `profiles`, recalcula `streak` (compara `quest_date` com último check-in).
+- RLS: tudo `auth.uid() = user_id`. GRANTs autenticated + service_role.
 
-### Quest do Dia personalizada
-`src/lib/quest.ts` — função pura que recebe `{ goal, level, time_per_day_min, behavioral_class }` e devolve `{ title, subtitle, xp }`. Sem persistência ainda (Fase 2). HUD/QuestOfDayCard passam a consumir essa função.
+### Server functions (TanStack)
+- `ensureTodayQuest()` — `requireSupabaseAuth`: busca quest de hoje, cria via `buildDailyQuest` se não existir, retorna row.
+- `completeQuest({ id, effort, note })` — valida com zod, faz UPDATE para `completed` (trigger faz o resto), retorna `{ xp_gained, new_xp, new_streak, leveled_up }`.
+- `listRecentQuests(limit=7)` — histórico para perfil.
+
+Arquivos: `src/lib/quests.functions.ts`.
+
+### Rotas alteradas
+- `_authenticated/mapa.tsx` — usa `useQuery(['today-quest'])` + `useServerFn(ensureTodayQuest)`. Mutation `completeQuest` invalida quest + profile.
+- `_authenticated/perfil.tsx` — adiciona seção "Últimas missões".
+
+### Lógica de streak
+- Se `last_quest_date == hoje - 1` → `streak += 1`.
+- Se `last_quest_date == hoje` → no-op (já contado).
+- Caso contrário → `streak = 1`.
+- Reset automático: na criação da quest de hoje, se gap > 1 dia desde a última `completed`, zera streak.
+
+### Level up
+- Fórmula: `level = floor(xp / 500) + 1` (mantém atual).
+- `leveled_up = true` quando crossing → toast especial "NÍVEL X" com ember-glow forte.
 
 ## Critérios de aceite
+- Abrir `/mapa` cria/retorna quest do dia consistente (mesma quest até meia-noite).
+- Check-in persiste, soma XP no HUD em tempo real, streak atualiza corretamente, animação aparece.
+- Segundo check-in no mesmo dia bloqueado (botão desaparece, card mostra "Concluída hoje").
+- `/perfil` lista últimas 7 missões.
+- Streak quebra corretamente após pular um dia.
+- Funciona nos 7 skins, mobile 390px, tokens semânticos, sem cores hardcoded.
 
-- Usuário novo: signup → `/onboarding` automaticamente, não consegue acessar `/mapa` antes de concluir.
-- Wizard navega forward/back, valida campos obrigatórios, mostra progresso.
-- Oráculo revela a classe com animação ember-glow e descrição condizente.
-- `profiles` atualizado com todos os campos + `behavior_scores` jsonb + `onboarding_completed=true`.
-- HUD do `/mapa` mostra a classe real (não mais "executor" hardcoded) e QuestOfDayCard mostra quest derivada das respostas.
-- `/perfil` mostra avatar/objetivo/classe e tem botão "Refazer diagnóstico" que reseta `onboarding_completed`.
-- Funciona em 390×844, todos tokens semânticos, sem cores hardcoded, suporta os 7 skins.
-
-## Fora de escopo (fases seguintes)
-- Upload real de foto/avatar (Fase 2 ou 3 com Storage).
-- Quests persistidas, check-in, XP real (Fase 2).
-- IA generativa no Oráculo (Fase 3 — Torre do Mentor com Lovable AI Gateway).
+## Fora de escopo
+- Múltiplas quests/dia, quests longas (Fase 3).
+- IA generativa pra título da quest (Fase 3 — Torre do Mentor).
+- Conquistas/badges, ranking social.
 
 ## Arquivos novos/alterados
 ```
-supabase/migrations/<ts>_profile_onboarding.sql
-src/lib/behavior.ts
-src/lib/quest.ts
-src/components/onboarding/OnboardingShell.tsx
-src/components/onboarding/AvatarStep.tsx
-src/components/onboarding/GoalStep.tsx
-src/components/onboarding/BehaviorStep.tsx
-src/components/onboarding/OracleReveal.tsx
-src/components/onboarding/inputs/{ScaleInput,ChoiceGrid,NumberStepper}.tsx
-src/components/map/ClassBadge.tsx
-src/routes/_authenticated/onboarding.tsx
-src/routes/_authenticated/route.tsx          (gate onboarding_completed)
-src/routes/_authenticated/mapa.tsx           (consome classe + quest dinâmica)
-src/routes/_authenticated/perfil.tsx         (mostra dados + refazer)
-src/components/map/QuestOfDayCard.tsx        (recebe props)
-src/integrations/supabase/types.ts           (regenerado pela migration)
+supabase/migrations/<ts>_daily_quests.sql
+src/lib/quests.functions.ts
+src/components/map/QuestOfDayCard.tsx        (estados pending/completed)
+src/components/map/CheckinSheet.tsx
+src/components/map/XPToast.tsx
+src/components/profile/QuestHistory.tsx
+src/routes/_authenticated/mapa.tsx
+src/routes/_authenticated/perfil.tsx
+src/integrations/supabase/types.ts           (regen pós-migration)
 ```

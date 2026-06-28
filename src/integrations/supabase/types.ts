@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_quests: {
+        Row: {
+          area_slug: string
+          completed_at: string | null
+          created_at: string
+          effort: number | null
+          id: string
+          note: string | null
+          quest_date: string
+          status: string
+          subtitle: string
+          title: string
+          updated_at: string
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          area_slug: string
+          completed_at?: string | null
+          created_at?: string
+          effort?: number | null
+          id?: string
+          note?: string | null
+          quest_date?: string
+          status?: string
+          subtitle: string
+          title: string
+          updated_at?: string
+          user_id: string
+          xp_reward?: number
+        }
+        Update: {
+          area_slug?: string
+          completed_at?: string | null
+          created_at?: string
+          effort?: number | null
+          id?: string
+          note?: string | null
+          quest_date?: string
+          status?: string
+          subtitle?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -74,6 +122,33 @@ export type Database = {
           updated_at?: string
           weight_kg?: number | null
           xp?: number
+        }
+        Relationships: []
+      }
+      xp_events: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          ref_id: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          ref_id?: string | null
+          source: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          ref_id?: string | null
+          source?: string
+          user_id?: string
         }
         Relationships: []
       }
