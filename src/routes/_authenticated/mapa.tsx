@@ -13,7 +13,9 @@ import {
   ensureTodayQuest,
   type DailyQuestRow,
 } from "@/lib/quests";
+import { areaLevelProgress, listAllAreaProgress, type AreaProgress } from "@/lib/area-missions";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_authenticated/mapa")({
   head: () => ({
