@@ -8,6 +8,7 @@ import { GoalStep, type GoalData } from "@/components/onboarding/GoalStep";
 import { BehaviorStep } from "@/components/onboarding/BehaviorStep";
 import { OracleReveal } from "@/components/onboarding/OracleReveal";
 import { BEHAVIOR_QUESTIONS, computeBehavior } from "@/lib/behavior";
+import { seedHabitsForClass } from "@/lib/habits";
 import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
