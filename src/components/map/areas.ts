@@ -88,7 +88,7 @@ export const AREAS: Area[] = [
     tagline: "Amigos & grupos",
     description: "Convivência saudável, missões sociais, grupos e equipes.",
     icon: Users,
-    status: "bloqueado",
+    status: "novo",
     colSpan: 2,
     rowSpan: 1,
   },
@@ -99,7 +99,7 @@ export const AREAS: Area[] = [
     description:
       "Conversa com os NPCs e a IA que orienta sua jornada.",
     icon: Sparkles,
-    status: "bloqueado",
+    status: "novo",
     colSpan: 2,
     rowSpan: 1,
   },
@@ -110,7 +110,7 @@ export const AREAS: Area[] = [
     description:
       "Sua evolução: score, medidas, fotos opcionais e relatórios.",
     icon: Trophy,
-    status: "bloqueado",
+    status: "novo",
     colSpan: 2,
     rowSpan: 1,
   },
@@ -121,10 +121,11 @@ export const AREAS: Area[] = [
     description:
       "Para personal trainers: alunos, alertas e missões do orientador.",
     icon: ClipboardCheck,
-    status: "bloqueado",
+    status: "novo",
     colSpan: 2,
     rowSpan: 1,
   },
+
   {
     slug: "casa",
     name: "Casa",

@@ -13,7 +13,9 @@ import {
   ensureTodayQuest,
   type DailyQuestRow,
 } from "@/lib/quests";
+import { areaLevelProgress, listAllAreaProgress, type AreaProgress } from "@/lib/area-missions";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_authenticated/mapa")({
   head: () => ({
@@ -42,6 +44,8 @@ function MapaPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [xpToast, setXpToast] = useState<{ amount: number; leveledUp: boolean } | null>(null);
+  const [areaProgress, setAreaProgress] = useState<Record<string, AreaProgress>>({});
+
 
   const loadProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
@@ -74,11 +78,22 @@ function MapaPage() {
         const msg = err instanceof Error ? err.message : "Falha ao carregar quest";
         toast.error(msg);
       }
+      try {
+        const rows = await listAllAreaProgress(userData.user.id);
+        if (active) {
+          setAreaProgress(
+            Object.fromEntries(rows.map((r) => [r.area_slug, r])),
+          );
+        }
+      } catch {
+        /* non-blocking */
+      }
     })();
     return () => {
       active = false;
     };
   }, [loadProfile]);
+
 
   async function handleSubmitCheckin(effort: number, note: string) {
     if (!quest || !userId || submitting) return;
@@ -141,10 +156,20 @@ function MapaPage() {
         </header>
 
         <div className="grid auto-rows-[120px] grid-cols-4 gap-3">
-          {AREAS.map((area) => (
-            <BentoArea key={area.slug} area={area} />
-          ))}
+          {AREAS.map((area) => {
+            const ap = areaProgress[area.slug];
+            const meta = ap ? areaLevelProgress(ap.xp) : null;
+            return (
+              <BentoArea
+                key={area.slug}
+                area={area}
+                level={meta?.level}
+                xpPct={meta?.pct}
+              />
+            );
+          })}
         </div>
+
       </section>
 
       <CheckinSheet

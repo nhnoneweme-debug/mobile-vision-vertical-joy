@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      area_mission_logs: {
+        Row: {
+          area_slug: string
+          completed_at: string
+          created_at: string
+          id: string
+          mission_id: string
+          note: string | null
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          area_slug: string
+          completed_at?: string
+          created_at?: string
+          id?: string
+          mission_id: string
+          note?: string | null
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          area_slug?: string
+          completed_at?: string
+          created_at?: string
+          id?: string
+          mission_id?: string
+          note?: string | null
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_mission_logs_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "area_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      area_missions: {
+        Row: {
+          active: boolean
+          area_slug: string
+          class_affinity: string[]
+          created_at: string
+          id: string
+          sort_order: number
+          subtitle: string
+          title: string
+          updated_at: string
+          weekly_target: number
+          xp_reward: number
+        }
+        Insert: {
+          active?: boolean
+          area_slug: string
+          class_affinity?: string[]
+          created_at?: string
+          id?: string
+          sort_order?: number
+          subtitle: string
+          title: string
+          updated_at?: string
+          weekly_target?: number
+          xp_reward?: number
+        }
+        Update: {
+          active?: boolean
+          area_slug?: string
+          class_affinity?: string[]
+          created_at?: string
+          id?: string
+          sort_order?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+          weekly_target?: number
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      area_progress: {
+        Row: {
+          area_slug: string
+          created_at: string
+          id: string
+          level: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          area_slug: string
+          created_at?: string
+          id?: string
+          level?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          area_slug?: string
+          created_at?: string
+          id?: string
+          level?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       daily_quests: {
         Row: {
           area_slug: string

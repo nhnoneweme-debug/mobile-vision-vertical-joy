@@ -14,9 +14,19 @@ const rowSpanClass: Record<number, string> = {
   2: "row-span-2",
 };
 
-export function BentoArea({ area }: { area: Area }) {
+export function BentoArea({
+  area,
+  level,
+  xpPct,
+}: {
+  area: Area;
+  level?: number;
+  xpPct?: number;
+}) {
   const Icon = area.icon;
   const locked = area.status === "bloqueado";
+  const showLevel = !locked && typeof level === "number" && level > 0;
+
 
   const content = (
     <>
@@ -33,16 +43,20 @@ export function BentoArea({ area }: { area: Area }) {
             <Icon className="h-5 w-5" strokeWidth={2.2} />
           )}
         </div>
-        {area.status === "ativo" && (
+        {showLevel ? (
+          <span className="rounded-md bg-ember/15 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
+            NV {level}
+          </span>
+        ) : area.status === "ativo" ? (
           <span className="rounded-md bg-ember/15 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
             ATIVO
           </span>
-        )}
-        {area.status === "novo" && (
+        ) : area.status === "novo" ? (
           <span className="rounded-md border border-border bg-charcoal-900 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-foreground">
             NOVO
           </span>
-        )}
+        ) : null}
+
       </div>
 
       <div className="mt-auto">
@@ -62,7 +76,13 @@ export function BentoArea({ area }: { area: Area }) {
         >
           {area.tagline.toUpperCase()}
         </p>
+        {showLevel && typeof xpPct === "number" && (
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-charcoal-800">
+            <div className="h-full bg-ember" style={{ width: `${xpPct}%` }} />
+          </div>
+        )}
       </div>
+
     </>
   );
 
