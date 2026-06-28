@@ -127,6 +127,88 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_progress: {
+        Row: {
+          challenge_id: string
+          id: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          challenge_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          value?: number
+        }
+        Update: {
+          challenge_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_progress_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string
+          group_id: string
+          id: string
+          metric: string
+          starts_at: string
+          target: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at: string
+          group_id: string
+          id?: string
+          metric: string
+          starts_at?: string
+          target: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string
+          group_id?: string
+          id?: string
+          metric?: string
+          starts_at?: string
+          target?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenges_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_quests: {
         Row: {
           area_slug: string
@@ -172,6 +254,95 @@ export type Database = {
           updated_at?: string
           user_id?: string
           xp_reward?: number
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          invite_code: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_code: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_code?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -308,6 +479,7 @@ export type Database = {
           created_at: string
           days_per_week: number | null
           display_name: string
+          friend_code: string | null
           gender: string | null
           goal: string | null
           height_cm: number | null
@@ -328,6 +500,7 @@ export type Database = {
           created_at?: string
           days_per_week?: number | null
           display_name?: string
+          friend_code?: string | null
           gender?: string | null
           goal?: string | null
           height_cm?: number | null
@@ -348,6 +521,7 @@ export type Database = {
           created_at?: string
           days_per_week?: number | null
           display_name?: string
+          friend_code?: string | null
           gender?: string | null
           goal?: string | null
           height_cm?: number | null
@@ -522,7 +696,12 @@ export type Database = {
     Functions: {
       check_perk_unlocks: { Args: never; Returns: number }
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
+      generate_friend_code: { Args: never; Returns: string }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
+      is_group_member: {
+        Args: { _group: string; _user: string }
+        Returns: boolean
+      }
       player_level: { Args: { _xp: number }; Returns: number }
       save_weekly_score_snapshot: { Args: never; Returns: number }
     }

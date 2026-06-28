@@ -31,6 +31,9 @@ export const Route = createFileRoute("/_authenticated/area/$slug")({
     if (params.slug === "progresso") {
       throw redirect({ to: "/progresso" });
     }
+    if (params.slug === "social") {
+      throw redirect({ to: "/social" });
+    }
     const area = getArea(params.slug);
     if (!area) throw notFound();
     return { area };
