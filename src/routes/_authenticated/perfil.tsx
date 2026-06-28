@@ -1,16 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { LogOut, Mail, RotateCcw, Target, GitBranch } from "lucide-react";
+import { LogOut, Mail, RotateCcw, Target, GitBranch, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ThemePicker } from "@/components/ThemePicker";
 import { QuestHistory } from "@/components/profile/QuestHistory";
 import { NotificationPrefsCard } from "@/components/profile/NotificationPrefsCard";
+import { OrientadorInbox } from "@/components/profile/OrientadorInbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CLASS_META, type BehavioralClass } from "@/lib/behavior";
 import { listRecentQuests, type DailyQuestRow } from "@/lib/quests";
+import { isOrientador } from "@/lib/orientador";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
@@ -52,6 +54,7 @@ function PerfilPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [recentQuests, setRecentQuests] = useState<DailyQuestRow[]>([]);
+  const [orientador, setOrientador] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +76,12 @@ function PerfilPage() {
       try {
         const recent = await listRecentQuests(userData.user.id, 7);
         if (active) setRecentQuests(recent);
+      } catch {
+        // silent
+      }
+      try {
+        const ori = await isOrientador(userData.user.id);
+        if (active) setOrientador(ori);
       } catch {
         // silent
       }
@@ -217,12 +226,37 @@ function PerfilPage() {
         </Link>
 
         <div className="mt-6">
+          <OrientadorInbox userId={userId} />
+        </div>
+
+        <Link
+          to="/painel"
+          className="mt-6 flex w-full items-center justify-between gap-3 rounded-2xl border border-ember/40 bg-card px-5 py-4 active:scale-[0.99]"
+        >
+          <div className="flex items-center gap-3">
+            <Crown className="h-5 w-5 text-ember" strokeWidth={2.2} />
+            <div>
+              <p className="font-display text-[10px] tracking-[0.3em] text-ember">
+                {orientador ? "PAINEL DO ORIENTADOR" : "VIRAR ORIENTADOR"}
+              </p>
+              <p className="font-display text-lg tracking-wide text-foreground">
+                {orientador ? "Seus alunos e missões" : "Resgatar código de acesso"}
+              </p>
+            </div>
+          </div>
+          <span className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+            ABRIR →
+          </span>
+        </Link>
+
+        <div className="mt-6">
           <NotificationPrefsCard userId={userId} />
         </div>
 
         <div className="mt-6">
           <ThemePicker />
         </div>
+
 
 
 
