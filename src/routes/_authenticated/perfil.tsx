@@ -48,6 +48,7 @@ function PerfilPage() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [recentQuests, setRecentQuests] = useState<DailyQuestRow[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -63,6 +64,12 @@ function PerfilPage() {
         .eq("id", userData.user.id)
         .maybeSingle();
       if (active && data) setProfile(data as Profile);
+      try {
+        const recent = await listRecentQuests(userData.user.id, 7);
+        if (active) setRecentQuests(recent);
+      } catch {
+        // silent
+      }
     })();
     return () => {
       active = false;
