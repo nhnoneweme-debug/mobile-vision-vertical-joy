@@ -43,7 +43,7 @@ function MapaPage() {
   const [quest, setQuest] = useState<DailyQuestRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [xpToast, setXpToast] = useState<{ amount: number; leveledUp: boolean } | null>(null);
+  const [areaProgress, setAreaProgress] = useState<Record<string, AreaProgress>>({});
 
   const loadProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
