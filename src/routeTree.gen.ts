@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
@@ -41,6 +42,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRitualRoute = AuthenticatedRitualRouteImport.update({
   id: '/ritual',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
+  '/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
+  '/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
+  '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/progresso'
     | '/ritual'
+    | '/social'
     | '/api/chat'
     | '/area/$slug'
     | '/area/orientador'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/progresso'
     | '/ritual'
+    | '/social'
     | '/api/chat'
     | '/area/$slug'
     | '/area/orientador'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/_authenticated/perfil'
     | '/_authenticated/progresso'
     | '/_authenticated/ritual'
+    | '/_authenticated/social'
     | '/api/chat'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
@@ -215,6 +227,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/social': {
+      id: '/_authenticated/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof AuthenticatedSocialRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ritual': {
       id: '/_authenticated/ritual'
@@ -290,6 +309,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
+  AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
   AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
 }
@@ -302,6 +322,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
+  AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
   AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
 }

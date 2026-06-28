@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Map, Swords, Flame, User } from "lucide-react";
+import { Map, Swords, Flame, Users, User } from "lucide-react";
 
 export function BottomNav() {
   return (
