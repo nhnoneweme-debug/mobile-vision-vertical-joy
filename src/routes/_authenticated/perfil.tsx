@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ThemePicker } from "@/components/ThemePicker";
 import { QuestHistory } from "@/components/profile/QuestHistory";
+import { NotificationPrefsCard } from "@/components/profile/NotificationPrefsCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CLASS_META, type BehavioralClass } from "@/lib/behavior";
@@ -48,6 +49,7 @@ function PerfilPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [recentQuests, setRecentQuests] = useState<DailyQuestRow[]>([]);
 
@@ -56,7 +58,10 @@ function PerfilPage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      if (active) setEmail(userData.user.email ?? null);
+      if (active) {
+        setEmail(userData.user.email ?? null);
+        setUserId(userData.user.id);
+      }
       const { data } = await supabase
         .from("profiles")
         .select(
@@ -212,8 +217,13 @@ function PerfilPage() {
         </Link>
 
         <div className="mt-6">
+          <NotificationPrefsCard userId={userId} />
+        </div>
+
+        <div className="mt-6">
           <ThemePicker />
         </div>
+
 
 
         <button
