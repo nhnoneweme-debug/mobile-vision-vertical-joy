@@ -1,97 +1,80 @@
+# Fase 1 — Onboarding + Avatar + Oráculo do Diagnóstico
 
-# Personal IA — Fase 0: Shell Mobile + Mapa 2D + Cloud
+Foco: transformar o signup numa **jornada de entrada no mundo Personal IA**. Logo após criar conta, o usuário passa por 3 módulos curtos que definem **quem é** (Avatar), **o que quer** (Objetivo) e **como é** (Classe Comportamental). No fim, o Oráculo entrega um diagnóstico inicial e desbloqueia o Mapa com a primeira Quest do Dia personalizada.
 
-Foco: entregar a **casca navegável** do mundo Personal IA, 100% vertical/mobile, sem features ainda. Cada área é uma rota real com placeholder, pronta para receber as fases 1, 2, 3 depois. Backend já ligado para login e perfil mínimo.
+## Escopo
 
-## Direção visual travada
+### Fluxo
+1. **Signup** (já existe) → após criar conta, em vez de cair direto no `/mapa`, vai para `/onboarding`.
+2. **/onboarding** — wizard vertical de 3 módulos + 1 tela de diagnóstico final:
+   - **Módulo 1 — Avatar**: nome de exibição, idade, gênero (M/F/Outro/Prefiro não dizer), altura, peso, foto opcional (skip permitido nesta fase — só placeholder).
+   - **Módulo 2 — Objetivo**: foco principal (Emagrecer / Hipertrofia / Saúde geral / Performance / Mente & hábitos), nível atual (Iniciante / Intermediário / Avançado), tempo disponível por dia (15/30/45/60+ min), dias por semana (slider 1–7).
+   - **Módulo 3 — Classe Comportamental (Dynamic Intake)**: 6 perguntas adaptativas com escala 1–5 ou múltipla escolha, calculam a **classe** entre: `executor`, `estrategista`, `explorador`, `guardiao`, `visionario`. Algoritmo simples por pontuação por eixo.
+   - **Oráculo**: tela final com a classe revelada (animação ember-glow), descrição da classe, e CTA "Entrar no mundo".
+3. Após concluir, `onboarding_completed=true` no profile → `/mapa` libera e mostra Quest do Dia gerada a partir das respostas.
 
-- Paleta: charcoal `#1a1a1a` / `#2d2d2d` / `#4a4a4a` + accent brasa `#e85d3a` (tokens semânticos no `src/styles.css`)
-- Tipografia: Bebas Neue (display/headings/HUD) + Barlow (body/labels), via `<link>` no `__root.tsx`
-- Layout: bento grid mobile para o mapa, viewport-alvo 390×844
-- Tom: dark premium, físico, RPG moderno — sem roxo, sem cartoon infantil
-
-Defino o viewport do preview como **mobile** desde o início.
-
-## Escopo da Fase 0
-
-### Telas
-1. **Splash / Boas-vindas** (`/`) — logo, frase do produto, CTA "Entrar / Criar conta".
-2. **Auth** (`/auth`) — login + signup (email/senha) com Lovable Cloud.
-3. **Home / Mapa do mundo** (`/mapa`) — HUD topo + bento das 10 áreas + nav inferior.
-4. **10 áreas placeholder** (`/area/casa`, `/area/missoes`, `/area/treino`, `/area/cozinha`, `/area/quarto`, `/area/mental`, `/area/social`, `/area/coach`, `/area/progresso`, `/area/orientador`) — cabeçalho com nome da área, breve descrição do que virá, botão voltar.
-5. **Perfil** (`/perfil`) — dados básicos do usuário logado + logout.
+### Rotas
+- `src/routes/_authenticated/onboarding.tsx` — wizard com state local + step indicator.
+- Gate em `_authenticated/route.tsx`: se `profiles.onboarding_completed=false`, redireciona qualquer rota protegida para `/onboarding` (exceto a própria).
+- `/perfil` ganha botão "Refazer diagnóstico" (reset opcional).
 
 ### Componentes
-- `MobileShell` — wrapper vertical com safe areas e nav inferior fixa.
-- `HUD` — avatar placeholder, nome, classe ("Executor" hardcoded por enquanto), barra de XP, contador de streak com chama.
-- `QuestOfDayCard` — banner placeholder destacado no topo do mapa.
-- `BentoArea` — tile do mapa com ícone, nome, status (`novo` / `bloqueado` / `n quests`).
-- `BottomNav` — 4 ícones: Mapa, Missões, Coach IA, Perfil.
-- `AreaPlaceholder` — layout reutilizável para as 10 telas internas.
+- `OnboardingShell` — header com progresso (1/4 · 2/4 · 3/4 · Oráculo), botão voltar, animação de transição entre steps.
+- `AvatarStep`, `GoalStep`, `BehaviorStep`, `OracleReveal`.
+- `ScaleInput` (1–5 com slider/dots), `ChoiceGrid` (cards selecionáveis), `NumberStepper`.
+- `ClassBadge` reutilizável (usado no HUD e no Oráculo).
 
-### Backend (Lovable Cloud)
-- Ativar Cloud.
-- Auth email/senha habilitado, sem confirmação de email (para acelerar testes).
-- Tabela `profiles` (id = auth.users.id, display_name, behavioral_class default `executor`, xp default 0, streak default 0, created_at). RLS: usuário só lê/edita o próprio.
-- Trigger `handle_new_user` cria row em `profiles` no signup.
-- Rota `_authenticated` protege `/mapa`, `/area/*`, `/perfil`. Não-autenticados vão para `/auth`.
+### Backend (migration única)
+Estender `profiles`:
+- `age int`, `gender text`, `height_cm int`, `weight_kg numeric(5,2)`
+- `goal text` (enum-like), `level text`, `time_per_day_min int`, `days_per_week int`
+- `behavioral_class` já existe — passa a ser populado pelo cálculo
+- `behavior_scores jsonb` (guarda os 5 eixos para futura recalibração)
+- `onboarding_completed boolean default false`
+- `onboarding_completed_at timestamptz`
 
-### Fora de escopo (fases seguintes)
-- Dynamic Intake Engine, quests reais, XP real, NPCs/IA, treino, fotos, grupos, painel do orientador, mapa interativo com pixel-art. Tudo isso vira fases 1+.
+Tudo nullable + defaults seguros. RLS já cobre (usuário edita o próprio). Sem novas tabelas nesta fase.
 
-## Detalhes técnicos
+### Lógica de classificação
+Função TS pura em `src/lib/behavior.ts`:
+- Input: 6 respostas (1–5 ou índice).
+- Output: `{ class: BehavioralClass, scores: Record<eixo, number> }`.
+- Eixos: `execucao`, `planejamento`, `exploracao`, `cuidado`, `visao`. Classe = eixo de maior score (com tiebreak determinístico).
 
-- **Stack**: TanStack Start + Tailwind v4 (já configurado). Sem libs extras nesta fase além de `lucide-react` (já presente).
-- **Fontes**: `<link>` para Google Fonts (Bebas Neue + Barlow) no `head` do `__root.tsx`. Tokens `--font-display` e `--font-body` em `@theme`.
-- **Tokens novos** no `src/styles.css`: `--ember`, `--ember-glow`, `--charcoal-900/800/700`, sobrescrevendo `--background`, `--foreground`, `--primary`, `--card`, `--border` para o tema dark premium. Tudo via `oklch`.
-- **Rotas TanStack** (convenção flat dot):
-  - `src/routes/index.tsx` (splash)
-  - `src/routes/auth.tsx`
-  - `src/routes/_authenticated.tsx` (gate)
-  - `src/routes/_authenticated.mapa.tsx`
-  - `src/routes/_authenticated.area.$slug.tsx` (uma rota dinâmica cobre as 10 áreas via slug)
-  - `src/routes/_authenticated.perfil.tsx`
-- **Bento grid**: CSS grid `grid-cols-4` mobile com tiles ocupando `col-span` e `row-span` variados; quest-do-dia full-width acima do bento; HUD sticky.
-- **Migration única** para `profiles` + RLS + grants (`authenticated`, `service_role`) + trigger `on_auth_user_created`.
-
-## Estrutura de arquivos (novos/alterados)
-
-```text
-src/
-  styles.css                        (tokens dark premium + fontes)
-  routes/
-    __root.tsx                      (link fontes, meta PT-BR)
-    index.tsx                       (splash)
-    auth.tsx
-    _authenticated.tsx              (gate de sessão)
-    _authenticated.mapa.tsx
-    _authenticated.area.$slug.tsx
-    _authenticated.perfil.tsx
-  components/
-    shell/MobileShell.tsx
-    shell/BottomNav.tsx
-    map/HUD.tsx
-    map/QuestOfDayCard.tsx
-    map/BentoArea.tsx
-    map/areas.ts                    (config das 10 áreas: slug, nome, ícone, status, span)
-    placeholders/AreaPlaceholder.tsx
-supabase/migrations/
-  <timestamp>_profiles.sql
-```
+### Quest do Dia personalizada
+`src/lib/quest.ts` — função pura que recebe `{ goal, level, time_per_day_min, behavioral_class }` e devolve `{ title, subtitle, xp }`. Sem persistência ainda (Fase 2). HUD/QuestOfDayCard passam a consumir essa função.
 
 ## Critérios de aceite
 
-- Abrir o preview em mobile mostra splash → auth → mapa.
-- Mapa renderiza HUD, quest-do-dia, 10 tiles em bento, nav inferior. Tudo legível em 390px.
-- Tocar qualquer tile abre a rota da área com placeholder e botão voltar.
-- Signup cria row em `profiles` automaticamente; perfil mostra nome e classe.
-- Logout funciona. Rotas protegidas redirecionam para `/auth`.
-- Zero classes hardcoded de cor (`text-white`, `bg-[#...]`) — só tokens semânticos.
-- Build limpa, sem placeholders Lovable remanescentes.
+- Usuário novo: signup → `/onboarding` automaticamente, não consegue acessar `/mapa` antes de concluir.
+- Wizard navega forward/back, valida campos obrigatórios, mostra progresso.
+- Oráculo revela a classe com animação ember-glow e descrição condizente.
+- `profiles` atualizado com todos os campos + `behavior_scores` jsonb + `onboarding_completed=true`.
+- HUD do `/mapa` mostra a classe real (não mais "executor" hardcoded) e QuestOfDayCard mostra quest derivada das respostas.
+- `/perfil` mostra avatar/objetivo/classe e tem botão "Refazer diagnóstico" que reseta `onboarding_completed`.
+- Funciona em 390×844, todos tokens semânticos, sem cores hardcoded, suporta os 7 skins.
 
-## Próximas fases (preview, não construir agora)
+## Fora de escopo (fases seguintes)
+- Upload real de foto/avatar (Fase 2 ou 3 com Storage).
+- Quests persistidas, check-in, XP real (Fase 2).
+- IA generativa no Oráculo (Fase 3 — Torre do Mentor com Lovable AI Gateway).
 
-- Fase 1: Onboarding + Avatar + Dynamic Intake (Módulos 1–3) com Oráculo do Diagnóstico.
-- Fase 2: Centro de Missões real (quests, XP, streak, check-in) com persistência.
-- Fase 3: Torre do Mentor (IA Coach via Lovable AI Gateway) + Templo do Progresso (Personal IA Score).
-- Fase 4: Sala do Orientador (papéis + RLS por papel) e grupos.
+## Arquivos novos/alterados
+```
+supabase/migrations/<ts>_profile_onboarding.sql
+src/lib/behavior.ts
+src/lib/quest.ts
+src/components/onboarding/OnboardingShell.tsx
+src/components/onboarding/AvatarStep.tsx
+src/components/onboarding/GoalStep.tsx
+src/components/onboarding/BehaviorStep.tsx
+src/components/onboarding/OracleReveal.tsx
+src/components/onboarding/inputs/{ScaleInput,ChoiceGrid,NumberStepper}.tsx
+src/components/map/ClassBadge.tsx
+src/routes/_authenticated/onboarding.tsx
+src/routes/_authenticated/route.tsx          (gate onboarding_completed)
+src/routes/_authenticated/mapa.tsx           (consome classe + quest dinâmica)
+src/routes/_authenticated/perfil.tsx         (mostra dados + refazer)
+src/components/map/QuestOfDayCard.tsx        (recebe props)
+src/integrations/supabase/types.ts           (regenerado pela migration)
+```

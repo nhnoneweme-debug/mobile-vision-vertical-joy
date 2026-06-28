@@ -6,6 +6,7 @@ import { HUD } from "@/components/map/HUD";
 import { QuestOfDayCard } from "@/components/map/QuestOfDayCard";
 import { BentoArea } from "@/components/map/BentoArea";
 import { AREAS } from "@/components/map/areas";
+import { buildDailyQuest } from "@/lib/quest";
 
 export const Route = createFileRoute("/_authenticated/mapa")({
   head: () => ({
@@ -22,6 +23,9 @@ type Profile = {
   behavioral_class: string;
   xp: number;
   streak: number;
+  goal: string | null;
+  level: string | null;
+  time_per_day_min: number | null;
 };
 
 function MapaPage() {
@@ -34,7 +38,7 @@ function MapaPage() {
       if (!userData.user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, behavioral_class, xp, streak")
+        .select("display_name, behavioral_class, xp, streak, goal, level, time_per_day_min")
         .eq("id", userData.user.id)
         .maybeSingle();
       if (active && data) setProfile(data as Profile);
@@ -51,6 +55,13 @@ function MapaPage() {
   const level = Math.max(1, Math.floor(xp / 500) + 1);
   const xpToNext = 500;
 
+  const quest = buildDailyQuest({
+    goal: profile?.goal,
+    level: profile?.level,
+    time_per_day_min: profile?.time_per_day_min,
+    behavioral_class: behavioralClass,
+  });
+
   return (
     <MobileShell>
       <HUD
@@ -63,7 +74,7 @@ function MapaPage() {
       />
 
       <div className="px-4 pt-4">
-        <QuestOfDayCard />
+        <QuestOfDayCard quest={quest} />
       </div>
 
       <section className="px-4 pb-6 pt-5">
