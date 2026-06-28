@@ -4,9 +4,11 @@ import { LogOut, Mail, RotateCcw, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ThemePicker } from "@/components/ThemePicker";
+import { QuestHistory } from "@/components/profile/QuestHistory";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CLASS_META, type BehavioralClass } from "@/lib/behavior";
+import { listRecentQuests, type DailyQuestRow } from "@/lib/quests";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
