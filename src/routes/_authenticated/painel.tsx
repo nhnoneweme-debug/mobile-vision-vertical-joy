@@ -6,7 +6,6 @@ import {
   Crown,
   Flame,
   KeyRound,
-  Plus,
   Send,
   UserPlus,
   Users as UsersIcon,
@@ -15,7 +14,6 @@ import { MobileShell } from "@/components/shell/MobileShell";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  completeOrientadorMission,
   inviteStudentByFriendCode,
   isOrientador,
   listMissionsForOrientador,
