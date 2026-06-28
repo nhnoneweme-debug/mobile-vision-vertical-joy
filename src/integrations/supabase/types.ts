@@ -249,6 +249,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_prefs: {
+        Row: {
+          created_at: string
+          morning_hour: number
+          night_hour: number
+          push_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          morning_hour?: number
+          night_hour?: number
+          push_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          morning_hour?: number
+          night_hour?: number
+          push_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       oracle_messages: {
         Row: {
           content: string
@@ -333,6 +360,39 @@ export type Database = {
           updated_at?: string
           weight_kg?: number | null
           xp?: number
+        }
+        Relationships: []
+      }
+      ritual_logs: {
+        Row: {
+          created_at: string
+          id: string
+          intention: string | null
+          reflections: Json
+          ritual_date: string
+          ritual_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intention?: string | null
+          reflections?: Json
+          ritual_date?: string
+          ritual_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intention?: string | null
+          reflections?: Json
+          ritual_date?: string
+          ritual_type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
