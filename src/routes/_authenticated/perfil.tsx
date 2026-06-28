@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { LogOut, Mail, RotateCcw, Target } from "lucide-react";
+import { LogOut, Mail, RotateCcw, Target, GitBranch } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ThemePicker } from "@/components/ThemePicker";
