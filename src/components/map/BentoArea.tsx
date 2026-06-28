@@ -76,7 +76,13 @@ export function BentoArea({
         >
           {area.tagline.toUpperCase()}
         </p>
+        {showLevel && typeof xpPct === "number" && (
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-charcoal-800">
+            <div className="h-full bg-ember" style={{ width: `${xpPct}%` }} />
+          </div>
+        )}
       </div>
+
     </>
   );
 
