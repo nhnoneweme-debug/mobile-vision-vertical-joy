@@ -471,6 +471,99 @@ export type Database = {
         }
         Relationships: []
       }
+      orientador_invites: {
+        Row: {
+          code: string
+          created_at: string
+          note: string | null
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          note?: string | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          note?: string | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
+      orientador_missions: {
+        Row: {
+          area_slug: string | null
+          completed_at: string | null
+          created_at: string
+          detail: string | null
+          due_at: string | null
+          id: string
+          orientador_id: string
+          status: string
+          student_id: string
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          area_slug?: string | null
+          completed_at?: string | null
+          created_at?: string
+          detail?: string | null
+          due_at?: string | null
+          id?: string
+          orientador_id: string
+          status?: string
+          student_id: string
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          area_slug?: string | null
+          completed_at?: string | null
+          created_at?: string
+          detail?: string | null
+          due_at?: string | null
+          id?: string
+          orientador_id?: string
+          status?: string
+          student_id?: string
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      orientador_students: {
+        Row: {
+          accepted_at: string | null
+          id: string
+          invited_at: string
+          orientador_id: string
+          status: string
+          student_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          id?: string
+          invited_at?: string
+          orientador_id: string
+          status?: string
+          student_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          id?: string
+          invited_at?: string
+          orientador_id?: string
+          status?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -662,6 +755,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       xp_events: {
         Row: {
           amount: number
@@ -698,15 +812,23 @@ export type Database = {
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
       generate_friend_code: { Args: never; Returns: string }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_group_member: {
         Args: { _group: string; _user: string }
         Returns: boolean
       }
       player_level: { Args: { _xp: number }; Returns: number }
+      redeem_orientador_invite: { Args: { _code: string }; Returns: boolean }
       save_weekly_score_snapshot: { Args: never; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "player" | "orientador" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -833,6 +955,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["player", "orientador", "admin"],
+    },
   },
 } as const
