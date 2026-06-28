@@ -12,11 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
+import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 
 const AuthRoute = AuthRouteImport.update({
@@ -31,6 +33,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
@@ -58,6 +65,12 @@ const AuthenticatedClasseRoute = AuthenticatedClasseRouteImport.update({
   path: '/classe',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAreaOrientadorRoute =
+  AuthenticatedAreaOrientadorRouteImport.update({
+    id: '/area/orientador',
+    path: '/area/orientador',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   id: '/area/$slug',
   path: '/area/$slug',
@@ -72,7 +85,9 @@ export interface FileRoutesByFullPath {
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/api/chat': typeof ApiChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,7 +97,9 @@ export interface FileRoutesByTo {
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/api/chat': typeof ApiChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,7 +111,9 @@ export interface FileRoutesById {
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/api/chat': typeof ApiChatRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,7 +125,9 @@ export interface FileRouteTypes {
     | '/mapa'
     | '/onboarding'
     | '/perfil'
+    | '/api/chat'
     | '/area/$slug'
+    | '/area/orientador'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -116,7 +137,9 @@ export interface FileRouteTypes {
     | '/mapa'
     | '/onboarding'
     | '/perfil'
+    | '/api/chat'
     | '/area/$slug'
+    | '/area/orientador'
   id:
     | '__root__'
     | '/'
@@ -127,13 +150,16 @@ export interface FileRouteTypes {
     | '/_authenticated/mapa'
     | '/_authenticated/onboarding'
     | '/_authenticated/perfil'
+    | '/api/chat'
     | '/_authenticated/area/$slug'
+    | '/_authenticated/area/orientador'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -157,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/perfil': {
@@ -194,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClasseRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/area/orientador': {
+      id: '/_authenticated/area/orientador'
+      path: '/area/orientador'
+      fullPath: '/area/orientador'
+      preLoaderRoute: typeof AuthenticatedAreaOrientadorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area/$slug': {
       id: '/_authenticated/area/$slug'
       path: '/area/$slug'
@@ -211,6 +251,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
+  AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -220,6 +261,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
+  AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -229,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
