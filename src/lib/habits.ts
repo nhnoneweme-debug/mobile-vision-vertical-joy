@@ -86,6 +86,7 @@ export async function toggleHabit(
     status: "completed",
   });
   if (error) throw error;
+  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
 }
 
 export async function createHabit(
