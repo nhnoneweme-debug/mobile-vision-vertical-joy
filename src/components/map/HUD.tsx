@@ -1,4 +1,5 @@
-import { Flame } from "lucide-react";
+import { Flame, Coins } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function HUD({
   displayName,
@@ -7,6 +8,7 @@ export function HUD({
   xp,
   xpToNext,
   streak,
+  brasas,
 }: {
   displayName: string;
   behavioralClass: string;
@@ -14,6 +16,7 @@ export function HUD({
   xp: number;
   xpToNext: number;
   streak: number;
+  brasas?: number;
 }) {
   const pct = Math.min(100, Math.round((xp / xpToNext) * 100));
 
