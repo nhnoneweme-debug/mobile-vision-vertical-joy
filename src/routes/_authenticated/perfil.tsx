@@ -226,12 +226,37 @@ function PerfilPage() {
         </Link>
 
         <div className="mt-6">
+          <OrientadorInbox userId={userId} />
+        </div>
+
+        <Link
+          to="/painel"
+          className="mt-6 flex w-full items-center justify-between gap-3 rounded-2xl border border-ember/40 bg-card px-5 py-4 active:scale-[0.99]"
+        >
+          <div className="flex items-center gap-3">
+            <Crown className="h-5 w-5 text-ember" strokeWidth={2.2} />
+            <div>
+              <p className="font-display text-[10px] tracking-[0.3em] text-ember">
+                {orientador ? "PAINEL DO ORIENTADOR" : "VIRAR ORIENTADOR"}
+              </p>
+              <p className="font-display text-lg tracking-wide text-foreground">
+                {orientador ? "Seus alunos e missões" : "Resgatar código de acesso"}
+              </p>
+            </div>
+          </div>
+          <span className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+            ABRIR →
+          </span>
+        </Link>
+
+        <div className="mt-6">
           <NotificationPrefsCard userId={userId} />
         </div>
 
         <div className="mt-6">
           <ThemePicker />
         </div>
+
 
 
 
