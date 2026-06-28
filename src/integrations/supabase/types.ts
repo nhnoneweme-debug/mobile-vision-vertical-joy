@@ -409,7 +409,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_perk_unlocks: { Args: { _user_id: string }; Returns: number }
+      check_perk_unlocks: { Args: never; Returns: number }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       player_level: { Args: { _xp: number }; Returns: number }
     }
