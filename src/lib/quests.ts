@@ -74,6 +74,7 @@ export async function completeQuest(
     .select("*")
     .single();
   if (error) throw error;
+  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
   return data as DailyQuestRow;
 }
 
