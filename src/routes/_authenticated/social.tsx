@@ -54,7 +54,7 @@ type Tab = "feed" | "amigos" | "grupos" | "desafios";
 function SocialPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [myCode, setMyCode] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("amigos");
+  const [tab, setTab] = useState<Tab>("feed");
   const [loading, setLoading] = useState(true);
 
   const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
