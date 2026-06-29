@@ -183,7 +183,7 @@ function MonthView({ userId }: { userId: string }) {
             >
               <span className={xp > 200 ? "text-charcoal-900" : "text-foreground/80"}>{d.getDate()}</span>
               {planned > 0 && (
-                <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-ember-bright" />
+                <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-ember-glow" />
               )}
             </button>
           );
