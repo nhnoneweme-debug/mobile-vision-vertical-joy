@@ -22,6 +22,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
+import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
@@ -93,6 +94,11 @@ const AuthenticatedLojaRoute = AuthenticatedLojaRouteImport.update({
   path: '/loja',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaRoute = AuthenticatedIaRouteImport.update({
+  id: '/ia',
+  path: '/ia',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   id: '/habitos',
   path: '/habitos',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/ia': typeof AuthenticatedIaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/ia': typeof AuthenticatedIaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
+  '/_authenticated/ia': typeof AuthenticatedIaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/classe'
     | '/conquistas'
     | '/habitos'
+    | '/ia'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/classe'
     | '/conquistas'
     | '/habitos'
+    | '/ia'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/_authenticated/classe'
     | '/_authenticated/conquistas'
     | '/_authenticated/habitos'
+    | '/_authenticated/ia'
     | '/_authenticated/loja'
     | '/_authenticated/mapa'
     | '/_authenticated/onboarding'
@@ -352,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLojaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia': {
+      id: '/_authenticated/ia'
+      path: '/ia'
+      fullPath: '/ia'
+      preLoaderRoute: typeof AuthenticatedIaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/habitos': {
       id: '/_authenticated/habitos'
       path: '/habitos'
@@ -402,6 +421,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
+  AuthenticatedIaRoute: typeof AuthenticatedIaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -419,6 +439,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
+  AuthenticatedIaRoute: AuthenticatedIaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
