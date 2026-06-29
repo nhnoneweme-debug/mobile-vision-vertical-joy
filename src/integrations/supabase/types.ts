@@ -693,6 +693,7 @@ export type Database = {
           height_cm: number | null
           id: string
           level: string | null
+          level_track: string
           onboarding_completed: boolean
           onboarding_completed_at: string | null
           phone: string | null
@@ -717,6 +718,7 @@ export type Database = {
           height_cm?: number | null
           id: string
           level?: string | null
+          level_track?: string
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           phone?: string | null
@@ -741,6 +743,7 @@ export type Database = {
           height_cm?: number | null
           id?: string
           level?: string | null
+          level_track?: string
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           phone?: string | null
