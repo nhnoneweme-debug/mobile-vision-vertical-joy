@@ -1281,7 +1281,7 @@ export type Database = {
       save_weekly_score_snapshot: { Args: never; Returns: number }
     }
     Enums: {
-      app_role: "player" | "orientador" | "admin"
+      app_role: "player" | "orientador" | "admin" | "studio_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1409,7 +1409,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["player", "orientador", "admin"],
+      app_role: ["player", "orientador", "admin", "studio_admin"],
     },
   },
 } as const
