@@ -252,12 +252,17 @@ function PerfilPage() {
         </Link>
 
         <div className="mt-6">
+          <LevelTrackPicker userId={userId} xp={profile?.xp ?? 0} />
+        </div>
+
+        <div className="mt-6">
           <NotificationPrefsCard userId={userId} />
         </div>
 
         <div className="mt-6">
           <ThemePicker />
         </div>
+
 
 
 
