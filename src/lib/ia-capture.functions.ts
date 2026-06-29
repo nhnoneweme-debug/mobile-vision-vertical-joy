@@ -81,6 +81,8 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
           const { error: e } = await supabase.from("daily_quests").insert({
             user_id: userId,
             title,
+            subtitle: null,
+            area_slug: String(payload.area_slug ?? "geral"),
             xp_reward: xp,
             quest_date: today,
             status: "open",
