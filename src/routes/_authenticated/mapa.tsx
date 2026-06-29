@@ -100,6 +100,14 @@ function MapaPage() {
     };
   }, [loadProfile]);
 
+  // Drena fila de conquistas: mostra próxima quando o toast fecha
+  useEffect(() => {
+    if (achToast || achQueue.length === 0) return;
+    const [next, ...rest] = achQueue;
+    setAchToast(next);
+    setAchQueue(rest);
+  }, [achToast, achQueue]);
+
 
   async function handleSubmitCheckin(effort: number, note: string) {
     if (!quest || !userId || submitting) return;
@@ -269,13 +277,6 @@ function MapaPage() {
           onDone={() => setXpToast(null)}
         />
       )}
-
-      {!achToast && achQueue.length > 0 && (() => {
-        const [next, ...rest] = achQueue;
-        setAchToast(next);
-        setAchQueue(rest);
-        return null;
-      })()}
 
       {achToast && (
         <AchievementToast
