@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sunrise, Moon } from "lucide-react";
+import { Sunrise, Moon, CalendarDays } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -165,6 +165,26 @@ function MapaPage() {
             </p>
             <p className="font-display text-base tracking-wide text-foreground">
               {new Date().getHours() < 17 ? "Abrir o dia" : "Fechar o dia"} · +25 XP
+            </p>
+          </div>
+        </div>
+        <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+          ABRIR →
+        </span>
+      </Link>
+
+      <Link
+        to="/calendario"
+        className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-charcoal-900 text-ember">
+            <CalendarDays className="h-5 w-5" strokeWidth={2.2} />
+          </div>
+          <div>
+            <p className="font-display text-[10px] tracking-[0.3em] text-ember">PLANEJAMENTO</p>
+            <p className="font-display text-base tracking-wide text-foreground">
+              Calendário & metas trimestrais
             </p>
           </div>
         </div>

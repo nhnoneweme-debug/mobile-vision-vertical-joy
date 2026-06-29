@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Map, Swords, Flame, ShoppingBag, User } from "lucide-react";
+import { Map, CalendarDays, Flame, ShoppingBag, User } from "lucide-react";
 
 export function BottomNav() {
   return (
@@ -20,13 +20,12 @@ export function BottomNav() {
         </li>
         <li className="flex-1">
           <Link
-            to="/area/$slug"
-            params={{ slug: "missoes" }}
+            to="/calendario"
             className="group flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground transition-colors"
             activeProps={{ className: "text-ember" }}
           >
-            <Swords className="h-5 w-5" strokeWidth={2.2} />
-            <span className="font-display text-[11px] tracking-[0.18em]">MISSÕES</span>
+            <CalendarDays className="h-5 w-5" strokeWidth={2.2} />
+            <span className="font-display text-[11px] tracking-[0.18em]">PLANO</span>
           </Link>
         </li>
         <li className="flex-1">
