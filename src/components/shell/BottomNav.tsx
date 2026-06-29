@@ -13,6 +13,9 @@ import {
   LineChart,
   ClipboardCheck,
   Moon,
+  Gem,
+  Swords,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -37,6 +40,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
       { to: "/progresso", label: "Progresso", icon: LineChart },
       { to: "/classe", label: "Classe & Perks", icon: Sparkles },
       { to: "/conquistas", label: "Conquistas & Lore", icon: Trophy },
+      { to: "/cristais", label: "Cristais do Poder", icon: Gem },
       { to: "/ritual", label: "Rituais", icon: Moon },
     ],
   },
@@ -44,6 +48,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     section: "Convívio",
     items: [
       { to: "/social", label: "Social", icon: Users },
+      { to: "/desafios", label: "Desafios", icon: Swords },
       { to: "/painel", label: "Painel do Orientador", icon: ClipboardCheck },
       { to: "/area/orientador", label: "Falar com a IA", icon: BookOpen },
     ],
@@ -53,6 +58,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/perfil", label: "Perfil", icon: User },
       { to: "/loja", label: "Forja de Brasas", icon: ShoppingBag },
+      { to: "/studio", label: "Studio (admin)", icon: Wand2 },
     ],
   },
 ];

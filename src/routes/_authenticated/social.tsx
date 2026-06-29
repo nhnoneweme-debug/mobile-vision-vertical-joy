@@ -23,6 +23,8 @@ import {
   type FriendshipRow,
   type GroupRow,
 } from "@/lib/social";
+import { FriendCodeCard } from "@/components/social/FriendCodeCard";
+import { Feed } from "@/components/social/Feed";
 import { toast } from "sonner";
 import {
   Check,
@@ -49,12 +51,12 @@ export const Route = createFileRoute("/_authenticated/social")({
   component: SocialPage,
 });
 
-type Tab = "amigos" | "grupos" | "desafios";
+type Tab = "feed" | "amigos" | "grupos" | "desafios";
 
 function SocialPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [myCode, setMyCode] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("amigos");
+  const [tab, setTab] = useState<Tab>("feed");
   const [loading, setLoading] = useState(true);
 
   const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
@@ -109,7 +111,7 @@ function SocialPage() {
         </p>
 
         <div className="mt-4 flex gap-2 overflow-x-auto">
-          {(["amigos", "grupos", "desafios"] as Tab[]).map((t) => (
+          {(["feed", "amigos", "grupos", "desafios"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -129,6 +131,11 @@ function SocialPage() {
       <div className="space-y-4 px-4 py-5 pb-32">
         {loading ? (
           <p className="text-center text-sm text-muted-foreground">Carregando…</p>
+        ) : tab === "feed" ? (
+          <div className="space-y-4">
+            <FriendCodeCard code={myCode} />
+            <Feed userId={userId!} />
+          </div>
         ) : tab === "amigos" ? (
           <FriendsPanel
             userId={userId!}
