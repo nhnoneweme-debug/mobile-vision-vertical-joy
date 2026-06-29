@@ -95,7 +95,7 @@ export async function updateGoal(
   id: string,
   patch: Partial<Pick<StrategicGoal, "title" | "description" | "current_value" | "target_value" | "status">>,
 ): Promise<StrategicGoal> {
-  const body: Record<string, unknown> = { ...patch };
+  const body: Partial<StrategicGoal> = { ...patch };
   if (patch.status === "completed") body.completed_at = new Date().toISOString();
   const { data, error } = await supabase
     .from("strategic_goals")
