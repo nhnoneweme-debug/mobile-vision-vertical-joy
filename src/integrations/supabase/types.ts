@@ -696,6 +696,56 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_quests: {
+        Row: {
+          area_slug: string | null
+          created_at: string
+          goal_id: string | null
+          id: string
+          scheduled_date: string
+          status: string
+          subtitle: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          area_slug?: string | null
+          created_at?: string
+          goal_id?: string | null
+          id?: string
+          scheduled_date: string
+          status?: string
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          xp_reward?: number
+        }
+        Update: {
+          area_slug?: string | null
+          created_at?: string
+          goal_id?: string | null
+          id?: string
+          scheduled_date?: string
+          status?: string
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_quests_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       score_snapshots: {
         Row: {
           breakdown: Json
@@ -795,6 +845,51 @@ export type Database = {
           title?: string
           unlock_level?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      strategic_goals: {
+        Row: {
+          area_slug: string | null
+          completed_at: string | null
+          created_at: string
+          current_value: number
+          description: string | null
+          id: string
+          quarter: string
+          status: string
+          target_value: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area_slug?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          description?: string | null
+          id?: string
+          quarter: string
+          status?: string
+          target_value?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area_slug?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          description?: string | null
+          id?: string
+          quarter?: string
+          status?: string
+          target_value?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -912,6 +1007,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calendar_activity: {
+        Args: { _end: string; _start: string }
+        Returns: {
+          day: string
+          events: number
+          xp: number
+        }[]
+      }
       check_perk_unlocks: { Args: never; Returns: number }
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
       equip_inventory_item: {
