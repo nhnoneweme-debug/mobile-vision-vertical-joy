@@ -13,6 +13,9 @@ import {
   LineChart,
   ClipboardCheck,
   Moon,
+  Gem,
+  Swords,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
