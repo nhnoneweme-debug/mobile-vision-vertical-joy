@@ -152,12 +152,8 @@ function MapaPage() {
   const streak = profile?.streak ?? 0;
   const level = Math.max(1, Math.floor(xp / 500) + 1);
   const xpToNext = 500;
-  const rankName = (() => {
-    // Lazy import to avoid circular load — runtime only
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getTrack, rankFor } = require("@/lib/level-tracks");
-    return rankFor(getTrack(profile?.level_track), level);
-  })();
+  const rankName = rankFor(getTrack(profile?.level_track), level);
+
 
   return (
     <MobileShell>
