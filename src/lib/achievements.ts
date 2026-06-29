@@ -51,7 +51,7 @@ export async function listAchievements(): Promise<Achievement[]> {
     .select("*")
     .order("sort_order", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as Achievement[];
+  return (data ?? []) as unknown as Achievement[];
 }
 
 export async function listUserAchievements(userId: string): Promise<UserAchievement[]> {
