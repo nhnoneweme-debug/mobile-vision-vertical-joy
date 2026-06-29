@@ -206,6 +206,26 @@ function MapaPage() {
         </span>
       </Link>
 
+      <Link
+        to="/conquistas"
+        className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-charcoal-900 text-ember">
+            <Award className="h-5 w-5" strokeWidth={2.2} />
+          </div>
+          <div>
+            <p className="font-display text-[10px] tracking-[0.3em] text-ember">CONQUISTAS & LORE</p>
+            <p className="font-display text-base tracking-wide text-foreground">
+              Capítulos do Oráculo das Brasas
+            </p>
+          </div>
+        </div>
+        <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+          ABRIR →
+        </span>
+      </Link>
+
       <section className="px-4 pb-6 pt-5">
         <header className="mb-3 flex items-center gap-3">
           <h2 className="font-display text-xl tracking-[0.18em] text-foreground">
@@ -247,6 +267,20 @@ function MapaPage() {
           amount={xpToast.amount}
           leveledUp={xpToast.leveledUp}
           onDone={() => setXpToast(null)}
+        />
+      )}
+
+      {!achToast && achQueue.length > 0 && (() => {
+        const [next, ...rest] = achQueue;
+        setAchToast(next);
+        setAchQueue(rest);
+        return null;
+      })()}
+
+      {achToast && (
+        <AchievementToast
+          achievement={achToast}
+          onDone={() => setAchToast(null)}
         />
       )}
     </MobileShell>
