@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sunrise, Moon, CalendarDays } from "lucide-react";
+import { Sunrise, Moon, CalendarDays, Award } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -15,6 +15,8 @@ import {
   type DailyQuestRow,
 } from "@/lib/quests";
 import { areaLevelProgress, listAllAreaProgress, type AreaProgress } from "@/lib/area-missions";
+import { checkAchievements, type UnlockedAchievement } from "@/lib/achievements";
+import { AchievementToast } from "@/components/achievements/AchievementToast";
 import { toast } from "sonner";
 
 
@@ -46,6 +48,8 @@ function MapaPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [xpToast, setXpToast] = useState<{ amount: number; leveledUp: boolean } | null>(null);
+  const [achToast, setAchToast] = useState<UnlockedAchievement | null>(null);
+  const [achQueue, setAchQueue] = useState<UnlockedAchievement[]>([]);
   const [areaProgress, setAreaProgress] = useState<Record<string, AreaProgress>>({});
 
 
@@ -112,6 +116,15 @@ function MapaPage() {
         amount: updated.xp_reward,
         leveledUp: newLevel > prevLevel,
       });
+      try {
+        const newly = await checkAchievements();
+        if (newly.length > 0) {
+          await loadProfile(userId);
+          setAchQueue((q) => [...q, ...newly]);
+        }
+      } catch {
+        /* silent */
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro no check-in";
       toast.error(msg);
