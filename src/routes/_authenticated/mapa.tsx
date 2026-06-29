@@ -39,7 +39,9 @@ type Profile = {
   goal: string | null;
   level: string | null;
   time_per_day_min: number | null;
+  level_track: string | null;
 };
+
 
 function MapaPage() {
   const [userId, setUserId] = useState<string | null>(null);
