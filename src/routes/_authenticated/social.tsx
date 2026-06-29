@@ -109,7 +109,7 @@ function SocialPage() {
         </p>
 
         <div className="mt-4 flex gap-2 overflow-x-auto">
-          {(["amigos", "grupos", "desafios"] as Tab[]).map((t) => (
+          {(["feed", "amigos", "grupos", "desafios"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
