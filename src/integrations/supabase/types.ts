@@ -418,6 +418,24 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          created_at: string
+          followed_id: string
+          follower_id: string
+        }
+        Insert: {
+          created_at?: string
+          followed_id: string
+          follower_id: string
+        }
+        Update: {
+          created_at?: string
+          followed_id?: string
+          follower_id?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -761,6 +779,209 @@ export type Database = {
         }
         Relationships: []
       }
+      post_audience: {
+        Row: {
+          audience_id: string | null
+          audience_type: string
+          created_at: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          audience_id?: string | null
+          audience_type: string
+          created_at?: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          audience_id?: string | null
+          audience_type?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_audience_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_views: {
+        Row: {
+          id: string
+          post_id: string
+          viewed_at: string
+          viewer_id: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          viewed_at?: string
+          viewer_id: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          viewed_at?: string
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_views_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          author_id: string
+          body: string | null
+          created_at: string
+          id: string
+          media_type: string
+          media_url: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          visibility_mode: string
+          visibility_rule: Json
+        }
+        Insert: {
+          author_id: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          visibility_mode?: string
+          visibility_rule?: Json
+        }
+        Update: {
+          author_id?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          visibility_mode?: string
+          visibility_rule?: Json
+        }
+        Relationships: []
+      }
+      power_crystals: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string | null
+          effect_config: Json
+          effect_type: string
+          icon: string | null
+          id: string
+          name: string
+          rarity: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string | null
+          effect_config?: Json
+          effect_type: string
+          icon?: string | null
+          id?: string
+          name: string
+          rarity?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string | null
+          effect_config?: Json
+          effect_type?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          rarity?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -1069,6 +1290,167 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_challenge_participants: {
+        Row: {
+          awarded_rewards: string[]
+          challenge_id: string
+          completed_at: string | null
+          id: string
+          joined_at: string
+          progress: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          awarded_rewards?: string[]
+          challenge_id: string
+          completed_at?: string | null
+          id?: string
+          joined_at?: string
+          progress?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          awarded_rewards?: string[]
+          challenge_id?: string
+          completed_at?: string | null
+          id?: string
+          joined_at?: string
+          progress?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "studio_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_challenge_rewards: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          criteria: Json
+          id: string
+          reward_id: string
+          tier: number
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          criteria?: Json
+          id?: string
+          reward_id: string
+          tier?: number
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          criteria?: Json
+          id?: string
+          reward_id?: string
+          tier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_challenge_rewards_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "studio_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_challenge_rewards_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "studio_rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_challenges: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_at: string | null
+          id: string
+          rules: Json
+          start_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_at?: string | null
+          id?: string
+          rules?: Json
+          start_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_at?: string | null
+          id?: string
+          rules?: Json
+          start_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      studio_rewards: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          kind: string
+          name: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind: string
+          name: string
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_id: string
@@ -1097,6 +1479,53 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_crystals: {
+        Row: {
+          acquired_at: string
+          active: boolean
+          condition: Json | null
+          created_at: string
+          crystal_id: string
+          expires_at: string | null
+          id: string
+          mode: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          active?: boolean
+          condition?: Json | null
+          created_at?: string
+          crystal_id: string
+          expires_at?: string | null
+          id?: string
+          mode: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          active?: boolean
+          condition?: Json | null
+          created_at?: string
+          crystal_id?: string
+          expires_at?: string | null
+          id?: string
+          mode?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_crystals_crystal_id_fkey"
+            columns: ["crystal_id"]
+            isOneToOne: false
+            referencedRelation: "power_crystals"
             referencedColumns: ["id"]
           },
         ]
@@ -1255,12 +1684,20 @@ export type Database = {
           xp: number
         }[]
       }
+      can_view_post: {
+        Args: { _post_id: string; _viewer: string }
+        Returns: boolean
+      }
       check_achievements: { Args: never; Returns: Json }
       check_perk_unlocks: { Args: never; Returns: number }
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
       equip_inventory_item: {
         Args: { _equip: boolean; _item_id: string }
         Returns: boolean
+      }
+      evaluate_challenge: {
+        Args: { _challenge: string; _user: string }
+        Returns: Json
       }
       generate_friend_code: { Args: never; Returns: string }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
@@ -1269,6 +1706,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_crystal_active: {
+        Args: { _code: string; _user: string }
         Returns: boolean
       }
       is_group_member: {
