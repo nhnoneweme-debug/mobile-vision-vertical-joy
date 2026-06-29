@@ -32,15 +32,18 @@ function OnboardingPage() {
   const [goal, setGoal] = useState<GoalData>({});
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
-  // Pré-popula display_name a partir do profile existente
+  // Pré-popula nome/telefone do profile e dos metadados de SSO
   useEffect(() => {
     let active = true;
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
+      const meta = userData.user.user_metadata ?? {};
+      const ssoName = (meta.full_name || meta.name || "") as string;
+      const ssoPhone = (userData.user.phone || "") as string;
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, onboarding_completed")
+        .select("display_name, phone, phone_country, onboarding_completed")
         .eq("id", userData.user.id)
         .maybeSingle();
       if (!active) return;
@@ -48,9 +51,12 @@ function OnboardingPage() {
         navigate({ to: "/mapa", replace: true });
         return;
       }
-      if (data?.display_name) {
-        setAvatar((a) => ({ ...a, display_name: a.display_name || data.display_name }));
-      }
+      setAvatar((a) => ({
+        ...a,
+        display_name: a.display_name || data?.display_name || ssoName || "",
+        phone_number: a.phone_number || data?.phone || ssoPhone || "",
+        phone_country: a.phone_country || data?.phone_country || "BR",
+      }));
     })();
     return () => {
       active = false;
@@ -60,14 +66,7 @@ function OnboardingPage() {
   const result = useMemo(() => computeBehavior(answers), [answers]);
 
   const canNext = (() => {
-    if (step === 0)
-      return Boolean(
-        avatar.display_name.trim() &&
-          avatar.age &&
-          avatar.gender &&
-          avatar.height_cm &&
-          avatar.weight_kg,
-      );
+    if (step === 0) return Boolean(avatar.display_name.trim());
     if (step === 1)
       return Boolean(
         goal.goal && goal.level && goal.time_per_day_min && goal.days_per_week,
