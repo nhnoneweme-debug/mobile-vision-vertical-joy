@@ -7,7 +7,7 @@ type ApplyInput = { audit_id: string };
 export const applyAuditWrite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: ApplyInput) => d)
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { supabase, userId } = context;
     const { data: audit, error } = await supabase
       .from("ai_audit_log")
@@ -20,27 +20,22 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
 
     const action = audit.action as AllowedAction;
     const payload = (audit.payload ?? {}) as Record<string, unknown>;
-    let result: unknown = null;
 
     try {
       switch (action) {
         case "habit.create": {
           const title = String(payload.title ?? "").trim();
-          const target = Number(payload.target_per_week ?? 3);
           if (!title) throw new Error("missing_title");
-          const { data: r, error: e } = await supabase
-            .from("habits")
-            .insert({
-              user_id: userId,
-              title,
-              target_per_week: Math.max(1, Math.min(7, target)),
-              active: true,
-              xp_reward: 10,
-            })
-            .select("id")
-            .single();
+          const target = Math.max(1, Math.min(7, Number(payload.target_per_week ?? 3)));
+          const { error: e } = await supabase.from("habits").insert({
+            user_id: userId,
+            title,
+            target_per_week: target,
+            active: true,
+            area_slug: String(payload.area ?? "geral"),
+            icon: "flame",
+          });
           if (e) throw e;
-          result = r;
           break;
         }
         case "habit_log.today": {
@@ -55,20 +50,27 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
           if (!h) {
             const { data: created, error: ce } = await supabase
               .from("habits")
-              .insert({ user_id: userId, title, target_per_week: 3, active: true, xp_reward: 10 })
+              .insert({
+                user_id: userId,
+                title,
+                target_per_week: 3,
+                active: true,
+                area_slug: "geral",
+                icon: "flame",
+              })
               .select("id")
               .single();
             if (ce) throw ce;
             h = created;
           }
           const today = new Date().toISOString().slice(0, 10);
-          const { data: r, error: e } = await supabase
-            .from("habit_logs")
-            .insert({ habit_id: h!.id, user_id: userId, log_date: today, status: "completed", xp_reward: 10 })
-            .select("id")
-            .single();
+          const { error: e } = await supabase.from("habit_logs").insert({
+            habit_id: h!.id,
+            user_id: userId,
+            log_date: today,
+            status: "completed",
+          });
           if (e) throw e;
-          result = r;
           break;
         }
         case "quest.create": {
@@ -76,20 +78,14 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
           if (!title) throw new Error("missing_title");
           const xp = Number(payload.xp_reward ?? 25);
           const today = new Date().toISOString().slice(0, 10);
-          const { data: r, error: e } = await supabase
-            .from("daily_quests")
-            .insert({
-              user_id: userId,
-              title,
-              xp_reward: xp,
-              quest_date: today,
-              status: "open",
-              source: "ia_capture",
-            })
-            .select("id")
-            .single();
+          const { error: e } = await supabase.from("daily_quests").insert({
+            user_id: userId,
+            title,
+            xp_reward: xp,
+            quest_date: today,
+            status: "open",
+          });
           if (e) throw e;
-          result = r;
           break;
         }
         case "ritual.upsert": {
@@ -97,61 +93,61 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
           const content = String(payload.content ?? "").trim();
           if (!["morning", "night"].includes(type) || !content) throw new Error("invalid_ritual");
           const today = new Date().toISOString().slice(0, 10);
-          const { data: r, error: e } = await supabase
+          const row =
+            type === "morning"
+              ? { intention: content }
+              : { reflections: { note: content } as unknown as never };
+          const { error: e } = await supabase
             .from("ritual_logs")
             .upsert(
-              { user_id: userId, ritual_type: type, ritual_date: today, content },
-              { onConflict: "user_id,ritual_type,ritual_date" },
-            )
-            .select("id")
-            .single();
+              {
+                user_id: userId,
+                ritual_type: type,
+                ritual_date: today,
+                ...row,
+              },
+              { onConflict: "user_id,ritual_date,ritual_type" },
+            );
           if (e) throw e;
-          result = r;
           break;
         }
         case "goal.create": {
           const title = String(payload.title ?? "").trim();
-          const horizon = String(payload.horizon ?? "quarter");
           if (!title) throw new Error("missing_title");
-          const { data: r, error: e } = await supabase
-            .from("strategic_goals")
-            .insert({
-              user_id: userId,
-              title,
-              horizon,
-              target_date: (payload.target_date as string) ?? null,
-              status: "active",
-            })
-            .select("id")
-            .single();
+          const quarter = String(payload.horizon ?? payload.quarter ?? "trimestre");
+          const { error: e } = await supabase.from("strategic_goals").insert({
+            user_id: userId,
+            title,
+            quarter,
+            status: "active",
+            description: (payload.description as string) ?? null,
+          });
           if (e) throw e;
-          result = r;
           break;
         }
         case "scheduled_quest.create": {
           const title = String(payload.title ?? "").trim();
-          const date = String(payload.scheduled_for ?? "");
+          const date = String(payload.scheduled_for ?? payload.scheduled_date ?? "");
           if (!title || !date) throw new Error("missing_fields");
-          const { data: r, error: e } = await supabase
-            .from("scheduled_quests")
-            .insert({ user_id: userId, title, scheduled_for: date, status: "pending" })
-            .select("id")
-            .single();
+          const { error: e } = await supabase.from("scheduled_quests").insert({
+            user_id: userId,
+            title,
+            scheduled_date: date,
+            status: "pending",
+          });
           if (e) throw e;
-          result = r;
           break;
         }
         case "area_mission.complete": {
           const area = String(payload.area_slug ?? "");
           const missionId = String(payload.mission_id ?? "");
           if (!area || !missionId) throw new Error("missing_fields");
-          const { data: r, error: e } = await supabase
-            .from("area_mission_logs")
-            .insert({ user_id: userId, area_slug: area, mission_id: missionId })
-            .select("id")
-            .single();
+          const { error: e } = await supabase.from("area_mission_logs").insert({
+            user_id: userId,
+            area_slug: area,
+            mission_id: missionId,
+          });
           if (e) throw e;
-          result = r;
           break;
         }
         case "profile.update": {
@@ -160,14 +156,11 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
             if (PROFILE_UPDATABLE_FIELDS.has(k)) safe[k] = v;
           }
           if (Object.keys(safe).length === 0) throw new Error("no_fields");
-          const { data: r, error: e } = await supabase
+          const { error: e } = await supabase
             .from("profiles")
-            .update(safe)
-            .eq("id", userId)
-            .select("id")
-            .single();
+            .update(safe as never)
+            .eq("id", userId);
           if (e) throw e;
-          result = r;
           break;
         }
         default:
@@ -176,10 +169,10 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
 
       await supabase
         .from("ai_audit_log")
-        .update({ status: "applied", result: result as never })
+        .update({ status: "applied" })
         .eq("id", data.audit_id);
 
-      return { ok: true, result };
+      return { ok: true };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "apply_failed";
       await supabase
@@ -193,7 +186,7 @@ export const applyAuditWrite = createServerFn({ method: "POST" })
 export const rejectAuditWrite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: ApplyInput) => d)
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { supabase, userId } = context;
     const { error } = await supabase
       .from("ai_audit_log")

@@ -88,7 +88,7 @@ export const Route = createFileRoute("/api/ia-capture")({
                 session_id: sessionId,
                 table_name: table,
                 action,
-                payload,
+                payload: payload as never,
                 status: "pending",
                 reason: summary,
               })
