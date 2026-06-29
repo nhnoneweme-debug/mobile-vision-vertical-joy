@@ -15,6 +15,8 @@ import {
   type DailyQuestRow,
 } from "@/lib/quests";
 import { areaLevelProgress, listAllAreaProgress, type AreaProgress } from "@/lib/area-missions";
+import { getTrack, rankFor } from "@/lib/level-tracks";
+
 import { checkAchievements, type UnlockedAchievement } from "@/lib/achievements";
 import { AchievementToast } from "@/components/achievements/AchievementToast";
 import { toast } from "sonner";
