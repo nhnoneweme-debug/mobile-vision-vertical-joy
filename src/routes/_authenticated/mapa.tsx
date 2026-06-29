@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sunrise, Moon } from "lucide-react";
+import { Sunrise, Moon, CalendarDays } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
