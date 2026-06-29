@@ -19,7 +19,7 @@ export type FeedPost = {
   thumbnail_url: string | null;
   visibility_mode: VisibilityMode;
   created_at: string;
-  author?: { display_name: string | null; avatar_url: string | null };
+  author?: { display_name: string | null };
   reactions_count?: number;
   comments_count?: number;
   views_count?: number;
@@ -107,7 +107,7 @@ export async function listFeed(limit = 20): Promise<FeedPost[]> {
   const authorIds = Array.from(new Set(posts.map((p) => p.author_id)));
 
   const [profilesQ, reactionsQ, commentsQ, viewsQ, myReactQ] = await Promise.all([
-    supabase.from("profiles").select("id, display_name, avatar_url").in("id", authorIds),
+    supabase.from("profiles").select("id, display_name").in("id", authorIds),
     supabase.from("post_reactions").select("post_id").in("post_id", ids),
     supabase.from("post_comments").select("post_id").in("post_id", ids),
     supabase.from("post_views").select("post_id").in("post_id", ids),
@@ -183,7 +183,7 @@ export async function listComments(postId: string) {
   const ids = Array.from(new Set(data.map((c) => c.user_id)));
   const { data: profs } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name")
     .in("id", ids);
   const map = new Map((profs ?? []).map((p) => [p.id, p]));
   return data.map((c) => ({ ...c, author: map.get(c.user_id) ?? null }));
@@ -221,7 +221,7 @@ export async function listSilentViewers(postId: string) {
   const ids = silent.map((v) => v.viewer_id);
   const { data: profs } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name")
     .in("id", ids);
   const map = new Map((profs ?? []).map((p) => [p.id, p]));
   return silent.map((v) => ({ ...v, profile: map.get(v.viewer_id) ?? null }));
