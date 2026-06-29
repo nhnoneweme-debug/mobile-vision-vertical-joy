@@ -23,6 +23,7 @@ import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/m
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
+import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 
@@ -95,6 +96,11 @@ const AuthenticatedClasseRoute = AuthenticatedClasseRouteImport.update({
   path: '/classe',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAreaOrientadorRoute =
   AuthenticatedAreaOrientadorRouteImport.update({
     id: '/area/orientador',
@@ -110,6 +116,7 @@ const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/loja': typeof AuthenticatedLojaRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/loja': typeof AuthenticatedLojaRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/calendario'
     | '/classe'
     | '/habitos'
     | '/loja'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/calendario'
     | '/classe'
     | '/habitos'
     | '/loja'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/calendario'
     | '/_authenticated/classe'
     | '/_authenticated/habitos'
     | '/_authenticated/loja'
@@ -322,6 +334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClasseRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/calendario': {
+      id: '/_authenticated/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area/orientador': {
       id: '/_authenticated/area/orientador'
       path: '/area/orientador'
@@ -340,6 +359,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
@@ -355,6 +375,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
