@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          brasas_reward: number
+          category: string
+          code: string
+          created_at: string
+          criteria: Json
+          description: string
+          icon: string
+          id: string
+          lore_fragment: string | null
+          rarity: string
+          sort_order: number
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          brasas_reward?: number
+          category?: string
+          code: string
+          created_at?: string
+          criteria: Json
+          description: string
+          icon?: string
+          id?: string
+          lore_fragment?: string | null
+          rarity?: string
+          sort_order?: number
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          brasas_reward?: number
+          category?: string
+          code?: string
+          created_at?: string
+          criteria?: Json
+          description?: string
+          icon?: string
+          id?: string
+          lore_fragment?: string | null
+          rarity?: string
+          sort_order?: number
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       area_mission_logs: {
         Row: {
           area_slug: string
@@ -447,6 +495,42 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      lore_chapters: {
+        Row: {
+          body: string
+          chapter_number: number
+          code: string
+          created_at: string
+          id: string
+          subtitle: string | null
+          title: string
+          unlock_achievement_code: string | null
+          unlock_level: number
+        }
+        Insert: {
+          body: string
+          chapter_number: number
+          code: string
+          created_at?: string
+          id?: string
+          subtitle?: string | null
+          title: string
+          unlock_achievement_code?: string | null
+          unlock_level?: number
+        }
+        Update: {
+          body?: string
+          chapter_number?: number
+          code?: string
+          created_at?: string
+          id?: string
+          subtitle?: string | null
+          title?: string
+          unlock_achievement_code?: string | null
+          unlock_level?: number
         }
         Relationships: []
       }
@@ -893,6 +977,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          seen: boolean
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          seen?: boolean
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          seen?: boolean
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_inventory: {
         Row: {
           acquired_at: string
@@ -921,6 +1037,35 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "shop_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_lore: {
+        Row: {
+          chapter_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_lore_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "lore_chapters"
             referencedColumns: ["id"]
           },
         ]
@@ -1015,6 +1160,7 @@ export type Database = {
           xp: number
         }[]
       }
+      check_achievements: { Args: never; Returns: Json }
       check_perk_unlocks: { Args: never; Returns: number }
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
       equip_inventory_item: {
