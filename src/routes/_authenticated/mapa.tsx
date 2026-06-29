@@ -58,8 +58,9 @@ function MapaPage() {
   const loadProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("display_name, behavioral_class, xp, streak, brasas, goal, level, time_per_day_min")
+      .select("display_name, behavioral_class, xp, streak, brasas, goal, level, time_per_day_min, level_track")
       .eq("id", uid)
+
       .maybeSingle();
     if (data) setProfile(data as Profile);
     return data as Profile | null;
