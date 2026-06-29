@@ -62,6 +62,89 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          payload: Json
+          reason: string | null
+          result: Json | null
+          session_id: string | null
+          status: string
+          table_name: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          reason?: string | null
+          result?: Json | null
+          session_id?: string | null
+          status?: string
+          table_name: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          reason?: string | null
+          result?: Json | null
+          session_id?: string | null
+          status?: string
+          table_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_audit_log_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_capture_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_capture_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          messages: Json
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+          writes_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          messages?: Json
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          writes_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          messages?: Json
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          writes_count?: number
+        }
+        Relationships: []
+      }
       area_mission_logs: {
         Row: {
           area_slug: string
