@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
@@ -40,6 +41,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
+  id: '/api/ia-capture',
+  path: '/api/ia-capture',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ia-capture': typeof ApiIaCaptureRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ia-capture': typeof ApiIaCaptureRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ia-capture': typeof ApiIaCaptureRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/ritual'
     | '/social'
     | '/api/chat'
+    | '/api/ia-capture'
     | '/area/$slug'
     | '/area/orientador'
   fileRoutesByTo: FileRoutesByTo
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/ritual'
     | '/social'
     | '/api/chat'
+    | '/api/ia-capture'
     | '/area/$slug'
     | '/area/orientador'
   id:
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ritual'
     | '/_authenticated/social'
     | '/api/chat'
+    | '/api/ia-capture'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
   fileRoutesById: FileRoutesById
@@ -244,6 +256,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiIaCaptureRoute: typeof ApiIaCaptureRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ia-capture': {
+      id: '/api/ia-capture'
+      path: '/api/ia-capture'
+      fullPath: '/api/ia-capture'
+      preLoaderRoute: typeof ApiIaCaptureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -419,6 +439,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiIaCaptureRoute: ApiIaCaptureRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
