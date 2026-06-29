@@ -9,6 +9,7 @@ import { BehaviorStep } from "@/components/onboarding/BehaviorStep";
 import { OracleReveal } from "@/components/onboarding/OracleReveal";
 import { BEHAVIOR_QUESTIONS, computeBehavior } from "@/lib/behavior";
 import { seedHabitsForClass } from "@/lib/habits";
+import { COUNTRIES, formatE164 } from "@/lib/countries";
 import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
@@ -91,14 +92,22 @@ function OnboardingPage() {
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Sessão expirada.");
+      const dial =
+        COUNTRIES.find((c) => c.code === (avatar.phone_country ?? "BR"))?.dial ??
+        "+55";
+      const phoneE164 = avatar.phone_number?.trim()
+        ? formatE164(dial, avatar.phone_number)
+        : null;
       const { error } = await supabase
         .from("profiles")
         .update({
           display_name: avatar.display_name.trim(),
-          age: avatar.age,
-          gender: avatar.gender,
-          height_cm: avatar.height_cm,
-          weight_kg: avatar.weight_kg,
+          age: avatar.age ?? null,
+          gender: avatar.gender ?? null,
+          height_cm: avatar.height_cm ?? null,
+          weight_kg: avatar.weight_kg ?? null,
+          phone: phoneE164,
+          phone_country: avatar.phone_country ?? "BR",
           goal: goal.goal,
           level: goal.level,
           time_per_day_min: goal.time_per_day_min,
