@@ -8,6 +8,8 @@ import { ThemePicker } from "@/components/ThemePicker";
 import { QuestHistory } from "@/components/profile/QuestHistory";
 import { NotificationPrefsCard } from "@/components/profile/NotificationPrefsCard";
 import { OrientadorInbox } from "@/components/profile/OrientadorInbox";
+import { LevelTrackPicker } from "@/components/profile/LevelTrackPicker";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CLASS_META, type BehavioralClass } from "@/lib/behavior";
@@ -250,12 +252,17 @@ function PerfilPage() {
         </Link>
 
         <div className="mt-6">
+          <LevelTrackPicker userId={userId} xp={profile?.xp ?? 0} />
+        </div>
+
+        <div className="mt-6">
           <NotificationPrefsCard userId={userId} />
         </div>
 
         <div className="mt-6">
           <ThemePicker />
         </div>
+
 
 
 

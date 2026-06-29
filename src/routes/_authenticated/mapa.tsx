@@ -15,6 +15,8 @@ import {
   type DailyQuestRow,
 } from "@/lib/quests";
 import { areaLevelProgress, listAllAreaProgress, type AreaProgress } from "@/lib/area-missions";
+import { getTrack, rankFor } from "@/lib/level-tracks";
+
 import { checkAchievements, type UnlockedAchievement } from "@/lib/achievements";
 import { AchievementToast } from "@/components/achievements/AchievementToast";
 import { toast } from "sonner";
@@ -39,7 +41,9 @@ type Profile = {
   goal: string | null;
   level: string | null;
   time_per_day_min: number | null;
+  level_track: string | null;
 };
+
 
 function MapaPage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -56,8 +60,9 @@ function MapaPage() {
   const loadProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("display_name, behavioral_class, xp, streak, brasas, goal, level, time_per_day_min")
+      .select("display_name, behavioral_class, xp, streak, brasas, goal, level, time_per_day_min, level_track")
       .eq("id", uid)
+
       .maybeSingle();
     if (data) setProfile(data as Profile);
     return data as Profile | null;
@@ -147,6 +152,8 @@ function MapaPage() {
   const streak = profile?.streak ?? 0;
   const level = Math.max(1, Math.floor(xp / 500) + 1);
   const xpToNext = 500;
+  const rankName = rankFor(getTrack(profile?.level_track), level);
+
 
   return (
     <MobileShell>
@@ -158,7 +165,9 @@ function MapaPage() {
         xpToNext={xpToNext}
         streak={streak}
         brasas={profile?.brasas ?? 0}
+        rankName={rankName}
       />
+
 
       <div className="px-4 pt-4">
         {quest ? (

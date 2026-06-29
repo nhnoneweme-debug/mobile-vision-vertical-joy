@@ -9,6 +9,7 @@ export function HUD({
   xpToNext,
   streak,
   brasas,
+  rankName,
 }: {
   displayName: string;
   behavioralClass: string;
@@ -17,6 +18,7 @@ export function HUD({
   xpToNext: number;
   streak: number;
   brasas?: number;
+  rankName?: string;
 }) {
   const pct = Math.min(100, Math.round((xp / xpToNext) * 100));
 
@@ -41,10 +43,11 @@ export function HUD({
               {behavioralClass}
             </span>
           </div>
-          <p className="mt-1 font-display text-[11px] tracking-[0.25em] text-muted-foreground">
-            NÍVEL {String(level).padStart(2, "0")} · {xp}/{xpToNext} XP
+          <p className="mt-1 truncate font-display text-[11px] tracking-[0.25em] text-muted-foreground">
+            {rankName ? `${rankName.toUpperCase()} · ` : ""}NÍVEL {String(level).padStart(2, "0")} · {xp}/{xpToNext} XP
           </p>
         </div>
+
 
         <div className="flex flex-col items-end">
           <div className="flex items-center gap-1 rounded-lg bg-charcoal-800 px-2 py-1">
