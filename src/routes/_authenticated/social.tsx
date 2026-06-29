@@ -129,6 +129,11 @@ function SocialPage() {
       <div className="space-y-4 px-4 py-5 pb-32">
         {loading ? (
           <p className="text-center text-sm text-muted-foreground">Carregando…</p>
+        ) : tab === "feed" ? (
+          <div className="space-y-4">
+            <FriendCodeCard code={myCode} />
+            <Feed userId={userId!} />
+          </div>
         ) : tab === "amigos" ? (
           <FriendsPanel
             userId={userId!}
