@@ -1,0 +1,1 @@
+ALTER TABLE public.xp_events ADD COLUMN IF NOT EXISTS meta jsonb NOT NULL DEFAULT '{}'::jsonb;

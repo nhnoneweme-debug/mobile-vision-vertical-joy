@@ -1131,6 +1131,7 @@ export type Database = {
           amount: number
           created_at: string
           id: string
+          meta: Json
           ref_id: string | null
           source: string
           user_id: string
@@ -1139,6 +1140,7 @@ export type Database = {
           amount: number
           created_at?: string
           id?: string
+          meta?: Json
           ref_id?: string | null
           source: string
           user_id: string
@@ -1147,6 +1149,7 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
+          meta?: Json
           ref_id?: string | null
           source?: string
           user_id?: string
