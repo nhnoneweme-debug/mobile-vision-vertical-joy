@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sunrise, Moon, CalendarDays } from "lucide-react";
+import { Sunrise, Moon, CalendarDays, Award } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -15,6 +15,8 @@ import {
   type DailyQuestRow,
 } from "@/lib/quests";
 import { areaLevelProgress, listAllAreaProgress, type AreaProgress } from "@/lib/area-missions";
+import { checkAchievements, type UnlockedAchievement } from "@/lib/achievements";
+import { AchievementToast } from "@/components/achievements/AchievementToast";
 import { toast } from "sonner";
 
 
@@ -46,6 +48,8 @@ function MapaPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [xpToast, setXpToast] = useState<{ amount: number; leveledUp: boolean } | null>(null);
+  const [achToast, setAchToast] = useState<UnlockedAchievement | null>(null);
+  const [achQueue, setAchQueue] = useState<UnlockedAchievement[]>([]);
   const [areaProgress, setAreaProgress] = useState<Record<string, AreaProgress>>({});
 
 
@@ -96,6 +100,14 @@ function MapaPage() {
     };
   }, [loadProfile]);
 
+  // Drena fila de conquistas: mostra próxima quando o toast fecha
+  useEffect(() => {
+    if (achToast || achQueue.length === 0) return;
+    const [next, ...rest] = achQueue;
+    setAchToast(next);
+    setAchQueue(rest);
+  }, [achToast, achQueue]);
+
 
   async function handleSubmitCheckin(effort: number, note: string) {
     if (!quest || !userId || submitting) return;
@@ -112,6 +124,15 @@ function MapaPage() {
         amount: updated.xp_reward,
         leveledUp: newLevel > prevLevel,
       });
+      try {
+        const newly = await checkAchievements();
+        if (newly.length > 0) {
+          await loadProfile(userId);
+          setAchQueue((q) => [...q, ...newly]);
+        }
+      } catch {
+        /* silent */
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro no check-in";
       toast.error(msg);
@@ -193,6 +214,26 @@ function MapaPage() {
         </span>
       </Link>
 
+      <Link
+        to="/conquistas"
+        className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-charcoal-900 text-ember">
+            <Award className="h-5 w-5" strokeWidth={2.2} />
+          </div>
+          <div>
+            <p className="font-display text-[10px] tracking-[0.3em] text-ember">CONQUISTAS & LORE</p>
+            <p className="font-display text-base tracking-wide text-foreground">
+              Capítulos do Oráculo das Brasas
+            </p>
+          </div>
+        </div>
+        <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+          ABRIR →
+        </span>
+      </Link>
+
       <section className="px-4 pb-6 pt-5">
         <header className="mb-3 flex items-center gap-3">
           <h2 className="font-display text-xl tracking-[0.18em] text-foreground">
@@ -234,6 +275,13 @@ function MapaPage() {
           amount={xpToast.amount}
           leveledUp={xpToast.leveledUp}
           onDone={() => setXpToast(null)}
+        />
+      )}
+
+      {achToast && (
+        <AchievementToast
+          achievement={achToast}
+          onDone={() => setAchToast(null)}
         />
       )}
     </MobileShell>
