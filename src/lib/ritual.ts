@@ -75,7 +75,7 @@ export async function saveRitual(
   };
   const { data, error } = await supabase
     .from("ritual_logs")
-    .insert(row)
+    .upsert(row, { onConflict: "user_id,ritual_date,ritual_type" })
     .select("id, ritual_date, ritual_type, intention, reflections")
     .single();
   if (error) throw error;
