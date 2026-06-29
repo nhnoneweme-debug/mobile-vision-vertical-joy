@@ -116,7 +116,7 @@ export async function listFeed(limit = 20): Promise<FeedPost[]> {
       : Promise.resolve({ data: [] as { post_id: string; kind: string }[] }),
   ]);
   const profilesMap = new Map(
-    (profilesQ.data ?? []).map((p) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]),
+    (profilesQ.data ?? []).map((p) => [p.id, { display_name: p.display_name }]),
   );
   const count = (rows: { post_id: string }[] | null | undefined, id: string) =>
     (rows ?? []).filter((r) => r.post_id === id).length;
