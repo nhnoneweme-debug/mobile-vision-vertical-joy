@@ -9,6 +9,7 @@ import { BehaviorStep } from "@/components/onboarding/BehaviorStep";
 import { OracleReveal } from "@/components/onboarding/OracleReveal";
 import { BEHAVIOR_QUESTIONS, computeBehavior } from "@/lib/behavior";
 import { seedHabitsForClass } from "@/lib/habits";
+import { COUNTRIES, formatE164 } from "@/lib/countries";
 import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
@@ -32,15 +33,18 @@ function OnboardingPage() {
   const [goal, setGoal] = useState<GoalData>({});
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
-  // Pré-popula display_name a partir do profile existente
+  // Pré-popula nome/telefone do profile e dos metadados de SSO
   useEffect(() => {
     let active = true;
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
+      const meta = userData.user.user_metadata ?? {};
+      const ssoName = (meta.full_name || meta.name || "") as string;
+      const ssoPhone = (userData.user.phone || "") as string;
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, onboarding_completed")
+        .select("display_name, phone, phone_country, onboarding_completed")
         .eq("id", userData.user.id)
         .maybeSingle();
       if (!active) return;
@@ -48,9 +52,12 @@ function OnboardingPage() {
         navigate({ to: "/mapa", replace: true });
         return;
       }
-      if (data?.display_name) {
-        setAvatar((a) => ({ ...a, display_name: a.display_name || data.display_name }));
-      }
+      setAvatar((a) => ({
+        ...a,
+        display_name: a.display_name || data?.display_name || ssoName || "",
+        phone_number: a.phone_number || data?.phone || ssoPhone || "",
+        phone_country: a.phone_country || data?.phone_country || "BR",
+      }));
     })();
     return () => {
       active = false;
@@ -60,14 +67,7 @@ function OnboardingPage() {
   const result = useMemo(() => computeBehavior(answers), [answers]);
 
   const canNext = (() => {
-    if (step === 0)
-      return Boolean(
-        avatar.display_name.trim() &&
-          avatar.age &&
-          avatar.gender &&
-          avatar.height_cm &&
-          avatar.weight_kg,
-      );
+    if (step === 0) return Boolean(avatar.display_name.trim());
     if (step === 1)
       return Boolean(
         goal.goal && goal.level && goal.time_per_day_min && goal.days_per_week,
@@ -92,14 +92,22 @@ function OnboardingPage() {
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Sessão expirada.");
+      const dial =
+        COUNTRIES.find((c) => c.code === (avatar.phone_country ?? "BR"))?.dial ??
+        "+55";
+      const phoneE164 = avatar.phone_number?.trim()
+        ? formatE164(dial, avatar.phone_number)
+        : null;
       const { error } = await supabase
         .from("profiles")
         .update({
           display_name: avatar.display_name.trim(),
-          age: avatar.age,
-          gender: avatar.gender,
-          height_cm: avatar.height_cm,
-          weight_kg: avatar.weight_kg,
+          age: avatar.age ?? null,
+          gender: avatar.gender ?? null,
+          height_cm: avatar.height_cm ?? null,
+          weight_kg: avatar.weight_kg ?? null,
+          phone: phoneE164,
+          phone_country: avatar.phone_country ?? "BR",
           goal: goal.goal,
           level: goal.level,
           time_per_day_min: goal.time_per_day_min,

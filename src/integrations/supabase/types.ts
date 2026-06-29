@@ -695,6 +695,8 @@ export type Database = {
           level: string | null
           onboarding_completed: boolean
           onboarding_completed_at: string | null
+          phone: string | null
+          phone_country: string | null
           streak: number
           time_per_day_min: number | null
           updated_at: string
@@ -717,6 +719,8 @@ export type Database = {
           level?: string | null
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
+          phone?: string | null
+          phone_country?: string | null
           streak?: number
           time_per_day_min?: number | null
           updated_at?: string
@@ -739,6 +743,8 @@ export type Database = {
           level?: string | null
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
+          phone?: string | null
+          phone_country?: string | null
           streak?: number
           time_per_day_min?: number | null
           updated_at?: string
