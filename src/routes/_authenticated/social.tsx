@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/social")({
   component: SocialPage,
 });
 
-type Tab = "amigos" | "grupos" | "desafios";
+type Tab = "feed" | "amigos" | "grupos" | "desafios";
 
 function SocialPage() {
   const [userId, setUserId] = useState<string | null>(null);
