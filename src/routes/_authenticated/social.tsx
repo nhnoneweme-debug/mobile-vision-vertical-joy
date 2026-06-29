@@ -23,6 +23,8 @@ import {
   type FriendshipRow,
   type GroupRow,
 } from "@/lib/social";
+import { FriendCodeCard } from "@/components/social/FriendCodeCard";
+import { Feed } from "@/components/social/Feed";
 import { toast } from "sonner";
 import {
   Check,
