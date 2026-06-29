@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
@@ -21,6 +22,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
+import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
@@ -40,6 +42,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
+  id: '/api/ia-capture',
+  path: '/api/ia-capture',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -87,6 +94,11 @@ const AuthenticatedLojaRoute = AuthenticatedLojaRouteImport.update({
   path: '/loja',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaRoute = AuthenticatedIaRouteImport.update({
+  id: '/ia',
+  path: '/ia',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   id: '/habitos',
   path: '/habitos',
@@ -126,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/ia': typeof AuthenticatedIaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -135,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ia-capture': typeof ApiIaCaptureRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -145,6 +159,7 @@ export interface FileRoutesByTo {
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/ia': typeof AuthenticatedIaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -154,6 +169,7 @@ export interface FileRoutesByTo {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ia-capture': typeof ApiIaCaptureRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -166,6 +182,7 @@ export interface FileRoutesById {
   '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
+  '/_authenticated/ia': typeof AuthenticatedIaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -175,6 +192,7 @@ export interface FileRoutesById {
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/ia-capture': typeof ApiIaCaptureRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -187,6 +205,7 @@ export interface FileRouteTypes {
     | '/classe'
     | '/conquistas'
     | '/habitos'
+    | '/ia'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -196,6 +215,7 @@ export interface FileRouteTypes {
     | '/ritual'
     | '/social'
     | '/api/chat'
+    | '/api/ia-capture'
     | '/area/$slug'
     | '/area/orientador'
   fileRoutesByTo: FileRoutesByTo
@@ -206,6 +226,7 @@ export interface FileRouteTypes {
     | '/classe'
     | '/conquistas'
     | '/habitos'
+    | '/ia'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -215,6 +236,7 @@ export interface FileRouteTypes {
     | '/ritual'
     | '/social'
     | '/api/chat'
+    | '/api/ia-capture'
     | '/area/$slug'
     | '/area/orientador'
   id:
@@ -226,6 +248,7 @@ export interface FileRouteTypes {
     | '/_authenticated/classe'
     | '/_authenticated/conquistas'
     | '/_authenticated/habitos'
+    | '/_authenticated/ia'
     | '/_authenticated/loja'
     | '/_authenticated/mapa'
     | '/_authenticated/onboarding'
@@ -235,6 +258,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ritual'
     | '/_authenticated/social'
     | '/api/chat'
+    | '/api/ia-capture'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
   fileRoutesById: FileRoutesById
@@ -244,6 +268,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiIaCaptureRoute: typeof ApiIaCaptureRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -267,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ia-capture': {
+      id: '/api/ia-capture'
+      path: '/api/ia-capture'
+      fullPath: '/api/ia-capture'
+      preLoaderRoute: typeof ApiIaCaptureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -332,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLojaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia': {
+      id: '/_authenticated/ia'
+      path: '/ia'
+      fullPath: '/ia'
+      preLoaderRoute: typeof AuthenticatedIaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/habitos': {
       id: '/_authenticated/habitos'
       path: '/habitos'
@@ -382,6 +421,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
+  AuthenticatedIaRoute: typeof AuthenticatedIaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -399,6 +439,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
+  AuthenticatedIaRoute: AuthenticatedIaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
@@ -419,17 +460,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiIaCaptureRoute: ApiIaCaptureRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

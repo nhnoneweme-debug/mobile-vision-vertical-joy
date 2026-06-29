@@ -110,7 +110,7 @@ export function BottomNav() {
         {/* Centro destacado — IA */}
         <li className="relative flex-1">
           <Link
-            to="/area/orientador"
+            to="/ia"
             className="group flex flex-col items-center gap-1 px-1 pt-1 text-muted-foreground"
             activeProps={{ className: "text-ember" }}
           >
