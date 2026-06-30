@@ -1937,7 +1937,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          behavioral_class: string | null
+          display_name: string | null
+          friend_code: string | null
+          id: string | null
+          level: string | null
+          level_track: string | null
+        }
+        Insert: {
+          behavioral_class?: string | null
+          display_name?: string | null
+          friend_code?: string | null
+          id?: string | null
+          level?: string | null
+          level_track?: string | null
+        }
+        Update: {
+          behavioral_class?: string | null
+          display_name?: string | null
+          friend_code?: string | null
+          id?: string | null
+          level?: string | null
+          level_track?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calendar_activity: {
@@ -1980,6 +2006,7 @@ export type Database = {
         Args: { _group: string; _user: string }
         Returns: boolean
       }
+      join_group_by_invite: { Args: { _code: string }; Returns: string }
       player_level: { Args: { _xp: number }; Returns: number }
       purchase_shop_item: { Args: { _item_id: string }; Returns: Json }
       redeem_orientador_invite: { Args: { _code: string }; Returns: boolean }
