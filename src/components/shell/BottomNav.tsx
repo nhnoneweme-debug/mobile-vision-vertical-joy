@@ -16,6 +16,9 @@ import {
   Gem,
   Swords,
   Wand2,
+  Clock,
+  MoonStar,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
