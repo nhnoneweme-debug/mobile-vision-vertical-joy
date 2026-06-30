@@ -9,6 +9,8 @@ import { PhoneInput } from "@/components/auth/PhoneInput";
 import { COUNTRIES, DEFAULT_COUNTRY, formatE164, type Country } from "@/lib/countries";
 import { signInWithPhone } from "@/lib/phone-login.functions";
 
+type AuthSearch = { mode?: "login" | "signup" };
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
@@ -23,6 +25,9 @@ export const Route = createFileRoute("/auth")({
     links: [{ rel: "canonical", href: "https://mobile-vision-vertical-joy.lovable.app/auth" }],
   }),
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): AuthSearch => ({
+    mode: search.mode === "login" || search.mode === "signup" ? search.mode : undefined,
+  }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session) {
@@ -37,7 +42,8 @@ type Method = "email" | "phone";
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("signup");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<Mode>(search.mode ?? "signup");
   const [method, setMethod] = useState<Method>("email");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
