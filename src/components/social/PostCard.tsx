@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  CalendarDays,
   Eye,
   Flame,
+  MapPin,
   MessageCircle,
   Send,
   Sparkles,
   Swords,
+  Users as UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,6 +19,12 @@ import {
   registerView,
   type FeedPost,
 } from "@/lib/feed";
+import {
+  getRsvpCounts,
+  setRsvp,
+  type EventCounts,
+  type RsvpStatus,
+} from "@/lib/post-events";
 import { isCrystalActive } from "@/lib/crystals";
 
 export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => void }) {
