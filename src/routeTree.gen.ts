@@ -16,6 +16,7 @@ import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedSonhosRouteImport } from './routes/_authenticated/sonhos'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
@@ -68,6 +69,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSonhosRoute = AuthenticatedSonhosRouteImport.update({
+  id: '/sonhos',
+  path: '/sonhos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
+  '/_authenticated/sonhos': typeof AuthenticatedSonhosRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/progresso'
     | '/ritual'
     | '/social'
+    | '/sonhos'
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/progresso'
     | '/ritual'
     | '/social'
+    | '/sonhos'
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/_authenticated/progresso'
     | '/_authenticated/ritual'
     | '/_authenticated/social'
+    | '/_authenticated/sonhos'
     | '/_authenticated/studio'
     | '/api/chat'
     | '/api/ia-capture'
@@ -393,6 +405,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sonhos': {
+      id: '/_authenticated/sonhos'
+      path: '/sonhos'
+      fullPath: '/sonhos'
+      preLoaderRoute: typeof AuthenticatedSonhosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/social': {
@@ -549,6 +568,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
+  AuthenticatedSonhosRoute: typeof AuthenticatedSonhosRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
   AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
@@ -572,6 +592,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
+  AuthenticatedSonhosRoute: AuthenticatedSonhosRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
   AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
