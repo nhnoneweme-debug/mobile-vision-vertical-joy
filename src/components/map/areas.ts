@@ -9,8 +9,10 @@ import {
   Sparkles,
   Trophy,
   ClipboardCheck,
+  Accessibility,
   type LucideIcon,
 } from "lucide-react";
+
 
 export type AreaStatus = "novo" | "ativo" | "bloqueado";
 
