@@ -9,8 +9,10 @@ import {
   Sparkles,
   Trophy,
   ClipboardCheck,
+  Accessibility,
   type LucideIcon,
 } from "lucide-react";
+
 
 export type AreaStatus = "novo" | "ativo" | "bloqueado";
 
@@ -136,7 +138,19 @@ export const AREAS: Area[] = [
     colSpan: 2,
     rowSpan: 1,
   },
+  {
+    slug: "inclusao",
+    name: "Refúgio Inclusivo",
+    tagline: "Você como você é",
+    description:
+      "Pronomes, acessibilidade, tom da IA e crenças que te fortalecem — tudo respeitado em todo o jogo.",
+    icon: Accessibility,
+    status: "novo",
+    colSpan: 2,
+    rowSpan: 1,
+  },
 ];
+
 
 export function getArea(slug: string): Area | undefined {
   return AREAS.find((a) => a.slug === slug);
