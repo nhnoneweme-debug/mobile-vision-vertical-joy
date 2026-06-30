@@ -150,6 +150,16 @@ function OrientadorDashboard({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState("");
   const [activeStudent, setActiveStudent] = useState<StudentSnapshot | null>(null);
+  const [myFriendCode, setMyFriendCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("friend_code")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data }) => setMyFriendCode(data?.friend_code ?? null));
+  }, [userId]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -193,6 +203,56 @@ function OrientadorDashboard({ userId }: { userId: string }) {
       <Header subtitle="Seus alunos" />
 
       <section className="space-y-4 px-4 py-5 pb-32">
+        {myFriendCode && (
+          <div className="rounded-2xl border border-ember/40 bg-ember/5 p-4">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-ember" strokeWidth={2.2} />
+              <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+                SEU CÓDIGO DE ORIENTADOR
+              </p>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="font-display text-2xl tracking-[0.3em] text-ember">
+                {myFriendCode}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(myFriendCode);
+                    toast.success("Código copiado.");
+                  }}
+                  className="rounded-full border border-border px-3 py-1.5 font-display text-[10px] tracking-[0.2em] text-foreground active:scale-[0.97]"
+                >
+                  COPIAR
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const text = `Sou seu orientador na Personal IA. Meu código: ${myFriendCode}`;
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({ text });
+                      } catch {
+                        /* user cancelled */
+                      }
+                    } else {
+                      navigator.clipboard.writeText(text);
+                      toast.success("Mensagem copiada.");
+                    }
+                  }}
+                  className="rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 font-display text-[10px] tracking-[0.2em] text-ember active:scale-[0.97]"
+                >
+                  COMPARTILHAR
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Compartilhe com seus alunos. Eles te buscam em <span className="text-ember">/social</span> e
+              enviam pedido de amizade.
+            </p>
+          </div>
+        )}
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-ember" strokeWidth={2.2} />

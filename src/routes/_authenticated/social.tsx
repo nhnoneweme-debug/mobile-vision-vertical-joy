@@ -25,6 +25,7 @@ import {
 } from "@/lib/social";
 import { FriendCodeCard } from "@/components/social/FriendCodeCard";
 import { Feed } from "@/components/social/Feed";
+import { GroupChat } from "@/components/social/GroupChat";
 import { toast } from "sonner";
 import {
   Check,
@@ -592,6 +593,10 @@ function GroupsPanel({
             </button>
           )}
         </Section>
+      )}
+
+      {active && (
+        <GroupChat groupId={active.id} groupName={active.name} userId={userId} />
       )}
     </>
   );
