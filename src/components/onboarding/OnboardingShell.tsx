@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Home } from "lucide-react";
+
 
 type Props = {
   step: number; // 1-based
