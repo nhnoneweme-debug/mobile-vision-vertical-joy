@@ -117,10 +117,12 @@ function JornadaPage() {
                     <div className="flex-1">
                       <p className="text-sm">{meta?.label ?? b.kind}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {new Date(b.started_at).toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {b.started_at
+                          ? new Date(b.started_at).toLocaleTimeString("pt-BR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
                         {b.ended_at
                           ? ` → ${new Date(b.ended_at).toLocaleTimeString("pt-BR", {
                               hour: "2-digit",
