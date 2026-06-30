@@ -127,8 +127,16 @@ function OnboardingPage() {
       toast.success("Bem-vindo ao mundo, " + avatar.display_name + ".");
       navigate({ to: "/mapa", replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro ao salvar.";
-      toast.error(msg);
+      // Surfaces PostgREST errors (which are plain objects, not Error instances)
+      const anyErr = err as { message?: string; details?: string; hint?: string; code?: string } | null;
+      const msg =
+        (err instanceof Error && err.message) ||
+        anyErr?.message ||
+        anyErr?.details ||
+        anyErr?.hint ||
+        "Erro ao salvar.";
+      console.error("[onboarding.finish] failed:", err);
+      toast.error(msg + (anyErr?.code ? ` (${anyErr.code})` : ""));
     } finally {
       setSaving(false);
     }
