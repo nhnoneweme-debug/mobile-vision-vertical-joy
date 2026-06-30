@@ -63,34 +63,32 @@ export function PWAStatus() {
 
       {installEvt && (
         <div
-          className="fixed inset-x-0 bottom-20 z-50 mx-auto w-full max-w-[440px] px-4"
-          style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+          className="fixed inset-x-0 top-0 z-40 mx-auto w-full max-w-[480px] px-3"
+          style={{ paddingTop: `calc(env(safe-area-inset-top) + ${offline ? 28 : 6}px)` }}
         >
-          <div className="flex items-center gap-3 rounded-2xl border border-ember/40 bg-charcoal-900/95 px-4 py-3 shadow-2xl backdrop-blur-xl">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ember/15 text-ember">
-              <Download className="h-5 w-5" strokeWidth={2.2} />
+          <div className="flex items-center gap-2 rounded-xl border border-ember/30 bg-charcoal-900/95 px-3 py-2 shadow-lg backdrop-blur-xl">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ember/15 text-ember">
+              <Download className="h-4 w-4" strokeWidth={2.2} />
             </div>
-            <div className="flex-1">
-              <p className="font-display text-[10px] tracking-[0.3em] text-ember">INSTALAR</p>
-              <p className="font-display text-sm tracking-wide text-foreground">
-                Personal IA na tela inicial
-              </p>
-            </div>
+            <p className="flex-1 truncate font-display text-[11px] tracking-[0.18em] text-foreground">
+              INSTALAR PERSONAL IA
+            </p>
             <button
               onClick={dismiss}
-              className="font-display text-[10px] tracking-[0.3em] text-muted-foreground"
+              className="font-display text-[10px] tracking-[0.25em] text-muted-foreground"
             >
               DEPOIS
             </button>
             <button
               onClick={handleInstall}
-              className="rounded-xl bg-ember px-3 py-2 font-display text-[11px] tracking-[0.2em] text-charcoal-950"
+              className="rounded-lg bg-ember px-2.5 py-1.5 font-display text-[10px] tracking-[0.18em] text-charcoal-950"
             >
               INSTALAR
             </button>
           </div>
         </div>
       )}
+
     </>
   );
 }

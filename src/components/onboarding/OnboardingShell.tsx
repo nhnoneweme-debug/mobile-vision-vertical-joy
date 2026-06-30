@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Home } from "lucide-react";
+
 
 type Props = {
   step: number; // 1-based
@@ -27,15 +29,24 @@ export function OnboardingShell({
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={!onBack}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-foreground disabled:opacity-40"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="h-5 w-5" strokeWidth={2.2} />
-          </button>
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-foreground"
+              aria-label="Voltar"
+            >
+              <ArrowLeft className="h-5 w-5" strokeWidth={2.2} />
+            </button>
+          ) : (
+            <Link
+              to="/"
+              className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-foreground"
+              aria-label="Voltar para o início"
+            >
+              <Home className="h-5 w-5" strokeWidth={2.2} />
+            </Link>
+          )}
           <div className="flex flex-1 gap-1">
             {Array.from({ length: total }).map((_, i) => (
               <div
@@ -46,6 +57,7 @@ export function OnboardingShell({
               />
             ))}
           </div>
+
           <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
             {step}/{total}
           </span>
