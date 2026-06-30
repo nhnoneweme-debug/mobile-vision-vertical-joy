@@ -77,6 +77,8 @@ export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => 
         </div>
       </header>
 
+      {post.event ? <EventBlock postId={post.id} event={post.event} /> : null}
+
       {post.body ? (
         <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{post.body}</p>
       ) : null}
