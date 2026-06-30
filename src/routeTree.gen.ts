@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
@@ -45,6 +46,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWakeChatRoute = ApiWakeChatRouteImport.update({
+  id: '/api/wake-chat',
+  path: '/api/wake-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/wake-chat': typeof ApiWakeChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/wake-chat': typeof ApiWakeChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/wake-chat': typeof ApiWakeChatRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/wake-chat'
     | '/area/$slug'
     | '/area/orientador'
   fileRoutesByTo: FileRoutesByTo
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/wake-chat'
     | '/area/$slug'
     | '/area/orientador'
   id:
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/wake-chat'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
   fileRoutesById: FileRoutesById
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
+  ApiWakeChatRoute: typeof ApiWakeChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -328,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/wake-chat': {
+      id: '/api/wake-chat'
+      path: '/api/wake-chat'
+      fullPath: '/api/wake-chat'
+      preLoaderRoute: typeof ApiWakeChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ia-capture': {
@@ -524,6 +544,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
+  ApiWakeChatRoute: ApiWakeChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
