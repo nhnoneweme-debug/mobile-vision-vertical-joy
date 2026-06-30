@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
+import { MentorBubble } from "@/components/mentor/MentorBubble";
 
 export function MobileShell({
   children,
   hideNav = false,
+  hideMentor = false,
 }: {
   children: ReactNode;
   hideNav?: boolean;
+  hideMentor?: boolean;
 }) {
   return (
     <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background">
@@ -17,6 +20,7 @@ export function MobileShell({
         {children}
       </main>
       {!hideNav && <BottomNav />}
+      {!hideMentor && <MentorBubble />}
     </div>
   );
 }
