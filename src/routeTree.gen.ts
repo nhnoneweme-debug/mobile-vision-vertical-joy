@@ -25,6 +25,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
+import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticated/jornada'
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedDespertarRouteImport } from './routes/_authenticated/despertar'
@@ -116,6 +117,11 @@ const AuthenticatedLojaRoute = AuthenticatedLojaRouteImport.update({
   path: '/loja',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedJornadaRoute = AuthenticatedJornadaRouteImport.update({
+  id: '/jornada',
+  path: '/jornada',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIaRoute = AuthenticatedIaRouteImport.update({
   id: '/ia',
   path: '/ia',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/despertar': typeof AuthenticatedDespertarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/ia': typeof AuthenticatedIaRoute
+  '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/despertar': typeof AuthenticatedDespertarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/ia': typeof AuthenticatedIaRoute
+  '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
+  '/_authenticated/jornada': typeof AuthenticatedJornadaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/despertar'
     | '/habitos'
     | '/ia'
+    | '/jornada'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/despertar'
     | '/habitos'
     | '/ia'
+    | '/jornada'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/_authenticated/despertar'
     | '/_authenticated/habitos'
     | '/_authenticated/ia'
+    | '/_authenticated/jornada'
     | '/_authenticated/loja'
     | '/_authenticated/mapa'
     | '/_authenticated/onboarding'
@@ -470,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLojaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/jornada': {
+      id: '/_authenticated/jornada'
+      path: '/jornada'
+      fullPath: '/jornada'
+      preLoaderRoute: typeof AuthenticatedJornadaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia': {
       id: '/_authenticated/ia'
       path: '/ia'
@@ -560,6 +579,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
+  AuthenticatedJornadaRoute: typeof AuthenticatedJornadaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -584,6 +604,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
+  AuthenticatedJornadaRoute: AuthenticatedJornadaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,

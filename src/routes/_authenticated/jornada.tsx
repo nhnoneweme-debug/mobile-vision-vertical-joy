@@ -121,11 +121,12 @@ function JornadaPage() {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                        {b.ended_at &&
-                          ` → ${new Date(b.ended_at).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}`}
+                        {b.ended_at
+                          ? ` → ${new Date(b.ended_at).toLocaleTimeString("pt-BR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`
+                          : ""}
                       </p>
                     </div>
                     {!b.completed && (
