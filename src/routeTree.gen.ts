@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedSonhosRouteImport } from './routes/_authenticated/sonhos'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
@@ -23,13 +25,16 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
+import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticated/jornada'
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
+import { Route as AuthenticatedDespertarRouteImport } from './routes/_authenticated/despertar'
 import { Route as AuthenticatedDesafiosRouteImport } from './routes/_authenticated/desafios'
 import { Route as AuthenticatedCristaisRouteImport } from './routes/_authenticated/cristais'
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
+import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated/alarme'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 
@@ -47,6 +52,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWakeChatRoute = ApiWakeChatRouteImport.update({
+  id: '/api/wake-chat',
+  path: '/api/wake-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
   id: '/api/ia-capture',
   path: '/api/ia-capture',
@@ -60,6 +70,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSonhosRoute = AuthenticatedSonhosRouteImport.update({
+  id: '/sonhos',
+  path: '/sonhos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
@@ -102,6 +117,11 @@ const AuthenticatedLojaRoute = AuthenticatedLojaRouteImport.update({
   path: '/loja',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedJornadaRoute = AuthenticatedJornadaRouteImport.update({
+  id: '/jornada',
+  path: '/jornada',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIaRoute = AuthenticatedIaRouteImport.update({
   id: '/ia',
   path: '/ia',
@@ -110,6 +130,11 @@ const AuthenticatedIaRoute = AuthenticatedIaRouteImport.update({
 const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   id: '/habitos',
   path: '/habitos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDespertarRoute = AuthenticatedDespertarRouteImport.update({
+  id: '/despertar',
+  path: '/despertar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDesafiosRoute = AuthenticatedDesafiosRouteImport.update({
@@ -137,6 +162,11 @@ const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAlarmeRoute = AuthenticatedAlarmeRouteImport.update({
+  id: '/alarme',
+  path: '/alarme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAreaOrientadorRoute =
   AuthenticatedAreaOrientadorRouteImport.update({
     id: '/area/orientador',
@@ -152,13 +182,16 @@ const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/alarme': typeof AuthenticatedAlarmeRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/cristais': typeof AuthenticatedCristaisRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
+  '/despertar': typeof AuthenticatedDespertarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/ia': typeof AuthenticatedIaRoute
+  '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -167,22 +200,27 @@ export interface FileRoutesByFullPath {
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/wake-chat': typeof ApiWakeChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/alarme': typeof AuthenticatedAlarmeRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/cristais': typeof AuthenticatedCristaisRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
+  '/despertar': typeof AuthenticatedDespertarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/ia': typeof AuthenticatedIaRoute
+  '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -191,9 +229,11 @@ export interface FileRoutesByTo {
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/wake-chat': typeof ApiWakeChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -202,13 +242,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/alarme': typeof AuthenticatedAlarmeRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/cristais': typeof AuthenticatedCristaisRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
+  '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
+  '/_authenticated/jornada': typeof AuthenticatedJornadaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -217,9 +260,11 @@ export interface FileRoutesById {
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
+  '/_authenticated/sonhos': typeof AuthenticatedSonhosRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/wake-chat': typeof ApiWakeChatRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -228,13 +273,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/alarme'
     | '/calendario'
     | '/classe'
     | '/conquistas'
     | '/cristais'
     | '/desafios'
+    | '/despertar'
     | '/habitos'
     | '/ia'
+    | '/jornada'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -243,22 +291,27 @@ export interface FileRouteTypes {
     | '/progresso'
     | '/ritual'
     | '/social'
+    | '/sonhos'
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/wake-chat'
     | '/area/$slug'
     | '/area/orientador'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/alarme'
     | '/calendario'
     | '/classe'
     | '/conquistas'
     | '/cristais'
     | '/desafios'
+    | '/despertar'
     | '/habitos'
     | '/ia'
+    | '/jornada'
     | '/loja'
     | '/mapa'
     | '/onboarding'
@@ -267,9 +320,11 @@ export interface FileRouteTypes {
     | '/progresso'
     | '/ritual'
     | '/social'
+    | '/sonhos'
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/wake-chat'
     | '/area/$slug'
     | '/area/orientador'
   id:
@@ -277,13 +332,16 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/alarme'
     | '/_authenticated/calendario'
     | '/_authenticated/classe'
     | '/_authenticated/conquistas'
     | '/_authenticated/cristais'
     | '/_authenticated/desafios'
+    | '/_authenticated/despertar'
     | '/_authenticated/habitos'
     | '/_authenticated/ia'
+    | '/_authenticated/jornada'
     | '/_authenticated/loja'
     | '/_authenticated/mapa'
     | '/_authenticated/onboarding'
@@ -292,9 +350,11 @@ export interface FileRouteTypes {
     | '/_authenticated/progresso'
     | '/_authenticated/ritual'
     | '/_authenticated/social'
+    | '/_authenticated/sonhos'
     | '/_authenticated/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/wake-chat'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
   fileRoutesById: FileRoutesById
@@ -305,6 +365,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
+  ApiWakeChatRoute: typeof ApiWakeChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -330,6 +391,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/wake-chat': {
+      id: '/api/wake-chat'
+      path: '/api/wake-chat'
+      fullPath: '/api/wake-chat'
+      preLoaderRoute: typeof ApiWakeChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ia-capture': {
       id: '/api/ia-capture'
       path: '/api/ia-capture'
@@ -349,6 +417,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sonhos': {
+      id: '/_authenticated/sonhos'
+      path: '/sonhos'
+      fullPath: '/sonhos'
+      preLoaderRoute: typeof AuthenticatedSonhosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/social': {
@@ -407,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLojaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/jornada': {
+      id: '/_authenticated/jornada'
+      path: '/jornada'
+      fullPath: '/jornada'
+      preLoaderRoute: typeof AuthenticatedJornadaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia': {
       id: '/_authenticated/ia'
       path: '/ia'
@@ -419,6 +501,13 @@ declare module '@tanstack/react-router' {
       path: '/habitos'
       fullPath: '/habitos'
       preLoaderRoute: typeof AuthenticatedHabitosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/despertar': {
+      id: '/_authenticated/despertar'
+      path: '/despertar'
+      fullPath: '/despertar'
+      preLoaderRoute: typeof AuthenticatedDespertarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/desafios': {
@@ -456,6 +545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/alarme': {
+      id: '/_authenticated/alarme'
+      path: '/alarme'
+      fullPath: '/alarme'
+      preLoaderRoute: typeof AuthenticatedAlarmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area/orientador': {
       id: '/_authenticated/area/orientador'
       path: '/area/orientador'
@@ -474,13 +570,16 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAlarmeRoute: typeof AuthenticatedAlarmeRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedCristaisRoute: typeof AuthenticatedCristaisRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
+  AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
+  AuthenticatedJornadaRoute: typeof AuthenticatedJornadaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -489,19 +588,23 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
+  AuthenticatedSonhosRoute: typeof AuthenticatedSonhosRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
   AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAlarmeRoute: AuthenticatedAlarmeRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedCristaisRoute: AuthenticatedCristaisRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
+  AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
+  AuthenticatedJornadaRoute: AuthenticatedJornadaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
@@ -510,6 +613,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
+  AuthenticatedSonhosRoute: AuthenticatedSonhosRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
   AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
@@ -524,17 +628,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
+  ApiWakeChatRoute: ApiWakeChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

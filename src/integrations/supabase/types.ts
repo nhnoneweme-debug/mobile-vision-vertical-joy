@@ -418,6 +418,98 @@ export type Database = {
         }
         Relationships: []
       }
+      day_blocks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          date: string
+          ended_at: string | null
+          id: string
+          kind: string
+          notes: string | null
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          date?: string
+          ended_at?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          date?: string
+          ended_at?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dream_logs: {
+        Row: {
+          ai_interpretation: string | null
+          ai_summary: string | null
+          audio_url: string | null
+          created_at: string
+          id: string
+          logged_at: string
+          lucidity: number | null
+          mood: string | null
+          raw_text: string | null
+          session_id: string | null
+          symbols: string[]
+          themes: string[]
+          user_id: string
+        }
+        Insert: {
+          ai_interpretation?: string | null
+          ai_summary?: string | null
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          logged_at?: string
+          lucidity?: number | null
+          mood?: string | null
+          raw_text?: string | null
+          session_id?: string | null
+          symbols?: string[]
+          themes?: string[]
+          user_id: string
+        }
+        Update: {
+          ai_interpretation?: string | null
+          ai_summary?: string | null
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          logged_at?: string
+          lucidity?: number | null
+          mood?: string | null
+          raw_text?: string | null
+          session_id?: string | null
+          symbols?: string[]
+          themes?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dream_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "wake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -1245,6 +1337,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sleep_logs: {
+        Row: {
+          bed_at: string | null
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          quality: number | null
+          ritual_done: boolean
+          sleep_at: string | null
+          user_id: string
+          wake_at: string | null
+        }
+        Insert: {
+          bed_at?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          quality?: number | null
+          ritual_done?: boolean
+          sleep_at?: string | null
+          user_id: string
+          wake_at?: string | null
+        }
+        Update: {
+          bed_at?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          quality?: number | null
+          ritual_done?: boolean
+          sleep_at?: string | null
+          user_id?: string
+          wake_at?: string | null
+        }
+        Relationships: []
+      }
       strategic_goals: {
         Row: {
           area_slug: string | null
@@ -1640,6 +1771,139 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wake_alarms: {
+        Row: {
+          created_at: string
+          days_of_week: number[]
+          enabled: boolean
+          id: string
+          label: string
+          max_snoozes: number
+          snooze_strategy: string
+          time_local: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          voice_persona: string
+          wake_style: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[]
+          enabled?: boolean
+          id?: string
+          label?: string
+          max_snoozes?: number
+          snooze_strategy?: string
+          time_local: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+          voice_persona?: string
+          wake_style?: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[]
+          enabled?: boolean
+          id?: string
+          label?: string
+          max_snoozes?: number
+          snooze_strategy?: string
+          time_local?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          voice_persona?: string
+          wake_style?: string
+        }
+        Relationships: []
+      }
+      wake_events: {
+        Row: {
+          at: string
+          id: string
+          kind: string
+          payload: Json
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wake_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "wake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wake_sessions: {
+        Row: {
+          alarm_id: string | null
+          created_at: string
+          dream_logged: boolean
+          id: string
+          mood_on_wake: string | null
+          snooze_count: number
+          started_at: string
+          status: string
+          total_snooze_min: number
+          user_id: string
+          woke_at: string | null
+        }
+        Insert: {
+          alarm_id?: string | null
+          created_at?: string
+          dream_logged?: boolean
+          id?: string
+          mood_on_wake?: string | null
+          snooze_count?: number
+          started_at?: string
+          status?: string
+          total_snooze_min?: number
+          user_id: string
+          woke_at?: string | null
+        }
+        Update: {
+          alarm_id?: string | null
+          created_at?: string
+          dream_logged?: boolean
+          id?: string
+          mood_on_wake?: string | null
+          snooze_count?: number
+          started_at?: string
+          status?: string
+          total_snooze_min?: number
+          user_id?: string
+          woke_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wake_sessions_alarm_id_fkey"
+            columns: ["alarm_id"]
+            isOneToOne: false
+            referencedRelation: "wake_alarms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       xp_events: {
         Row: {

@@ -16,6 +16,9 @@ import {
   Gem,
   Swords,
   Wand2,
+  Clock,
+  MoonStar,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -41,6 +44,9 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
       { to: "/classe", label: "Classe & Perks", icon: Sparkles },
       { to: "/conquistas", label: "Conquistas & Lore", icon: Trophy },
       { to: "/cristais", label: "Cristais do Poder", icon: Gem },
+      { to: "/alarme", label: "Despertar/Alarme", icon: Clock },
+      { to: "/sonhos", label: "Sonhos", icon: MoonStar },
+      { to: "/jornada", label: "Jornada do Dia", icon: MapPin },
       { to: "/ritual", label: "Rituais", icon: Moon },
     ],
   },
