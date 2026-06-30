@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/conquistas")({
   head: () => ({
     meta: [
       { title: "Conquistas — Personal IA" },
-      { name: "description", content: "Suas conquistas e a lore do Oráculo das Brasas." },
+      { name: "description", content: "Suas conquistas e a Saga do Oráculo das Brasas." },
     ],
   }),
   component: ConquistasPage,
@@ -120,7 +120,7 @@ function ConquistasPage() {
           <span className="font-display text-[10px] tracking-[0.3em]">MAPA</span>
         </Link>
         <h1 className="mt-2 font-display text-3xl tracking-wide text-foreground">
-          Conquistas & Lore
+          Conquistas & Saga
         </h1>
         <p className="mt-1 text-xs text-muted-foreground">
           {stats.got}/{stats.total} conquistas · {stats.pct}% da jornada
@@ -147,7 +147,7 @@ function ConquistasPage() {
                 : "border-border bg-card text-muted-foreground"
             }`}
           >
-            <BookOpen className="mr-1 inline h-4 w-4" /> LORE
+            <BookOpen className="mr-1 inline h-4 w-4" /> SAGA
           </button>
         </div>
       </header>

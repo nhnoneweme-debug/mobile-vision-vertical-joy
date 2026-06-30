@@ -232,7 +232,7 @@ function MapaPage() {
             <Award className="h-5 w-5" strokeWidth={2.2} />
           </div>
           <div>
-            <p className="font-display text-[10px] tracking-[0.3em] text-ember">CONQUISTAS & LORE</p>
+            <p className="font-display text-[10px] tracking-[0.3em] text-ember">CONQUISTAS & SAGA</p>
             <p className="font-display text-base tracking-wide text-foreground">
               Capítulos do Oráculo das Brasas
             </p>
