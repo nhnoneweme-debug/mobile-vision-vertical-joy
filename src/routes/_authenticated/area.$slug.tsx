@@ -11,6 +11,8 @@ import { MentalJournalCard } from "@/components/area/MentalJournalCard";
 import { CozinhaDietCard } from "@/components/area/CozinhaDietCard";
 import { TreinoPlanCard } from "@/components/area/TreinoPlanCard";
 import { QuartoSleepCard } from "@/components/area/QuartoSleepCard";
+import { InclusaoCard } from "@/components/area/InclusaoCard";
+
 import { XPToast } from "@/components/map/XPToast";
 import { getArea } from "@/components/map/areas";
 import { supabase } from "@/integrations/supabase/client";
