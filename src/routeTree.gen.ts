@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
+import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
@@ -28,6 +29,7 @@ import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/l
 import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticated/jornada'
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
+import { Route as AuthenticatedDormirRouteImport } from './routes/_authenticated/dormir'
 import { Route as AuthenticatedDespertarRouteImport } from './routes/_authenticated/despertar'
 import { Route as AuthenticatedDesafiosRouteImport } from './routes/_authenticated/desafios'
 import { Route as AuthenticatedCristaisRouteImport } from './routes/_authenticated/cristais'
@@ -55,6 +57,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiWakeChatRoute = ApiWakeChatRouteImport.update({
   id: '/api/wake-chat',
   path: '/api/wake-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSleepChatRoute = ApiSleepChatRouteImport.update({
+  id: '/api/sleep-chat',
+  path: '/api/sleep-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
@@ -132,6 +139,11 @@ const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   path: '/habitos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDormirRoute = AuthenticatedDormirRouteImport.update({
+  id: '/dormir',
+  path: '/dormir',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDespertarRoute = AuthenticatedDespertarRouteImport.update({
   id: '/despertar',
   path: '/despertar',
@@ -189,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/cristais': typeof AuthenticatedCristaisRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
   '/despertar': typeof AuthenticatedDespertarRoute
+  '/dormir': typeof AuthenticatedDormirRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/ia': typeof AuthenticatedIaRoute
   '/jornada': typeof AuthenticatedJornadaRoute
@@ -204,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -218,6 +232,7 @@ export interface FileRoutesByTo {
   '/cristais': typeof AuthenticatedCristaisRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
   '/despertar': typeof AuthenticatedDespertarRoute
+  '/dormir': typeof AuthenticatedDormirRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/ia': typeof AuthenticatedIaRoute
   '/jornada': typeof AuthenticatedJornadaRoute
@@ -233,6 +248,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -249,6 +265,7 @@ export interface FileRoutesById {
   '/_authenticated/cristais': typeof AuthenticatedCristaisRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
   '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
+  '/_authenticated/dormir': typeof AuthenticatedDormirRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
   '/_authenticated/jornada': typeof AuthenticatedJornadaRoute
@@ -264,6 +281,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
+  '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
@@ -280,6 +298,7 @@ export interface FileRouteTypes {
     | '/cristais'
     | '/desafios'
     | '/despertar'
+    | '/dormir'
     | '/habitos'
     | '/ia'
     | '/jornada'
@@ -295,6 +314,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/sleep-chat'
     | '/api/wake-chat'
     | '/area/$slug'
     | '/area/orientador'
@@ -309,6 +329,7 @@ export interface FileRouteTypes {
     | '/cristais'
     | '/desafios'
     | '/despertar'
+    | '/dormir'
     | '/habitos'
     | '/ia'
     | '/jornada'
@@ -324,6 +345,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/sleep-chat'
     | '/api/wake-chat'
     | '/area/$slug'
     | '/area/orientador'
@@ -339,6 +361,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cristais'
     | '/_authenticated/desafios'
     | '/_authenticated/despertar'
+    | '/_authenticated/dormir'
     | '/_authenticated/habitos'
     | '/_authenticated/ia'
     | '/_authenticated/jornada'
@@ -354,6 +377,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/api/chat'
     | '/api/ia-capture'
+    | '/api/sleep-chat'
     | '/api/wake-chat'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
@@ -365,6 +389,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
+  ApiSleepChatRoute: typeof ApiSleepChatRoute
   ApiWakeChatRoute: typeof ApiWakeChatRoute
 }
 
@@ -396,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/api/wake-chat'
       fullPath: '/api/wake-chat'
       preLoaderRoute: typeof ApiWakeChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sleep-chat': {
+      id: '/api/sleep-chat'
+      path: '/api/sleep-chat'
+      fullPath: '/api/sleep-chat'
+      preLoaderRoute: typeof ApiSleepChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ia-capture': {
@@ -503,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHabitosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dormir': {
+      id: '/_authenticated/dormir'
+      path: '/dormir'
+      fullPath: '/dormir'
+      preLoaderRoute: typeof AuthenticatedDormirRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/despertar': {
       id: '/_authenticated/despertar'
       path: '/despertar'
@@ -577,6 +616,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCristaisRoute: typeof AuthenticatedCristaisRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
   AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
+  AuthenticatedDormirRoute: typeof AuthenticatedDormirRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
   AuthenticatedJornadaRoute: typeof AuthenticatedJornadaRoute
@@ -602,6 +642,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCristaisRoute: AuthenticatedCristaisRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
   AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
+  AuthenticatedDormirRoute: AuthenticatedDormirRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
   AuthenticatedJornadaRoute: AuthenticatedJornadaRoute,
@@ -628,18 +669,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
+  ApiSleepChatRoute: ApiSleepChatRoute,
   ApiWakeChatRoute: ApiWakeChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
