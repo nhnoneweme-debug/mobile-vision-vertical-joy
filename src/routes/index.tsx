@@ -90,13 +90,21 @@ function Splash() {
       <footer className="relative z-10 flex flex-col gap-3">
         <Link
           to="/auth"
+          search={{ mode: "signup" }}
           className="ember-glow flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 font-display text-lg tracking-widest text-primary-foreground active:scale-[0.99]"
         >
-          ENTRAR NO MUNDO
+          INICIAR JORNADA
           <ArrowRight className="h-5 w-5" strokeWidth={2.6} />
         </Link>
-        <p className="text-center font-display text-[10px] tracking-[0.3em] text-muted-foreground">
-          NOVO POR AQUI? CRIE SUA CONTA NA PRÓXIMA TELA
+        <Link
+          to="/auth"
+          search={{ mode: "login" }}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-4 font-display text-base tracking-widest text-foreground active:scale-[0.99]"
+        >
+          JÁ ESTOU NA JORNADA
+        </Link>
+        <p className="mt-1 text-center font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+          ENTRE POR EMAIL, TELEFONE OU GOOGLE
         </p>
       </footer>
     </div>
