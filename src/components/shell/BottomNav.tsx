@@ -28,12 +28,6 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Crown } from "lucide-react";
 
