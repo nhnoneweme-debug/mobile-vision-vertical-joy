@@ -247,6 +247,28 @@ function OrientadorDashboard({ userId }: { userId: string }) {
                 </button>
               </div>
             </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Sou seu orientador na Personal IA. Meu código: ${myFriendCode}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-border bg-charcoal-900 px-2 py-2 text-center font-display text-[10px] tracking-[0.2em] text-foreground active:scale-[0.97]"
+              >
+                WHATSAPP
+              </a>
+              <a
+                href={`sms:?&body=${encodeURIComponent(`Sou seu orientador na Personal IA. Meu código: ${myFriendCode}`)}`}
+                className="rounded-lg border border-border bg-charcoal-900 px-2 py-2 text-center font-display text-[10px] tracking-[0.2em] text-foreground active:scale-[0.97]"
+              >
+                SMS
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent("Convite Personal IA")}&body=${encodeURIComponent(`Sou seu orientador na Personal IA. Meu código: ${myFriendCode}`)}`}
+                className="rounded-lg border border-border bg-charcoal-900 px-2 py-2 text-center font-display text-[10px] tracking-[0.2em] text-foreground active:scale-[0.97]"
+              >
+                EMAIL
+              </a>
+            </div>
             <p className="mt-2 text-xs text-muted-foreground">
               Compartilhe com seus alunos. Eles te buscam em <span className="text-ember">/social</span> e
               enviam pedido de amizade.
