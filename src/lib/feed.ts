@@ -97,13 +97,16 @@ export async function createPost(input: CreatePostInput): Promise<string> {
 export async function listFeed(limit = 20): Promise<FeedPost[]> {
   const { data: u } = await supabase.auth.getUser();
   const me = u.user?.id;
-  const { data: posts, error } = await supabase
+  const { getBlockedUserIdSet } = await import("@/lib/moderation");
+  const blocked = me ? await getBlockedUserIdSet() : new Set<string>();
+  const { data: rawPosts, error } = await supabase
     .from("posts")
     .select("id, author_id, body, media_url, media_type, thumbnail_url, visibility_mode, created_at")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(limit * 2);
   if (error) throw error;
-  if (!posts || posts.length === 0) return [];
+  const posts = (rawPosts ?? []).filter((p) => !blocked.has(p.author_id)).slice(0, limit);
+  if (posts.length === 0) return [];
 
   const ids = posts.map((p) => p.id);
   const authorIds = Array.from(new Set(posts.map((p) => p.author_id)));
