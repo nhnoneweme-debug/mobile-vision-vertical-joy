@@ -10,6 +10,7 @@ import { CasaIntentionCard } from "@/components/area/CasaIntentionCard";
 import { MentalJournalCard } from "@/components/area/MentalJournalCard";
 import { CozinhaDietCard } from "@/components/area/CozinhaDietCard";
 import { TreinoPlanCard } from "@/components/area/TreinoPlanCard";
+import { QuartoSleepCard } from "@/components/area/QuartoSleepCard";
 import { XPToast } from "@/components/map/XPToast";
 import { getArea } from "@/components/map/areas";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,7 +130,8 @@ function AreaPage() {
     area.slug === "casa" ||
     area.slug === "mental" ||
     area.slug === "cozinha" ||
-    area.slug === "treino";
+    area.slug === "treino" ||
+    area.slug === "quarto";
   if (!loading && missions.length === 0 && !hasCustomWidget) {
     return (
       <MobileShell>
@@ -148,6 +150,7 @@ function AreaPage() {
         {userId && area.slug === "mental" && <MentalJournalCard userId={userId} />}
         {userId && area.slug === "cozinha" && <CozinhaDietCard />}
         {userId && area.slug === "treino" && <TreinoPlanCard />}
+        {userId && area.slug === "quarto" && <QuartoSleepCard />}
 
         <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
           MISSÕES DA SEMANA

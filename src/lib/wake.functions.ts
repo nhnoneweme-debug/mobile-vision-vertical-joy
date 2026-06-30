@@ -285,3 +285,16 @@ export const upsertSleepLog = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+export const listSleepLogs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("sleep_logs")
+      .select("date, bed_at, sleep_at, wake_at, quality, ritual_done, notes")
+      .eq("user_id", context.userId)
+      .order("date", { ascending: false })
+      .limit(14);
+    if (error) throw new Error(error.message);
+    return data;
+  });
