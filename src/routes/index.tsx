@@ -2,6 +2,8 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+const SITE_URL = "https://mobile-vision-vertical-joy.lovable.app";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -9,7 +11,39 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Personal IA transforma cuidar de si em uma jornada viva.",
+          "Personal IA transforma cuidar de si em uma jornada viva: treino, sono, mente e rotina guiados por IA.",
+      },
+      { property: "og:title", content: "Personal IA — Sua jornada de bem-estar" },
+      {
+        property: "og:description",
+        content: "Sua jornada gamificada de bem-estar guiada por IA.",
+      },
+      { property: "og:url", content: `${SITE_URL}/` },
+      { name: "twitter:title", content: "Personal IA — Sua jornada de bem-estar" },
+      {
+        name: "twitter:description",
+        content: "Sua jornada gamificada de bem-estar guiada por IA.",
+      },
+    ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Personal IA",
+          url: SITE_URL,
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Personal IA",
+          url: SITE_URL,
+        }),
       },
     ],
   }),

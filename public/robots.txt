@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mobile-vision-vertical-joy.lovable.app/sitemap.xml

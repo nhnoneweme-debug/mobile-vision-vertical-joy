@@ -13,8 +13,14 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Entrar — Personal IA" },
-      { name: "description", content: "Entre ou crie sua conta no Personal IA." },
+      { name: "description", content: "Entre ou crie sua conta no Personal IA por email, telefone ou SSO." },
+      { property: "og:title", content: "Entrar — Personal IA" },
+      { property: "og:description", content: "Entre ou crie sua conta no Personal IA por email, telefone ou SSO." },
+      { property: "og:url", content: "https://mobile-vision-vertical-joy.lovable.app/auth" },
+      { name: "twitter:title", content: "Entrar — Personal IA" },
+      { name: "twitter:description", content: "Entre ou crie sua conta no Personal IA por email, telefone ou SSO." },
     ],
+    links: [{ rel: "canonical", href: "https://mobile-vision-vertical-joy.lovable.app/auth" }],
   }),
   ssr: false,
   beforeLoad: async () => {
