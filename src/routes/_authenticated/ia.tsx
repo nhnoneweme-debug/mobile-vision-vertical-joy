@@ -29,13 +29,14 @@ function IAPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [proposalStatus, setProposalStatus] = useState<Record<string, "applied" | "rejected" | "loading">>({});
+  const [proposalStatus, setProposalStatus] = useState<Record<string, "applied" | "rejected" | "loading" | "reverted">>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const applyFn = useServerFn(applyAuditWrite);
   const rejectFn = useServerFn(rejectAuditWrite);
+  const undoFn = useServerFn(undoAuditWrite);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
