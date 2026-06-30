@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/conquistas")({
   head: () => ({
     meta: [
       { title: "Conquistas — Personal IA" },
-      { name: "description", content: "Suas conquistas e a lore do Oráculo das Brasas." },
+      { name: "description", content: "Suas conquistas e a Saga do Oráculo das Brasas." },
     ],
   }),
   component: ConquistasPage,
