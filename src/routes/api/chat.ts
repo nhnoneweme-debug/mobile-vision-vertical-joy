@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/chat")({
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
 
         // Load profile + signals for context.
-        const [{ data: profile }, { data: areaProg }, { data: habits }, { data: history }] =
+        const [{ data: profile }, { data: areaProg }, { data: habits }, { data: history }, { data: inclusionRow }] =
           await Promise.all([
             supabase
               .from("profiles")
@@ -72,7 +72,25 @@ export const Route = createFileRoute("/api/chat")({
               .eq("user_id", userId)
               .order("created_at", { ascending: true })
               .limit(40),
+            supabase
+              .from("area_progress")
+              .select("meta")
+              .eq("user_id", userId)
+              .eq("area_slug", "inclusao")
+              .maybeSingle(),
           ]);
+
+        const inclusion = ((inclusionRow?.meta ?? {}) as Record<string, unknown>).inclusion as
+          | {
+              pronouns?: string;
+              identity_note?: string;
+              ia_tone?: string;
+              language_level?: string;
+              no_go_topics?: string;
+              empowering_beliefs?: string;
+            }
+          | undefined;
+
 
         // Persist the user message right away.
         if (lastUser) {
