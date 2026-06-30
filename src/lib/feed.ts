@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getEventsForPosts, type PostEvent } from "@/lib/post-events";
 
 export type MediaType = "none" | "image" | "video";
 export type VisibilityMode = "auto" | "manual" | "hybrid" | "public";
@@ -25,6 +26,7 @@ export type FeedPost = {
   views_count?: number;
   my_reaction?: string | null;
   signed_media_url?: string | null;
+  event?: PostEvent | null;
 };
 
 export async function uploadPostMedia(
