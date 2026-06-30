@@ -121,8 +121,10 @@ function AreaPage() {
   }
 
   // Missions are seeded for every area in the catalog, but if a slug has none
-  // we gracefully fall back to the original placeholder.
-  if (!loading && missions.length === 0) {
+  // we gracefully fall back to the original placeholder — unless the area has
+  // a custom widget (casa/mental) that should still render.
+  const hasCustomWidget = area.slug === "casa" || area.slug === "mental";
+  if (!loading && missions.length === 0 && !hasCustomWidget) {
     return (
       <MobileShell>
         <AreaPlaceholder area={area} />
