@@ -40,6 +40,13 @@ function IAPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
+    try {
+      const seed = sessionStorage.getItem("ia.seed");
+      if (seed) {
+        sessionStorage.removeItem("ia.seed");
+        setInput(seed);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
