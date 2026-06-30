@@ -9,6 +9,7 @@ import { AreaMissionRow } from "@/components/area/AreaMissionRow";
 import { CasaIntentionCard } from "@/components/area/CasaIntentionCard";
 import { MentalJournalCard } from "@/components/area/MentalJournalCard";
 import { CozinhaDietCard } from "@/components/area/CozinhaDietCard";
+import { TreinoPlanCard } from "@/components/area/TreinoPlanCard";
 import { XPToast } from "@/components/map/XPToast";
 import { getArea } from "@/components/map/areas";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,7 +125,11 @@ function AreaPage() {
   // Missions are seeded for every area in the catalog, but if a slug has none
   // we gracefully fall back to the original placeholder — unless the area has
   // a custom widget (casa/mental) that should still render.
-  const hasCustomWidget = area.slug === "casa" || area.slug === "mental" || area.slug === "cozinha";
+  const hasCustomWidget =
+    area.slug === "casa" ||
+    area.slug === "mental" ||
+    area.slug === "cozinha" ||
+    area.slug === "treino";
   if (!loading && missions.length === 0 && !hasCustomWidget) {
     return (
       <MobileShell>
@@ -142,6 +147,7 @@ function AreaPage() {
         {userId && area.slug === "casa" && <CasaIntentionCard userId={userId} />}
         {userId && area.slug === "mental" && <MentalJournalCard userId={userId} />}
         {userId && area.slug === "cozinha" && <CozinhaDietCard />}
+        {userId && area.slug === "treino" && <TreinoPlanCard />}
 
         <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
           MISSÕES DA SEMANA
