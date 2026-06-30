@@ -36,9 +36,9 @@ export function HUD({
 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="truncate font-display text-2xl leading-none tracking-wide text-foreground">
+            <h1 className="truncate font-display text-2xl leading-none tracking-wide text-foreground">
               {displayName}
-            </h2>
+            </h1>
             <span className="rounded-md border border-border bg-charcoal-800 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-[0.2em] text-ember">
               {behavioralClass}
             </span>
