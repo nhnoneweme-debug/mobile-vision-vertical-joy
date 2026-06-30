@@ -79,6 +79,7 @@ export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => 
             {new Date(post.created_at).toLocaleString("pt-BR")}
           </p>
         </div>
+        <PostMenu authorId={post.author_id} postId={post.id} onChange={onChange} />
       </header>
 
       {post.event ? <EventBlock postId={post.id} event={post.event} /> : null}
