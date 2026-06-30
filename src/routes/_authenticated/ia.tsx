@@ -89,6 +89,17 @@ function IAPage() {
       toast.error(e instanceof Error ? e.message : "Erro");
     }
   }
+  async function undo(p: Proposal) {
+    setProposalStatus((s) => ({ ...s, [p.audit_id]: "loading" }));
+    try {
+      await undoFn({ data: { audit_id: p.audit_id } });
+      setProposalStatus((s) => ({ ...s, [p.audit_id]: "reverted" }));
+      toast.success("Desfeito");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível desfazer");
+      setProposalStatus((s) => ({ ...s, [p.audit_id]: "applied" }));
+    }
+  }
 
   async function toggleRecord() {
     if (recording) {
