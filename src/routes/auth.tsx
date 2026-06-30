@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { COUNTRIES, DEFAULT_COUNTRY, formatE164, type Country } from "@/lib/countries";
-import { lookupEmailByPhone } from "@/lib/phone-login.functions";
+import { signInWithPhone } from "@/lib/phone-login.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
