@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { COUNTRIES, DEFAULT_COUNTRY, formatE164, type Country } from "@/lib/countries";
-import { lookupEmailByPhone } from "@/lib/phone-login.functions";
+import { signInWithPhone } from "@/lib/phone-login.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -106,25 +106,28 @@ function AuthPage() {
         navigate({ to: "/onboarding", replace: true });
       } else {
         // LOGIN
-        let loginEmail = email;
         if (method === "phone") {
           const phoneE164 = formatE164(country.dial, phoneNumber);
           if (!phoneE164) {
             toast.error("Informe o número de telefone.");
             return;
           }
-          const res = await lookupEmailByPhone({ data: { phone: phoneE164 } });
-          if (!res.email) {
-            toast.error("Telefone não encontrado. Tente por e-mail.");
+          const res = await signInWithPhone({
+            data: { phone: phoneE164, password },
+          });
+          if (!res.ok) {
+            toast.error(res.error);
             return;
           }
-          loginEmail = res.email;
+          const { error: setErr } = await supabase.auth.setSession(res.session);
+          if (setErr) throw setErr;
+        } else {
+          const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (error) throw error;
         }
-        const { error } = await supabase.auth.signInWithPassword({
-          email: loginEmail,
-          password,
-        });
-        if (error) throw error;
         toast.success("De volta à jornada.");
         navigate({ to: "/mapa", replace: true });
       }
