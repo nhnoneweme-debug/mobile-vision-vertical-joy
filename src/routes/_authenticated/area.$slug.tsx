@@ -147,6 +147,7 @@ function AreaPage() {
         {userId && area.slug === "casa" && <CasaIntentionCard userId={userId} />}
         {userId && area.slug === "mental" && <MentalJournalCard userId={userId} />}
         {userId && area.slug === "cozinha" && <CozinhaDietCard />}
+        {userId && area.slug === "treino" && <TreinoPlanCard />}
 
         <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
           MISSÕES DA SEMANA
