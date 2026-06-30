@@ -31,6 +31,7 @@ import { Route as AuthenticatedCristaisRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
+import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated/alarme'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 
@@ -143,6 +144,11 @@ const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAlarmeRoute = AuthenticatedAlarmeRouteImport.update({
+  id: '/alarme',
+  path: '/alarme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAreaOrientadorRoute =
   AuthenticatedAreaOrientadorRouteImport.update({
     id: '/area/orientador',
@@ -158,6 +164,7 @@ const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/alarme': typeof AuthenticatedAlarmeRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/alarme': typeof AuthenticatedAlarmeRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/alarme': typeof AuthenticatedAlarmeRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/alarme'
     | '/calendario'
     | '/classe'
     | '/conquistas'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/alarme'
     | '/calendario'
     | '/classe'
     | '/conquistas'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/alarme'
     | '/_authenticated/calendario'
     | '/_authenticated/classe'
     | '/_authenticated/conquistas'
@@ -476,6 +488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/alarme': {
+      id: '/_authenticated/alarme'
+      path: '/alarme'
+      fullPath: '/alarme'
+      preLoaderRoute: typeof AuthenticatedAlarmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area/orientador': {
       id: '/_authenticated/area/orientador'
       path: '/area/orientador'
@@ -494,6 +513,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAlarmeRoute: typeof AuthenticatedAlarmeRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
@@ -515,6 +535,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAlarmeRoute: AuthenticatedAlarmeRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
