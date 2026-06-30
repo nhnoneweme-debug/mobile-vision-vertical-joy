@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  CalendarDays,
   Eye,
   Flame,
+  MapPin,
   MessageCircle,
   Send,
   Sparkles,
   Swords,
+  Users as UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,6 +19,12 @@ import {
   registerView,
   type FeedPost,
 } from "@/lib/feed";
+import {
+  getRsvpCounts,
+  setRsvp,
+  type EventCounts,
+  type RsvpStatus,
+} from "@/lib/post-events";
 import { isCrystalActive } from "@/lib/crystals";
 
 export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => void }) {
@@ -67,6 +76,8 @@ export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => 
           </p>
         </div>
       </header>
+
+      {post.event ? <EventBlock postId={post.id} event={post.event} /> : null}
 
       {post.body ? (
         <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{post.body}</p>
@@ -234,5 +245,82 @@ function ReactBtn({
       <Icon className="h-4 w-4" />
       {count > 0 ? count : null}
     </button>
+  );
+}
+
+function EventBlock({
+  postId,
+  event,
+}: {
+  postId: string;
+  event: NonNullable<FeedPost["event"]>;
+}) {
+  const [counts, setCounts] = useState<EventCounts | null>(null);
+
+  const load = async () => setCounts(await getRsvpCounts(postId));
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
+  const start = new Date(event.starts_at);
+  const dateLabel = start.toLocaleString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const choose = async (status: RsvpStatus) => {
+    try {
+      await setRsvp(postId, status);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha no RSVP");
+    }
+  };
+
+  const RsvpBtn = ({ status, label }: { status: RsvpStatus; label: string }) => {
+    const active = counts?.my_status === status;
+    return (
+      <button
+        type="button"
+        onClick={() => choose(status)}
+        className={
+          "flex-1 rounded-full border px-2 py-1.5 font-display text-[10px] tracking-[0.18em] transition " +
+          (active
+            ? "border-ember bg-ember text-charcoal-900"
+            : "border-border text-muted-foreground")
+        }
+      >
+        {label}
+      </button>
+    );
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-ember/30 bg-ember/5 p-3">
+      <p className="font-display text-base tracking-wide text-foreground">{event.title}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <CalendarDays className="h-3 w-3" /> {dateLabel}
+        </span>
+        {event.location_text ? (
+          <span className="flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> {event.location_text}
+          </span>
+        ) : null}
+        <span className="flex items-center gap-1">
+          <UsersIcon className="h-3 w-3" /> {counts?.going ?? 0}
+          {event.capacity ? `/${event.capacity}` : ""}
+        </span>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <RsvpBtn status="going" label="VOU" />
+        <RsvpBtn status="maybe" label="TALVEZ" />
+        <RsvpBtn status="declined" label="NÃO POSSO" />
+      </div>
+    </div>
   );
 }

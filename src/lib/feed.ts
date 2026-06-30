@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getEventsForPosts, type PostEvent } from "@/lib/post-events";
 
 export type MediaType = "none" | "image" | "video";
 export type VisibilityMode = "auto" | "manual" | "hybrid" | "public";
@@ -25,6 +26,7 @@ export type FeedPost = {
   views_count?: number;
   my_reaction?: string | null;
   signed_media_url?: string | null;
+  event?: PostEvent | null;
 };
 
 export async function uploadPostMedia(
@@ -106,14 +108,15 @@ export async function listFeed(limit = 20): Promise<FeedPost[]> {
   const ids = posts.map((p) => p.id);
   const authorIds = Array.from(new Set(posts.map((p) => p.author_id)));
 
-  const [profilesQ, reactionsQ, commentsQ, viewsQ, myReactQ] = await Promise.all([
-    supabase.from("profiles").select("id, display_name").in("id", authorIds),
+  const [profilesQ, reactionsQ, commentsQ, viewsQ, myReactQ, eventsMap] = await Promise.all([
+    supabase.from("public_profiles").select("id, display_name").in("id", authorIds),
     supabase.from("post_reactions").select("post_id").in("post_id", ids),
     supabase.from("post_comments").select("post_id").in("post_id", ids),
     supabase.from("post_views").select("post_id").in("post_id", ids),
     me
       ? supabase.from("post_reactions").select("post_id, kind").in("post_id", ids).eq("user_id", me)
       : Promise.resolve({ data: [] as { post_id: string; kind: string }[] }),
+    getEventsForPosts(ids),
   ]);
   const profilesMap = new Map(
     (profilesQ.data ?? []).map((p) => [p.id, { display_name: p.display_name }]),
@@ -136,6 +139,7 @@ export async function listFeed(limit = 20): Promise<FeedPost[]> {
         views_count: count(viewsQ.data, p.id),
         my_reaction: myReactMap.get(p.id) ?? null,
         signed_media_url: signed,
+        event: eventsMap.get(p.id) ?? null,
       };
     }),
   );
@@ -182,8 +186,7 @@ export async function listComments(postId: string) {
   if (!data || data.length === 0) return [];
   const ids = Array.from(new Set(data.map((c) => c.user_id)));
   const { data: profs } = await supabase
-    .from("profiles")
-    .select("id, display_name")
+    .from("public_profiles").select("id, display_name")
     .in("id", ids);
   const map = new Map((profs ?? []).map((p) => [p.id, p]));
   return data.map((c) => ({ ...c, author: map.get(c.user_id) ?? null }));
@@ -220,8 +223,7 @@ export async function listSilentViewers(postId: string) {
   if (silent.length === 0) return [];
   const ids = silent.map((v) => v.viewer_id);
   const { data: profs } = await supabase
-    .from("profiles")
-    .select("id, display_name")
+    .from("public_profiles").select("id, display_name")
     .in("id", ids);
   const map = new Map((profs ?? []).map((p) => [p.id, p]));
   return silent.map((v) => ({ ...v, profile: map.get(v.viewer_id) ?? null }));
