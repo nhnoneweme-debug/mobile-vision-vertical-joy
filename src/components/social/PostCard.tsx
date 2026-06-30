@@ -5,9 +5,12 @@ import {
   Flame,
   MapPin,
   MessageCircle,
+  MoreVertical,
   Send,
+  ShieldAlert,
   Sparkles,
   Swords,
+  UserX,
   Users as UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +29,7 @@ import {
   type RsvpStatus,
 } from "@/lib/post-events";
 import { isCrystalActive } from "@/lib/crystals";
+import { blockUser, reportContent } from "@/lib/moderation";
 
 export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
