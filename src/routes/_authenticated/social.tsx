@@ -26,6 +26,7 @@ import {
 import { FriendCodeCard } from "@/components/social/FriendCodeCard";
 import { Feed } from "@/components/social/Feed";
 import { GroupChat } from "@/components/social/GroupChat";
+import { BlockedListCard } from "@/components/social/BlockedListCard";
 import { toast } from "sonner";
 import {
   Check,
@@ -135,6 +136,7 @@ function SocialPage() {
         ) : tab === "feed" ? (
           <div className="space-y-4">
             <FriendCodeCard code={myCode} />
+            <BlockedListCard />
             <Feed userId={userId!} />
           </div>
         ) : tab === "amigos" ? (
