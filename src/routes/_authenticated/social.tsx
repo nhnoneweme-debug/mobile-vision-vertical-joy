@@ -135,6 +135,7 @@ function SocialPage() {
         ) : tab === "feed" ? (
           <div className="space-y-4">
             <FriendCodeCard code={myCode} />
+            <BlockedListCard />
             <Feed userId={userId!} />
           </div>
         ) : tab === "amigos" ? (
