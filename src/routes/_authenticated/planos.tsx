@@ -71,7 +71,7 @@ const PLANS: Plan[] = [
       "Alarme avançado e suporte direto",
     ],
   },
-] as const;
+];
 
 const PACKS = [
   { id: "pack500", priceId: "brasas_pack_500_once", brasas: "500", price: "R$ 9,90", bonus: null },
