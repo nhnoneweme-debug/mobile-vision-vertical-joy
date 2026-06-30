@@ -214,8 +214,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
                 user_id: userId,
                 action: "insight.capture",
                 table_name: "ritual_logs",
-                payload: { kind, text, date: today },
-                summary: `${kind}: ${text.slice(0, 80)}`,
+                payload: { kind, text, date: today, summary: `${kind}: ${text.slice(0, 80)}` },
                 status: "applied",
               });
               if (error) return { ok: false, error: error.message };
