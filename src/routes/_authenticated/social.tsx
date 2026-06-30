@@ -594,6 +594,10 @@ function GroupsPanel({
           )}
         </Section>
       )}
+
+      {active && (
+        <GroupChat groupId={active.id} groupName={active.name} userId={userId} />
+      )}
     </>
   );
 }
