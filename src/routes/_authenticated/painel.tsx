@@ -150,6 +150,16 @@ function OrientadorDashboard({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState("");
   const [activeStudent, setActiveStudent] = useState<StudentSnapshot | null>(null);
+  const [myFriendCode, setMyFriendCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("friend_code")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data }) => setMyFriendCode(data?.friend_code ?? null));
+  }, [userId]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
