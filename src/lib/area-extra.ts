@@ -92,3 +92,82 @@ export async function saveTodayMentalEntry(
   if (error) throw error;
   return data as MentalEntry;
 }
+
+// ---------- Inclusão: identidade, acessibilidade, tom da IA ----------
+
+export type InclusionPrefs = {
+  pronouns: string; // ex: "ela/dela", "ele/dele", "elu/delu", livre
+  identity_note: string; // espaço livre para identidade
+  accessibility: {
+    reduced_motion: boolean;
+    large_text: boolean;
+    high_contrast: boolean;
+    screen_reader: boolean;
+  };
+  ia_tone: "firme" | "acolhedor" | "poetico" | "direto" | "leve";
+  language_level: "tecnico" | "simples" | "muito_simples";
+  no_go_topics: string; // assuntos que a IA deve evitar
+  empowering_beliefs: string; // crenças que reforçam a pessoa
+};
+
+export const DEFAULT_INCLUSION: InclusionPrefs = {
+  pronouns: "",
+  identity_note: "",
+  accessibility: {
+    reduced_motion: false,
+    large_text: false,
+    high_contrast: false,
+    screen_reader: false,
+  },
+  ia_tone: "firme",
+  language_level: "simples",
+  no_go_topics: "",
+  empowering_beliefs: "",
+};
+
+export async function getInclusionPrefs(userId: string): Promise<InclusionPrefs> {
+  const { data, error } = await supabase
+    .from("area_progress")
+    .select("meta")
+    .eq("user_id", userId)
+    .eq("area_slug", "inclusao")
+    .maybeSingle();
+  if (error) throw error;
+  const meta = (data?.meta ?? {}) as Record<string, unknown>;
+  const prefs = meta.inclusion as Partial<InclusionPrefs> | undefined;
+  return {
+    ...DEFAULT_INCLUSION,
+    ...(prefs ?? {}),
+    accessibility: {
+      ...DEFAULT_INCLUSION.accessibility,
+      ...((prefs?.accessibility ?? {}) as Record<string, boolean>),
+    },
+  };
+}
+
+export async function saveInclusionPrefs(
+  userId: string,
+  prefs: InclusionPrefs,
+): Promise<InclusionPrefs> {
+  const { data: existing } = await supabase
+    .from("area_progress")
+    .select("id, meta")
+    .eq("user_id", userId)
+    .eq("area_slug", "inclusao")
+    .maybeSingle();
+  const meta = {
+    ...((existing?.meta ?? {}) as Record<string, unknown>),
+    inclusion: prefs,
+  };
+  if (existing) {
+    const { error } = await supabase.from("area_progress").update({ meta }).eq("id", existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("area_progress")
+      .insert({ user_id: userId, area_slug: "inclusao", level: 1, xp: 0, meta });
+    if (error) throw error;
+  }
+  return prefs;
+}
+
