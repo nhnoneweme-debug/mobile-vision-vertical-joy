@@ -93,12 +93,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Personal IA transforma cuidar de si em uma jornada viva: treino, sono, alimentação e mente em um mundo guiado por IA.",
       },
-      { property: "og:title", content: "Personal IA" },
+      { property: "og:title", content: "Personal IA — Sua jornada de bem-estar" },
       {
         property: "og:description",
         content: "Sua jornada gamificada de bem-estar guiada por IA.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "Personal IA — Sua jornada de bem-estar" },
+      { name: "description", content: "Personal Digital, is about e be well with to your inner self, not only gyn, not only sleep, no only what to eat. Is more them that is the hole, total, complete" },
+      { property: "og:description", content: "Personal Digital, is about e be well with to your inner self, not only gyn, not only sleep, no only what to eat. Is more them that is the hole, total, complete" },
+      { name: "twitter:description", content: "Personal Digital, is about e be well with to your inner self, not only gyn, not only sleep, no only what to eat. Is more them that is the hole, total, complete" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/b6b8a945-e4c8-4369-8d85-a083ce8af74f" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/b6b8a945-e4c8-4369-8d85-a083ce8af74f" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
