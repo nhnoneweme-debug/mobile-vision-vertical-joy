@@ -13,6 +13,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
 import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
@@ -22,6 +23,7 @@ import { Route as AuthenticatedSonhosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
+import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -58,6 +60,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWakeChatRoute = ApiWakeChatRouteImport.update({
@@ -103,6 +110,11 @@ const AuthenticatedRitualRoute = AuthenticatedRitualRouteImport.update({
 const AuthenticatedProgressoRoute = AuthenticatedProgressoRouteImport.update({
   id: '/progresso',
   path: '/progresso',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlanosRoute = AuthenticatedPlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
@@ -217,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/planos': typeof AuthenticatedPlanosRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
@@ -226,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -249,6 +263,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/planos': typeof AuthenticatedPlanosRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
@@ -258,6 +273,7 @@ export interface FileRoutesByTo {
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -283,6 +299,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/planos': typeof AuthenticatedPlanosRoute
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
@@ -292,6 +309,7 @@ export interface FileRoutesById {
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
 }
@@ -317,6 +335,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/painel'
     | '/perfil'
+    | '/planos'
     | '/progresso'
     | '/ritual'
     | '/social'
@@ -326,6 +345,7 @@ export interface FileRouteTypes {
     | '/api/ia-capture'
     | '/api/sleep-chat'
     | '/api/wake-chat'
+    | '/checkout/return'
     | '/area/$slug'
     | '/area/orientador'
   fileRoutesByTo: FileRoutesByTo
@@ -349,6 +369,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/painel'
     | '/perfil'
+    | '/planos'
     | '/progresso'
     | '/ritual'
     | '/social'
@@ -358,6 +379,7 @@ export interface FileRouteTypes {
     | '/api/ia-capture'
     | '/api/sleep-chat'
     | '/api/wake-chat'
+    | '/checkout/return'
     | '/area/$slug'
     | '/area/orientador'
   id:
@@ -382,6 +404,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/painel'
     | '/_authenticated/perfil'
+    | '/_authenticated/planos'
     | '/_authenticated/progresso'
     | '/_authenticated/ritual'
     | '/_authenticated/social'
@@ -391,6 +414,7 @@ export interface FileRouteTypes {
     | '/api/ia-capture'
     | '/api/sleep-chat'
     | '/api/wake-chat'
+    | '/checkout/return'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
   fileRoutesById: FileRoutesById
@@ -404,6 +428,7 @@ export interface RootRouteChildren {
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
   ApiSleepChatRoute: typeof ApiSleepChatRoute
   ApiWakeChatRoute: typeof ApiWakeChatRoute
+  CheckoutReturnRoute: typeof CheckoutReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -434,6 +459,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/wake-chat': {
@@ -497,6 +529,13 @@ declare module '@tanstack/react-router' {
       path: '/progresso'
       fullPath: '/progresso'
       preLoaderRoute: typeof AuthenticatedProgressoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/planos': {
+      id: '/_authenticated/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof AuthenticatedPlanosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/perfil': {
@@ -645,6 +684,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
@@ -671,6 +711,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
@@ -692,6 +733,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIaCaptureRoute: ApiIaCaptureRoute,
   ApiSleepChatRoute: ApiSleepChatRoute,
   ApiWakeChatRoute: ApiWakeChatRoute,
+  CheckoutReturnRoute: CheckoutReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

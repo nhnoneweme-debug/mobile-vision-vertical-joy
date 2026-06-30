@@ -23,7 +23,17 @@ export const Route = createFileRoute("/_authenticated/planos")({
 
 type Cycle = "monthly" | "yearly";
 
-const PLANS = [
+type Plan = {
+  id: string;
+  name: string;
+  icon: typeof Sparkles;
+  highlight?: boolean;
+  monthly: { priceId: string; amount: string; note?: string };
+  yearly: { priceId: string; amount: string; note?: string };
+  perks: string[];
+};
+
+const PLANS: Plan[] = [
   {
     id: "essencial",
     name: "Essencial",
