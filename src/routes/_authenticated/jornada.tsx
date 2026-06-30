@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, ChefHat, Dumbbell, Brain, Heart, Moon, Sun, MoonStar, MapPin } from "lucide-react";
+import { Check, ChefHat, Dumbbell, Brain, Heart, Moon, Sun, MoonStar, MapPin, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -30,7 +30,18 @@ function JornadaPage() {
   const list = useServerFn(listDayBlocks);
   const create = useServerFn(createDayBlock);
   const complete = useServerFn(completeDayBlock);
+  const navigate = useNavigate();
   const [blocks, setBlocks] = useState<Block[]>([]);
+
+  function askIA() {
+    try {
+      sessionStorage.setItem(
+        "ia.seed",
+        "Monte minha jornada de hoje em blocos: despertar, refeições, treino, foco profundo, família, desacelerar e dormir — respeitando minha rotina e meu tempo/dia disponível. Salve cada bloco como uma quest de hoje.",
+      );
+    } catch {}
+    navigate({ to: "/ia" });
+  }
 
   async function refresh() {
     try {
@@ -74,8 +85,16 @@ function JornadaPage() {
       </header>
 
       <div className="space-y-5 px-4 py-5 pb-32">
+        <button
+          onClick={askIA}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 px-4 py-3 text-sm text-ember active:scale-[0.98]"
+        >
+          <Sparkles className="h-4 w-4" />
+          Pedir pra IA montar meu dia
+        </button>
+
         <section>
-          <h2 className="mb-2 font-display text-sm text-muted-foreground">INICIAR BLOCO</h2>
+          <h2 className="mb-2 font-display text-sm text-muted-foreground">+ ADICIONAR BLOCO MANUAL</h2>
           <div className="grid grid-cols-4 gap-2">
             {KINDS.map(({ kind, label, Icon }) => (
               <button

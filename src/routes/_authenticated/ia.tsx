@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { applyAuditWrite, rejectAuditWrite } from "@/lib/ia-capture.functions";
+import { applyAuditWrite, rejectAuditWrite, undoAuditWrite } from "@/lib/ia-capture.functions";
 import { useServerFn } from "@tanstack/react-start";
 import type { Proposal } from "@/lib/ia-capture";
 
@@ -29,16 +29,24 @@ function IAPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [proposalStatus, setProposalStatus] = useState<Record<string, "applied" | "rejected" | "loading">>({});
+  const [proposalStatus, setProposalStatus] = useState<Record<string, "applied" | "rejected" | "loading" | "reverted">>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const applyFn = useServerFn(applyAuditWrite);
   const rejectFn = useServerFn(rejectAuditWrite);
+  const undoFn = useServerFn(undoAuditWrite);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
+    try {
+      const seed = sessionStorage.getItem("ia.seed");
+      if (seed) {
+        sessionStorage.removeItem("ia.seed");
+        setInput(seed);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -86,6 +94,17 @@ function IAPage() {
       setProposalStatus((s) => ({ ...s, [p.audit_id]: "rejected" }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
+    }
+  }
+  async function undo(p: Proposal) {
+    setProposalStatus((s) => ({ ...s, [p.audit_id]: "loading" }));
+    try {
+      await undoFn({ data: { audit_id: p.audit_id } });
+      setProposalStatus((s) => ({ ...s, [p.audit_id]: "reverted" }));
+      toast.success("Desfeito");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível desfazer");
+      setProposalStatus((s) => ({ ...s, [p.audit_id]: "applied" }));
     }
   }
 
@@ -157,22 +176,49 @@ function IAPage() {
               {!mine && m.proposals && m.proposals.length > 0 && (
                 <div className="w-full max-w-[88%] space-y-2">
                   {m.proposals.map((p) => {
-                    const st = proposalStatus[p.audit_id];
+                    const st = proposalStatus[p.audit_id] ?? (p.auto_applied ? "applied" : undefined);
+                    const isAuto = p.auto_applied === true;
+                    const hasError = !!p.apply_error;
                     return (
                       <div
                         key={p.audit_id}
-                        className="rounded-xl border border-ember/40 bg-ember/5 p-3"
+                        className={`rounded-xl border p-3 ${
+                          hasError ? "border-red-500/40 bg-red-500/5" : "border-ember/40 bg-ember/5"
+                        }`}
                       >
                         <p className="font-display text-[10px] tracking-[0.18em] text-ember">
                           {p.action.toUpperCase()}
+                          {isAuto && !hasError && st !== "reverted" && (
+                            <span className="ml-2 rounded bg-ember/20 px-1.5 py-[1px] text-[9px] text-ember">
+                              AUTO
+                            </span>
+                          )}
                         </p>
                         <p className="mt-1 text-sm">{p.summary}</p>
                         <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-muted-foreground">
                           {JSON.stringify(p.payload, null, 0)}
                         </pre>
                         <div className="mt-2 flex gap-2">
-                          {st === "applied" ? (
-                            <span className="text-xs text-ember">✓ registrado</span>
+                          {hasError ? (
+                            <span className="text-xs text-red-400">
+                              ✗ falhou: {p.apply_error}
+                            </span>
+                          ) : st === "reverted" ? (
+                            <span className="text-xs text-muted-foreground">↺ desfeito</span>
+                          ) : st === "applied" ? (
+                            <>
+                              <span className="text-xs text-ember">
+                                {isAuto ? "✓ salvo automaticamente" : "✓ registrado"}
+                              </span>
+                              {isAuto && (
+                                <button
+                                  onClick={() => undo(p)}
+                                  className="ml-auto rounded-md border border-border px-2 py-[2px] text-[11px] text-muted-foreground hover:text-foreground"
+                                >
+                                  Desfazer
+                                </button>
+                              )}
+                            </>
                           ) : st === "rejected" ? (
                             <span className="text-xs text-muted-foreground">descartado</span>
                           ) : (

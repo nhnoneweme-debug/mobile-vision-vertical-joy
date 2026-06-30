@@ -17,6 +17,8 @@ export type Proposal = {
   table: string;
   payload: Record<string, unknown>;
   summary: string;
+  auto_applied?: boolean;
+  apply_error?: string;
 };
 
 export const ALLOWED_ACTIONS: AllowedAction[] = [

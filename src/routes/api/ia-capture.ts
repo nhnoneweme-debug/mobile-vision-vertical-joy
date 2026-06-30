@@ -10,6 +10,7 @@ import {
   type AllowedAction,
   type Proposal,
 } from "@/lib/ia-capture";
+import { AUTO_APPLY_ACTIONS, applyAction } from "@/lib/ia-capture-apply";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 type Body = { session_id?: string | null; messages: ChatMsg[] };
@@ -80,7 +81,8 @@ export const Route = createFileRoute("/api/ia-capture")({
               .describe("Campos da escrita. Veja exemplos no system prompt."),
           }),
           execute: async ({ action, summary, payload }) => {
-            const table = ACTION_TO_TABLE[action as AllowedAction];
+            const typedAction = action as AllowedAction;
+            const table = ACTION_TO_TABLE[typedAction];
             const { data, error } = await supabase
               .from("ai_audit_log")
               .insert({
@@ -95,14 +97,43 @@ export const Route = createFileRoute("/api/ia-capture")({
               .select("id")
               .single();
             if (error || !data) return { ok: false, error: error?.message ?? "audit_insert_failed" };
+
+            let autoApplied = false;
+            let applyError: string | undefined;
+            if (AUTO_APPLY_ACTIONS.has(typedAction)) {
+              try {
+                const res = await applyAction(supabase, userId, typedAction, payload);
+                await supabase
+                  .from("ai_audit_log")
+                  .update({
+                    status: "applied",
+                    payload: {
+                      ...payload,
+                      _inserted_table: res.inserted_table,
+                      _inserted_id: res.inserted_id,
+                    } as never,
+                  })
+                  .eq("id", data.id);
+                autoApplied = true;
+              } catch (err) {
+                applyError = err instanceof Error ? err.message : "apply_failed";
+                await supabase
+                  .from("ai_audit_log")
+                  .update({ status: "error", reason: applyError })
+                  .eq("id", data.id);
+              }
+            }
+
             proposals.push({
               audit_id: data.id,
-              action: action as AllowedAction,
+              action: typedAction,
               table,
               payload,
               summary,
+              auto_applied: autoApplied,
+              apply_error: applyError,
             });
-            return { ok: true, audit_id: data.id };
+            return { ok: true, audit_id: data.id, auto_applied: autoApplied };
           },
         });
 
@@ -121,6 +152,11 @@ export const Route = createFileRoute("/api/ia-capture")({
           "- scheduled_quest.create → { title:string, scheduled_for:YYYY-MM-DD }",
           "- area_mission.complete → { area_slug:string, mission_id:uuid }",
           "- profile.update → { display_name?, goal?, time_per_day_min?, days_per_week?, height_cm?, weight_kg?, age?, level_track? }",
+          "",
+          "## Comportamento de gravação",
+          "Ações de BAIXO RISCO são salvas automaticamente, sem pedir confirmação: habit.create, habit_log.today, quest.create, ritual.upsert, scheduled_quest.create, area_mission.complete.",
+          "Apenas profile.update e goal.create exigem confirmação do usuário.",
+          "Quando salvar algo automaticamente, diga o que foi salvo de forma curta (1 linha por item).",
           "",
           "## Contexto do jogador",
           `Nome: ${profile?.display_name ?? "Viajante"} · Classe: ${profile?.behavioral_class ?? "—"} · Trilha: ${profile?.level_track ?? "—"}`,
