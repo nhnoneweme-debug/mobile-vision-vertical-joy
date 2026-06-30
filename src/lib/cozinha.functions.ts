@@ -128,6 +128,6 @@ export const clearDietPlan = createServerFn({ method: "POST" })
     if (!existing) return { ok: true };
     const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
     delete meta.diet_plan;
-    await context.supabase.from("area_progress").update({ meta }).eq("id", existing.id);
+    await context.supabase.from("area_progress").update({ meta: meta as never }).eq("id", existing.id);
     return { ok: true };
   });

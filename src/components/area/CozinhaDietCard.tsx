@@ -48,7 +48,7 @@ export function CozinhaDietCard() {
   async function handleClear() {
     setSubmitting(true);
     try {
-      await fnClear({ data: {} });
+      await fnClear();
       setPlan(null);
       setText("");
       setEditing(true);
