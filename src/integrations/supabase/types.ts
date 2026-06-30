@@ -234,6 +234,7 @@ export type Database = {
           created_at: string
           id: string
           level: number
+          meta: Json
           updated_at: string
           user_id: string
           xp: number
@@ -243,6 +244,7 @@ export type Database = {
           created_at?: string
           id?: string
           level?: number
+          meta?: Json
           updated_at?: string
           user_id: string
           xp?: number
@@ -252,6 +254,7 @@ export type Database = {
           created_at?: string
           id?: string
           level?: number
+          meta?: Json
           updated_at?: string
           user_id?: string
           xp?: number
@@ -724,6 +727,39 @@ export type Database = {
           title?: string
           unlock_achievement_code?: string | null
           unlock_level?: number
+        }
+        Relationships: []
+      }
+      mental_journal: {
+        Row: {
+          created_at: string
+          gratitudes: string[]
+          id: string
+          limiting_belief: string | null
+          log_date: string
+          reframe: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gratitudes?: string[]
+          id?: string
+          limiting_belief?: string | null
+          log_date?: string
+          reframe?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gratitudes?: string[]
+          id?: string
+          limiting_belief?: string | null
+          log_date?: string
+          reframe?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
