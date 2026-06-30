@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, ChefHat, Dumbbell, Brain, Heart, Moon, Sun, MoonStar, MapPin } from "lucide-react";
+import { Check, ChefHat, Dumbbell, Brain, Heart, Moon, Sun, MoonStar, MapPin, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
