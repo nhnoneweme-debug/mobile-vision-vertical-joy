@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { applyAuditWrite, rejectAuditWrite } from "@/lib/ia-capture.functions";
+import { applyAuditWrite, rejectAuditWrite, undoAuditWrite } from "@/lib/ia-capture.functions";
 import { useServerFn } from "@tanstack/react-start";
 import type { Proposal } from "@/lib/ia-capture";
 
