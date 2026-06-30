@@ -225,6 +225,118 @@ export function PostCard({ post, onChange }: { post: FeedPost; onChange?: () => 
   );
 }
 
+function PostMenu({
+  authorId,
+  postId,
+  onChange,
+}: {
+  authorId: string;
+  postId: string;
+  onChange?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"menu" | "report">("menu");
+  const [reason, setReason] = useState("");
+
+  const close = () => {
+    setOpen(false);
+    setMode("menu");
+    setReason("");
+  };
+
+  const submitReport = async () => {
+    try {
+      await reportContent("post", postId, reason);
+      toast.success("Denúncia registrada. Obrigado.");
+      close();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao denunciar");
+    }
+  };
+
+  const doBlock = async () => {
+    if (!confirm("Bloquear este viajante? Vocês deixarão de se ver no feed.")) return;
+    try {
+      await blockUser(authorId);
+      toast.success("Viajante bloqueado.");
+      close();
+      onChange?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao bloquear");
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-full p-1.5 text-muted-foreground hover:bg-charcoal-900/40"
+        aria-label="Mais ações"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-9 z-20 w-56 rounded-xl border border-border bg-charcoal-900/95 p-2 shadow-xl backdrop-blur">
+          {mode === "menu" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setMode("report")}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-foreground hover:bg-ember/10"
+              >
+                <ShieldAlert className="h-4 w-4 text-ember" /> Denunciar post
+              </button>
+              <button
+                type="button"
+                onClick={doBlock}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-foreground hover:bg-ember/10"
+              >
+                <UserX className="h-4 w-4 text-ember" /> Bloquear viajante
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className="mt-1 w-full rounded-lg px-3 py-1.5 text-[10px] text-muted-foreground"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <div className="space-y-2 p-1">
+              <p className="font-display text-[10px] tracking-[0.2em] text-ember">MOTIVO</p>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Descreva brevemente..."
+                className="w-full rounded-lg border border-border bg-transparent p-2 text-xs text-foreground outline-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={close}
+                  className="flex-1 rounded-lg border border-border px-2 py-1.5 text-[10px] text-muted-foreground"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  type="button"
+                  onClick={submitReport}
+                  className="flex-1 rounded-lg bg-ember px-2 py-1.5 text-[10px] font-display tracking-[0.18em] text-charcoal-900"
+                >
+                  ENVIAR
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ReactBtn({
   Icon,
   count,
