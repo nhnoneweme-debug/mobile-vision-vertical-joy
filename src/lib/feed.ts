@@ -186,8 +186,7 @@ export async function listComments(postId: string) {
   if (!data || data.length === 0) return [];
   const ids = Array.from(new Set(data.map((c) => c.user_id)));
   const { data: profs } = await supabase
-    .from("profiles")
-    .select("id, display_name")
+    .from("public_profiles").select("id, display_name")
     .in("id", ids);
   const map = new Map((profs ?? []).map((p) => [p.id, p]));
   return data.map((c) => ({ ...c, author: map.get(c.user_id) ?? null }));
@@ -224,8 +223,7 @@ export async function listSilentViewers(postId: string) {
   if (silent.length === 0) return [];
   const ids = silent.map((v) => v.viewer_id);
   const { data: profs } = await supabase
-    .from("profiles")
-    .select("id, display_name")
+    .from("public_profiles").select("id, display_name")
     .in("id", ids);
   const map = new Map((profs ?? []).map((p) => [p.id, p]));
   return silent.map((v) => ({ ...v, profile: map.get(v.viewer_id) ?? null }));
