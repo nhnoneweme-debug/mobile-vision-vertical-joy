@@ -1,112 +1,100 @@
-# Fase E — Rede Social + Cristais + Studio
 
-## Visão geral
-Três frentes integradas: feed social com privacidade granular, sistema de Cristais do Poder com efeitos em camadas (Olho do Oráculo + Eco do Mentor no MVP) e um Studio de gestão para admins criarem desafios e prêmios dinâmicos sem código.
+# Fase F — Companheira do Despertar ao Dormir
+
+A IA-Coletora vira **companheira contínua** do ciclo diário. O alarme deixa de ser barulho fixo: a IA conversa, adapta intensidade, negocia o snooze, propõe música/pensamento, captura sonhos e conduz a pessoa pelos blocos do dia (cozinha, academia, trabalho, descanso).
 
 ---
 
-## E.1 — Rede Social interna
+## F.1 — Alarme Inteligente Conversacional
 
 ### Banco
-- `posts` (id, author_id, body text, media_url, media_type [image|video|none], visibility_mode [auto|manual|hybrid], visibility_rule jsonb, created_at)
-- `post_audience` (post_id, audience_type [friend|guild|class|user], audience_id) — alimenta o "manual" e o "hybrid"
-- `post_reactions` (post_id, user_id, kind [ember|insight|strength])
-- `post_comments` (post_id, user_id, body, created_at)
-- `post_views` (post_id, viewer_id, viewed_at) — base do Olho do Oráculo
-- `follows` (follower_id, followed_id) — assimétrico, separado de friendships
-- Storage bucket `social-media` (público com RLS de write por owner)
+- `wake_alarms` (id, user_id, label, time_local, days_of_week int[], timezone, enabled, wake_style [gentle|firm|energetic|custom], voice_persona, max_snoozes default 3, snooze_strategy [fixed|adaptive], created_at)
+- `wake_sessions` (id, user_id, alarm_id, started_at, woke_at nullable, total_snooze_min, snooze_count, mood_on_wake, dream_logged bool, status [ringing|snoozing|awake|missed])
+- `wake_events` (session_id, kind [ring|snooze|interaction|music|thought|wake|miss], payload jsonb, at)
 
-### Visibilidade granular
-Cada post escolhe um modo:
-- **auto**: regra salva no perfil (ex. "sempre amigos+guilda")
-- **manual**: usuário marca audiências específicas no composer
-- **hybrid**: regra automática + exceções manuais (incluir/excluir)
-Função SQL `can_view_post(viewer, post)` consulta `post_audience` + regra jsonb e é usada por RLS.
+### Lógica de despertar
+1. **Ring inicial**: PWA dispara notification + (se app aberto) som progressivo. Tela full-screen mostra **chat ao vivo** com a IA: "Oi, acordou? Tô aqui no controle — música, pensamento, deixar tocar?"
+2. **Snooze adaptativo**: a cada interação, IA decide próximo intervalo (5/10/20 min) com base em:
+   - hora prevista vs hora real
+   - streak de despertares anteriores
+   - humor declarado ("dá mais 10" = suave; sem resposta = sobe intensidade)
+   - perfil do usuário (classe, level_track, time_per_day_min)
+3. **Modos de estímulo** que a IA pode acionar:
+   - Música (preset por mood: calma/energia/foco) — usa Web Audio API + faixas locais ou geradas
+   - Pensamento do dia (frase curta poética, gerada com contexto)
+   - Quest preview ("hoje sua missão é X — bora?")
+4. **Limite e respeito**: após `max_snoozes` ou tempo total, IA muda tom: "Acabou o crédito da cama, te amo, levanta."
 
 ### Frontend
-- Rota `/social` reformulada com tabs: **Feed**, **Amigos**, **Descobrir**
-- `PostComposer` com upload (imagem/vídeo ≤30s via MediaRecorder/file), seletor de audiência granular
-- `PostCard` com reações, comentários, contagem de views (clicável se cristal ativo)
-- Topo da aba Amigos: card grande com **meu friend_code**, botão "Compartilhar no WhatsApp" (deep link wa.me) + 3 modos de adicionar amigo (código, email, telefone)
+- Rota `/alarme` (lista/edição) e `/despertar` (full-screen quando dispara)
+- Componente `WakeChat` reaproveita transport do `/api/chat`, mas com `system` de "Companheira do Despertar"
+- Background sound loop com fade-in
+- Service Worker já existe (PWA) — adicionar `showNotification` + schedule via `setTimeout` quando o app está aberto e fallback de notification para quando fechado
 
 ---
 
-## E.2 — Cristais do Poder
+## F.2 — Registro de Sonhos
 
 ### Banco
-- `power_crystals` (id, code, name, description, icon, effect_type, effect_config jsonb, rarity)
-- `user_crystals` (user_id, crystal_id, mode [temporal|conditional|permanent], acquired_at, expires_at nullable, condition jsonb nullable, active boolean)
-- Função `is_crystal_active(user, code)` resolve mode+condição+expiração
-- View `active_user_crystals` para consulta rápida no client
+- `dream_logs` (id, user_id, session_id nullable, logged_at, raw_text, audio_url nullable, mood, lucidity int 0-10, symbols text[], themes text[], ai_summary, ai_interpretation, created_at)
+- Estrutura base de **símbolos recorrentes** alimenta gráfico de padrões ao longo do tempo
 
-### Cristais iniciais
-1. **Olho do Oráculo** — revela lista de viewers silenciosos em `post_views`
-2. **Eco do Mentor** — multiplica XP de hábitos por 2 enquanto ativo
-
-Cada um pode existir em qualquer um dos 3 modos (drop define qual).
+### Fluxo
+- Logo após "acordei", IA pergunta: "Quer registrar o sonho? Texto ou áudio."
+- Captura via voz (MediaRecorder já existe no `/ia`) ou texto rápido
+- IA processa: extrai símbolos, tema, humor, gera resumo e interpretação leve (não místico de mais — alinhado ao tom mentor)
+- Insere em `dream_logs` via server fn
 
 ### Frontend
-- Nova aba "Cristais" em `/conquistas` com inventário + estado (temporal countdown, condição atual, permanente)
-- Badge no HUD do mapa quando há cristal ativo
-- Hook `useActiveCrystals()` consultado por features que reagem (PostCard mostra viewers, award_habit_xp lê multiplicador)
-- Trigger SQL atualiza `xp_events.amount` se Eco do Mentor ativo no momento do log
+- Rota `/sonhos` com timeline, busca por símbolo, heatmap de lucidez
+- Card "registrar sonho" surge automaticamente em `/despertar` após `status=awake`
 
 ---
 
-## E.3 — Studio de Gestão (admin)
+## F.3 — Jornada Acordar → Dormir
 
-Painel para a equipe criar conteúdo dinâmico sem migration.
+A "espinha dorsal" do dia: a IA acompanha blocos e nos pontos de transição oferece o próximo passo.
 
 ### Banco
-- `studio_rewards` (id, kind [crystal|brasas|xp|inventory_item|badge], payload jsonb, created_by, active)
-- `studio_challenges` (id, title, description, cover_url, start_at, end_at, rules jsonb, status [draft|published|archived])
-- `studio_challenge_rewards` (challenge_id, reward_id, tier int, criteria jsonb) — múltiplos prêmios por perspectiva
-- `studio_challenge_participants` (challenge_id, user_id, progress jsonb, completed_at, awarded_rewards uuid[])
-- Role `studio_admin` adicionado em `app_role` enum; gate via `has_role`
+- `day_blocks` (id, user_id, date, kind [wake|dream|kitchen|move|deep_work|family|wind_down|sleep], started_at, ended_at, completed bool, notes)
+- `sleep_logs` (id, user_id, date, bed_at, sleep_at nullable, wake_at nullable, quality 1-5, ritual_done bool)
 
-### Regras dinâmicas
-`rules` jsonb suporta perspectivas combinadas:
-```
-{ "perspectives": [
-  { "name": "execução", "metric": "habit_completion", "target": 30 },
-  { "name": "constância", "metric": "streak_min", "target": 14 },
-  { "name": "social", "metric": "posts_count", "target": 5 }
-]}
-```
-Engine SQL `evaluate_challenge(user, challenge)` retorna progresso por perspectiva e quais tiers de prêmio foram alcançados.
+### Lógica
+- `wake_sessions.status=awake` dispara criação de `day_blocks` padrão segundo perfil
+- Cada bloco tem CTA da IA: "Bora pra cozinha?" → abre área já existente
+- À noite, ritual da noite + `sleep_logs` (reuso da tabela `ritual_logs` para wind_down)
+- Tela `/jornada` mostra timeline do dia com blocos consumidos/pendentes
 
-### Frontend Studio
-- Rota `/_authenticated/studio` (gate `studio_admin`)
-- **Reward Builder**: form dinâmico que muda campos conforme `kind` (cristal: escolher modo/condição; brasas: amount; item: shop_items)
-- **Challenge Builder**: editor visual de perspectivas (adicionar/remover métricas), agendamento, anexar múltiplos prêmios por tier
-- **Preview & Publish** com simulação contra um usuário-teste
-- Lista de desafios ativos com participantes e métricas
+---
 
-### Para o jogador
-- Nova rota `/desafios` lista desafios publicados, com barra de progresso por perspectiva e prêmios visíveis
-- Drop automático de cristais/recompensas via `award_challenge_rewards()` quando critério bate
+## F.4 — Integração com IA existente
+
+- Novo system prompt **"Companheira do Despertar"** quando contexto = sessão de alarme
+- IA ganha tools (AI SDK):
+  - `setSnooze({ minutes })`
+  - `playMusic({ mood })`
+  - `speakThought({ text })`
+  - `logDream({ raw_text, mood, lucidity })`
+  - `markAwake()`
+  - `createDayBlock({ kind })`
+- Loop com `stopWhen: stepCountIs(50)`
+- Captura de contexto reaproveita `src/lib/ai-gateway.server.ts` e padrão de `/api/chat`
 
 ---
 
 ## Ordem de implementação
-1. Migration única com todas as tabelas + RLS + grants + funções base
-2. Storage bucket + policies
-3. Server fns: criar post, reagir, comentar, registrar view, listar feed com visibilidade
-4. UI rede social (composer, feed, cards, friend card no topo)
-5. Cristais: catálogo seed (Olho + Eco), hook, badge HUD, integração com habit XP e viewers
-6. Studio: gate de role, builders, engine de avaliação
-7. Rota `/desafios` para jogadores
+1. Migration (`wake_alarms`, `wake_sessions`, `wake_events`, `dream_logs`, `day_blocks`, `sleep_logs`) + RLS + GRANTs
+2. Server fns: `createAlarm`, `updateAlarm`, `startWakeSession`, `recordSnooze`, `markAwake`, `logDream`, `createDayBlock`
+3. Endpoint `/api/wake-chat` (streamText com tools acima)
+4. Rotas: `/alarme`, `/despertar`, `/sonhos`, `/jornada` + entradas no Upper Menu
+5. PWA: notification scheduler (best-effort enquanto aberto) + página de fallback
+6. Conectar `/despertar` ao fluxo: dispara → chat IA → snooze/wake → propõe sonho → propõe primeiro bloco
 
-## Detalhes técnicos
-- Vídeo: client-side check de duração (≤30s) + tamanho (≤20MB) antes do upload; thumbnail gerada via `<video>` + canvas
-- Views: debounce de 2s antes de inserir em `post_views`, único por (post,viewer)
-- Cristais temporais: cron diário desativa expirados (`update user_crystals set active=false where expires_at < now()`)
-- RLS de `post_views`: viewer pode inserir o próprio; autor lê só se cristal ativo (checado em server fn, não em RLS)
-- Studio: todas as escritas via server fns com `has_role(_, 'studio_admin')` check
-- Multimodal de mídia segue padrão Storage signed URLs
+## Escopo fora desta fase
+- Wake-up real em background com app fechado em iOS (limitação de PWA — só notificação local)
+- Geração de música original via AI (usa biblioteca pré-curada por ora; depois ElevenLabs Music)
+- Análise profunda de padrões de sono com wearables
 
-## Escopo fora
-- Notificações push de reações/comentários (Fase F)
-- Moderação automática de conteúdo
-- Stories/efêmeros
-- Mensagens diretas
+---
+
+**Quer que eu implemente já na ordem proposta, ou priorizar primeiro só F.1 + F.2 (alarme + sonhos) e deixar F.3 (jornada do dia) para a próxima rodada?**
