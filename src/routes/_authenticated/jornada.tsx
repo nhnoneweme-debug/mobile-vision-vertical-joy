@@ -30,7 +30,18 @@ function JornadaPage() {
   const list = useServerFn(listDayBlocks);
   const create = useServerFn(createDayBlock);
   const complete = useServerFn(completeDayBlock);
+  const navigate = useNavigate();
   const [blocks, setBlocks] = useState<Block[]>([]);
+
+  function askIA() {
+    try {
+      sessionStorage.setItem(
+        "ia.seed",
+        "Monte minha jornada de hoje em blocos: despertar, refeições, treino, foco profundo, família, desacelerar e dormir — respeitando minha rotina e meu tempo/dia disponível. Salve cada bloco como uma quest de hoje.",
+      );
+    } catch {}
+    navigate({ to: "/ia" });
+  }
 
   async function refresh() {
     try {
