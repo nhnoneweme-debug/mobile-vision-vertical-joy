@@ -28,7 +28,14 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
+import { Crown } from "lucide-react";
 
 type NavItem = {
   to: string;
@@ -66,6 +73,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/perfil", label: "Perfil", icon: User },
       { to: "/loja", label: "Forja de Brasas", icon: ShoppingBag },
+      { to: "/planos", label: "Planos Brasas+", icon: Crown },
       { to: "/studio", label: "Studio (admin)", icon: Wand2 },
     ],
   },
