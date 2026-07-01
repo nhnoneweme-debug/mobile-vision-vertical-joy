@@ -11,12 +11,14 @@ import {
   Target,
 } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { ChatThread } from "@/components/orientador/ChatThread";
 import {
   getStudentDeepSnapshot,
   sendMission,
   type StudentDeepSnapshot,
 } from "@/lib/orientador";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/_authenticated/painel-aluno/$id")({
   head: () => ({
