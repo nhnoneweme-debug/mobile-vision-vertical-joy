@@ -996,6 +996,36 @@ export type Database = {
         }
         Relationships: []
       }
+      orientador_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          orientador_id: string
+          read_at: string | null
+          sender_id: string
+          student_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          orientador_id: string
+          read_at?: string | null
+          sender_id: string
+          student_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          orientador_id?: string
+          read_at?: string | null
+          sender_id?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       orientador_missions: {
         Row: {
           area_slug: string | null
