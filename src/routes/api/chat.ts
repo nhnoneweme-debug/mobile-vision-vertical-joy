@@ -138,6 +138,18 @@ export const Route = createFileRoute("/api/chat")({
             }
           | undefined;
 
+        const trainingPlan = ((treinoRow?.meta ?? {}) as Record<string, unknown>)
+          .training_plan as
+          | { split?: string; days_per_week?: number; sessions?: Array<{ day: string; focus: string; exercises: Array<{ name: string; sets: number; reps: string }> }> }
+          | undefined;
+        const dietPlan = ((cozinhaRow?.meta ?? {}) as Record<string, unknown>)
+          .diet_plan as
+          | { hydration_ml?: number; meals?: Array<{ time: string; name: string; items: string[] }> }
+          | undefined;
+
+        const doneToday = new Set(
+          (recentMissionLogs ?? []).filter((l) => l.done).map((l) => l.mission_id),
+        );
 
         // Persist the user message right away.
         if (lastUser) {
@@ -155,7 +167,8 @@ export const Route = createFileRoute("/api/chat")({
           "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
           "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
           "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
-          "Usa o contexto do jogador para sugerir próximos passos concretos (missões, hábitos, áreas).",
+          "Você TEM acesso ao histórico do jogador (treino, dieta, hábitos, missões, sono, mental) e deve usá-lo de forma individualizada.",
+          "Sugira sempre próximo passo concreto (missão, hábito, ajuste no treino/dieta).",
           "Respostas curtas (até ~6 linhas), markdown leve permitido. Sem listas gigantes.",
           "",
           "## Contexto do jogador",
@@ -164,6 +177,9 @@ export const Route = createFileRoute("/api/chat")({
           `Objetivo: ${profile?.goal ?? "—"} | Nível interno: ${profile?.level ?? "—"}`,
           `XP global: ${profile?.xp ?? 0} | Streak: ${profile?.streak ?? 0} dias`,
           `Tempo/dia: ${profile?.time_per_day_min ?? "—"} min | Dias/semana: ${profile?.days_per_week ?? "—"}`,
+          profile?.height_cm || profile?.weight_kg || profile?.age
+            ? `Corpo: ${profile?.height_cm ?? "—"}cm · ${profile?.weight_kg ?? "—"}kg · ${profile?.age ?? "—"}a`
+            : "",
           "",
           "Áreas em progresso:",
           (areaProg ?? [])
@@ -173,6 +189,40 @@ export const Route = createFileRoute("/api/chat")({
           "Hábitos ativos:",
           (habits ?? []).map((h) => `- ${h.title} (${h.target_per_week}x/sem)`).join("\n") ||
             "- nenhum ainda",
+          "",
+          "Missões do jogador (hoje):",
+          (userMissions ?? [])
+            .map((m) => `- [${doneToday.has(m.id) ? "x" : " "}] ${m.title}${m.scheduled_time ? ` @${m.scheduled_time}` : ""} (${m.area_slug})`)
+            .join("\n") || "- nenhuma cadastrada",
+          "",
+          trainingPlan
+            ? `Treino atual (${trainingPlan.split ?? "?"} · ${trainingPlan.days_per_week ?? "?"}x/sem):\n${(trainingPlan.sessions ?? [])
+                .map(
+                  (s) =>
+                    `- ${s.day} (${s.focus}): ${(s.exercises ?? [])
+                      .slice(0, 6)
+                      .map((e) => `${e.name} ${e.sets}x${e.reps}`)
+                      .join(", ")}`,
+                )
+                .join("\n")}`
+            : "Treino: não cadastrado.",
+          "",
+          dietPlan
+            ? `Dieta atual${dietPlan.hydration_ml ? ` (hidratação ${dietPlan.hydration_ml}ml)` : ""}:\n${(dietPlan.meals ?? [])
+                .map((m) => `- ${m.time} ${m.name}: ${(m.items ?? []).slice(0, 5).join(", ")}`)
+                .join("\n")}`
+            : "Dieta: não cadastrada.",
+          "",
+          (sleepRecent ?? []).length
+            ? `Sono recente:\n${(sleepRecent ?? [])
+                .map((s) => `- ${s.sleep_date}: ${s.duration_min ?? "?"}min, qualidade ${s.quality ?? "?"}`)
+                .join("\n")}`
+            : "",
+          (mentalRecent ?? []).length
+            ? `Diário mental recente:\n${(mentalRecent ?? [])
+                .map((m) => `- ${m.entry_date}: humor ${m.mood ?? "?"}${m.limiting_belief ? ` | crença: ${m.limiting_belief}` : ""}`)
+                .join("\n")}`
+            : "",
           "",
           "## Inclusão (respeite SEMPRE)",
           inclusion?.pronouns ? `Pronomes: ${inclusion.pronouns}` : "Pronomes: não informados",
