@@ -21,9 +21,11 @@ import {
   MapPin,
   MessageCircle,
   ChevronRight,
+  Send,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import {
   Sheet,
   SheetContent,
