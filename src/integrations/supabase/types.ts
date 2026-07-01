@@ -261,6 +261,36 @@ export type Database = {
         }
         Relationships: []
       }
+      belief_confrontations: {
+        Row: {
+          belief: string
+          created_at: string
+          faced: boolean
+          id: string
+          log_date: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          belief: string
+          created_at?: string
+          faced?: boolean
+          id?: string
+          log_date?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          belief?: string
+          created_at?: string
+          faced?: boolean
+          id?: string
+          log_date?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       brasas_events: {
         Row: {
           amount: number
