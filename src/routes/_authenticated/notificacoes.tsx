@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, Check, CheckCheck, RefreshCw, Trash2, Flame, Moon, Sun, Target, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -241,6 +241,12 @@ function NotificacoesPage() {
                 <Send className="h-3.5 w-3.5" /> ENVIAR PUSH DE TESTE
               </button>
             )}
+            <Link
+              to="/preferencias-notificacoes"
+              className="mt-2 block text-center font-display text-[10px] tracking-[0.25em] text-ember"
+            >
+              AJUSTAR CATEGORIAS E SILÊNCIO →
+            </Link>
           </div>
         )}
 

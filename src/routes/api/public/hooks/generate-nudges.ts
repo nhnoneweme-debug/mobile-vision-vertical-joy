@@ -60,6 +60,7 @@ export const Route = createFileRoute('/api/public/hooks/generate-nudges')({
                   body: n.body ?? '',
                   url: n.link ?? '/notificacoes',
                   tag: n.kind ?? undefined,
+                  kind: n.kind ?? undefined,
                 })
                 pushSent += r.sent
                 pushErrors += r.errors

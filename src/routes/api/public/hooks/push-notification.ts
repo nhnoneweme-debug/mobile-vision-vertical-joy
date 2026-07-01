@@ -57,6 +57,7 @@ export const Route = createFileRoute('/api/public/hooks/push-notification')({
             body: n.body ?? '',
             url: n.link ?? '/notificacoes',
             tag: n.kind ?? undefined,
+                  kind: n.kind ?? undefined,
           })
           await admin
             .from('notifications')
