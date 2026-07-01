@@ -23,6 +23,7 @@ import { Route as AuthenticatedSonhosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
+import { Route as AuthenticatedPreferenciasNotificacoesRouteImport } from './routes/_authenticated/preferencias-notificacoes'
 import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
@@ -117,6 +118,12 @@ const AuthenticatedProgressoRoute = AuthenticatedProgressoRouteImport.update({
   path: '/progresso',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPreferenciasNotificacoesRoute =
+  AuthenticatedPreferenciasNotificacoesRouteImport.update({
+    id: '/preferencias-notificacoes',
+    path: '/preferencias-notificacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPlanosRoute = AuthenticatedPlanosRouteImport.update({
   id: '/planos',
   path: '/planos',
@@ -266,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/planos': typeof AuthenticatedPlanosRoute
+  '/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
@@ -305,6 +313,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/planos': typeof AuthenticatedPlanosRoute
+  '/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
@@ -346,6 +355,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/planos': typeof AuthenticatedPlanosRoute
+  '/_authenticated/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
@@ -387,6 +397,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/perfil'
     | '/planos'
+    | '/preferencias-notificacoes'
     | '/progresso'
     | '/ritual'
     | '/social'
@@ -426,6 +437,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/perfil'
     | '/planos'
+    | '/preferencias-notificacoes'
     | '/progresso'
     | '/ritual'
     | '/social'
@@ -466,6 +478,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/perfil'
     | '/_authenticated/planos'
+    | '/_authenticated/preferencias-notificacoes'
     | '/_authenticated/progresso'
     | '/_authenticated/ritual'
     | '/_authenticated/social'
@@ -594,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/progresso'
       fullPath: '/progresso'
       preLoaderRoute: typeof AuthenticatedProgressoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/preferencias-notificacoes': {
+      id: '/_authenticated/preferencias-notificacoes'
+      path: '/preferencias-notificacoes'
+      fullPath: '/preferencias-notificacoes'
+      preLoaderRoute: typeof AuthenticatedPreferenciasNotificacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/planos': {
@@ -788,6 +808,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
+  AuthenticatedPreferenciasNotificacoesRoute: typeof AuthenticatedPreferenciasNotificacoesRoute
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
@@ -818,6 +839,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
+  AuthenticatedPreferenciasNotificacoesRoute:
+    AuthenticatedPreferenciasNotificacoesRoute,
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
