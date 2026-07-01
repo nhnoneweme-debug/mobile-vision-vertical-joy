@@ -50,6 +50,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/progresso", label: "Progresso", icon: LineChart },
       { to: "/missoes", label: "Minhas Missões", icon: ClipboardCheck },
+      { to: "/classe", label: "Classe & Perks", icon: Sparkles },
       { to: "/conquistas", label: "Conquistas & Saga", icon: Trophy },
       { to: "/cristais", label: "Cristais do Poder", icon: Gem },
       { to: "/alarme", label: "Despertar/Alarme", icon: Clock },
