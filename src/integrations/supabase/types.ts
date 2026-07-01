@@ -860,26 +860,47 @@ export type Database = {
       }
       notification_prefs: {
         Row: {
+          allow_mission: boolean
+          allow_orientador: boolean
+          allow_ritual: boolean
+          allow_social: boolean
+          allow_streak: boolean
           created_at: string
           morning_hour: number
           night_hour: number
           push_enabled: boolean
+          quiet_end: number
+          quiet_start: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          allow_mission?: boolean
+          allow_orientador?: boolean
+          allow_ritual?: boolean
+          allow_social?: boolean
+          allow_streak?: boolean
           created_at?: string
           morning_hour?: number
           night_hour?: number
           push_enabled?: boolean
+          quiet_end?: number
+          quiet_start?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          allow_mission?: boolean
+          allow_orientador?: boolean
+          allow_ritual?: boolean
+          allow_social?: boolean
+          allow_streak?: boolean
           created_at?: string
           morning_hour?: number
           night_hour?: number
           push_enabled?: boolean
+          quiet_end?: number
+          quiet_start?: number
           updated_at?: string
           user_id?: string
         }
