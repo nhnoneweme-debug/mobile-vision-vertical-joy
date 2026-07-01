@@ -893,6 +893,7 @@ export type Database = {
           id: string
           kind: string
           link: string | null
+          pushed_at: string | null
           read_at: string | null
           ref_id: string | null
           title: string
@@ -905,6 +906,7 @@ export type Database = {
           id?: string
           kind: string
           link?: string | null
+          pushed_at?: string | null
           read_at?: string | null
           ref_id?: string | null
           title: string
@@ -917,6 +919,7 @@ export type Database = {
           id?: string
           kind?: string
           link?: string | null
+          pushed_at?: string | null
           read_at?: string | null
           ref_id?: string | null
           title?: string
