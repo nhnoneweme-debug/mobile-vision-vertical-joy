@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Loader2, Swords } from "lucide-react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import {
   evaluateMyProgress,
   joinChallenge,
@@ -61,7 +60,6 @@ function ChallengesPlayerPage() {
         )}
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

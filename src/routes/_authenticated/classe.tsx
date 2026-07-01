@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Lock, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import {
   checkPerkUnlocks,
   currentTitle,
@@ -139,7 +138,6 @@ function ClassePage() {
         )}
       </section>
 
-      <BottomNav />
     </MobileShell>
   );
 }

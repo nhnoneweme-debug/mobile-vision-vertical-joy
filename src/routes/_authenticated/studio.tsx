@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Loader2, Plus, ShieldOff, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import {
   attachReward,
   checkStudioAdmin,
@@ -68,7 +67,6 @@ function StudioPage() {
             Esta área é exclusiva da equipe de design (papel <code>studio_admin</code>).
           </p>
         </div>
-        <BottomNav />
       </MobileShell>
     );
   }
@@ -106,7 +104,6 @@ function StudioPage() {
         )}
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

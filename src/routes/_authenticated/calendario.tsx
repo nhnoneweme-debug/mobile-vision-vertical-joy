@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight, Plus, Target, CalendarDays, Sparkles, Trash2
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { AREAS } from "@/components/map/areas";
 import {
   calendarActivity,
@@ -87,7 +86,6 @@ function CalendarioPage() {
       )}
 
       <div className="h-24" />
-      <BottomNav />
     </MobileShell>
   );
 }

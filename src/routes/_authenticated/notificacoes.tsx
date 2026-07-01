@@ -4,7 +4,6 @@ import { Bell, Check, CheckCheck, RefreshCw, Trash2, Flame, Moon, Sun, Target, S
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import {
   deleteNotification,
   generateMyNudges,
@@ -207,7 +206,6 @@ function NotificacoesPage() {
           </ul>
         )}
       </div>
-      <BottomNav />
     </MobileShell>
   );
 }

@@ -6,7 +6,6 @@ import ReactMarkdown from "react-markdown";
 import { Send, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/area/orientador")({
@@ -200,7 +199,6 @@ function OrientadorPage() {
         </div>
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Clock, Gem, Infinity as InfinityIcon, Loader2, Sparkles } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { listAllCrystals, listMyCrystals, rarityClass, type PowerCrystal, type UserCrystal } from "@/lib/crystals";
 
 export const Route = createFileRoute("/_authenticated/cristais")({
@@ -88,7 +87,6 @@ function CrystalsPage() {
         )}
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

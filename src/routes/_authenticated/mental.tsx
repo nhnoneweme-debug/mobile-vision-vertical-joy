@@ -4,7 +4,6 @@ import { Sprout, CalendarDays, Shield, Check, X, RefreshCw } from "lucide-react"
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { MentalJournalCard } from "@/components/area/MentalJournalCard";
 import {
   listMentalHistory,
@@ -43,7 +42,6 @@ function MentalPage() {
     return (
       <MobileShell>
         <div className="p-4 text-sm text-muted-foreground">Carregando…</div>
-        <BottomNav />
       </MobileShell>
     );
   }
@@ -79,7 +77,6 @@ function MentalPage() {
         {tab === "calendario" && <CalendarView userId={userId} />}
         {tab === "crencas" && <BeliefsView userId={userId} />}
       </div>
-      <BottomNav />
     </MobileShell>
   );
 }

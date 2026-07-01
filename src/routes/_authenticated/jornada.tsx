@@ -4,7 +4,6 @@ import { Check, ChefHat, Dumbbell, Brain, Heart, Moon, Sun, MoonStar, MapPin, Sp
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { listDayBlocks, createDayBlock, completeDayBlock } from "@/lib/wake.functions";
 
 export const Route = createFileRoute("/_authenticated/jornada")({
@@ -166,7 +165,6 @@ function JornadaPage() {
         </section>
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

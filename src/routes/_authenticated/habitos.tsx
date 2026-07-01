@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { HabitRow } from "@/components/habits/HabitRow";
 import { HabitForm } from "@/components/habits/HabitForm";
 import { XPToast } from "@/components/map/XPToast";
@@ -135,7 +134,6 @@ function HabitosPage() {
         />
       )}
 
-      <BottomNav />
     </MobileShell>
   );
 }
