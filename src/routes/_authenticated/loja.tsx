@@ -4,7 +4,6 @@ import { Coins, Lock, Check, Sparkles, History } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import {
   listShopItems,
   listInventory,
@@ -187,7 +186,6 @@ function LojaPage() {
         )}
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

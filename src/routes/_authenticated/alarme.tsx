@@ -4,7 +4,6 @@ import { Plus, Trash2, AlarmClock, Play } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { listAlarms, upsertAlarm, deleteAlarm, startWakeSession } from "@/lib/wake.functions";
 
 export const Route = createFileRoute("/_authenticated/alarme")({
@@ -201,7 +200,6 @@ function AlarmesPage() {
         </Link>
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

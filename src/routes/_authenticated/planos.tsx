@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Sparkles, Flame, Crown, Coins, X } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { supabase } from "@/integrations/supabase/client";
@@ -281,7 +280,6 @@ function PlanosPage() {
         </div>
       )}
 
-      <BottomNav />
     </MobileShell>
   );
 }

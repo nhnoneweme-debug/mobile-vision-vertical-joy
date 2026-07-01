@@ -11,7 +11,6 @@ import {
   Users as UsersIcon,
 } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import {
   inviteStudentByFriendCode,
@@ -75,7 +74,6 @@ function PainelPage() {
         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
           Carregando…
         </div>
-        <BottomNav />
       </MobileShell>
     );
   }
@@ -120,7 +118,6 @@ function PainelPage() {
             </p>
           </div>
         </section>
-        <BottomNav />
       </MobileShell>
     );
   }
@@ -434,7 +431,6 @@ function OrientadorDashboard({ userId }: { userId: string }) {
         />
       )}
 
-      <BottomNav />
     </MobileShell>
   );
 }

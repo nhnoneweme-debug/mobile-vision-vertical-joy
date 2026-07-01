@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-route
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { AreaPlaceholder } from "@/components/placeholders/AreaPlaceholder";
 import { AreaHeader } from "@/components/area/AreaHeader";
 import { AreaMissionRow } from "@/components/area/AreaMissionRow";
@@ -143,7 +142,6 @@ function AreaPage() {
     return (
       <MobileShell>
         <AreaPlaceholder area={area} />
-        <BottomNav />
       </MobileShell>
     );
   }
@@ -200,7 +198,6 @@ function AreaPage() {
         />
       )}
 
-      <BottomNav />
     </MobileShell>
   );
 }

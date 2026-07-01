@@ -4,7 +4,6 @@ import { Send, Sparkles, Mic, Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { applyAuditWrite, rejectAuditWrite, undoAuditWrite } from "@/lib/ia-capture.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -298,7 +297,6 @@ function IAPage() {
         </div>
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }

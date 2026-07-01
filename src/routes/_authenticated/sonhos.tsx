@@ -4,7 +4,6 @@ import { MoonStar, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { BottomNav } from "@/components/shell/BottomNav";
 import { listDreams, logDream } from "@/lib/wake.functions";
 
 export const Route = createFileRoute("/_authenticated/sonhos")({
@@ -125,7 +124,6 @@ function SonhosPage() {
         )}
       </div>
 
-      <BottomNav />
     </MobileShell>
   );
 }
