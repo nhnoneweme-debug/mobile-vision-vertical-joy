@@ -45,6 +45,7 @@ import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated/alarme'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
+import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -227,6 +228,12 @@ const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   path: '/area/$slug',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksGenerateNudgesRoute =
+  ApiPublicHooksGenerateNudgesRouteImport.update({
+    id: '/api/public/hooks/generate-nudges',
+    path: '/api/public/hooks/generate-nudges',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
+  '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -301,6 +309,7 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
+  '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -340,6 +349,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
+  '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/area/$slug'
     | '/area/orientador'
+    | '/api/public/hooks/generate-nudges'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/area/$slug'
     | '/area/orientador'
+    | '/api/public/hooks/generate-nudges'
   id:
     | '__root__'
     | '/'
@@ -454,6 +466,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
+    | '/api/public/hooks/generate-nudges'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -466,6 +479,7 @@ export interface RootRouteChildren {
   ApiSleepChatRoute: typeof ApiSleepChatRoute
   ApiWakeChatRoute: typeof ApiWakeChatRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
+  ApiPublicHooksGenerateNudgesRoute: typeof ApiPublicHooksGenerateNudgesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -722,6 +736,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAreaSlugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/generate-nudges': {
+      id: '/api/public/hooks/generate-nudges'
+      path: '/api/public/hooks/generate-nudges'
+      fullPath: '/api/public/hooks/generate-nudges'
+      preLoaderRoute: typeof ApiPublicHooksGenerateNudgesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -798,6 +819,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSleepChatRoute: ApiSleepChatRoute,
   ApiWakeChatRoute: ApiWakeChatRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
+  ApiPublicHooksGenerateNudgesRoute: ApiPublicHooksGenerateNudgesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
