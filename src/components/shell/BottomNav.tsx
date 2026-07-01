@@ -49,7 +49,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     section: "Jornada",
     items: [
       { to: "/progresso", label: "Progresso", icon: LineChart },
-      { to: "/classe", label: "Classe & Perks", icon: Sparkles },
+      { to: "/missoes", label: "Minhas Missões", icon: ClipboardCheck },
       { to: "/conquistas", label: "Conquistas & Saga", icon: Trophy },
       { to: "/cristais", label: "Cristais do Poder", icon: Gem },
       { to: "/alarme", label: "Despertar/Alarme", icon: Clock },
