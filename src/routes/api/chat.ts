@@ -215,12 +215,12 @@ export const Route = createFileRoute("/api/chat")({
           "",
           (sleepRecent ?? []).length
             ? `Sono recente:\n${(sleepRecent ?? [])
-                .map((s) => `- ${s.sleep_date}: ${s.duration_min ?? "?"}min, qualidade ${s.quality ?? "?"}`)
+                .map((s) => `- ${s.date}: qualidade ${s.quality ?? "?"}${s.bed_at ? ` | dormiu ${s.bed_at}` : ""}${s.wake_at ? ` | acordou ${s.wake_at}` : ""}`)
                 .join("\n")}`
             : "",
           (mentalRecent ?? []).length
             ? `Diário mental recente:\n${(mentalRecent ?? [])
-                .map((m) => `- ${m.entry_date}: humor ${m.mood ?? "?"}${m.limiting_belief ? ` | crença: ${m.limiting_belief}` : ""}`)
+                .map((m) => `- ${m.log_date}${m.limiting_belief ? ` | crença: ${m.limiting_belief}` : ""}${m.reframe ? ` → reframe: ${m.reframe}` : ""}`)
                 .join("\n")}`
             : "",
           "",
