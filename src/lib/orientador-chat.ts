@@ -97,11 +97,11 @@ export async function listMyOrientadores(studentId: string) {
   if (ids.length === 0) return [];
   const { data: profs } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name")
     .in("id", ids);
   return (profs ?? []) as Array<{
     id: string;
     display_name: string | null;
-    avatar_url: string | null;
   }>;
 }
+
