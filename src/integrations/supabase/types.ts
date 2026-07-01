@@ -885,6 +885,45 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          dedupe_key: string | null
+          id: string
+          kind: string
+          link: string | null
+          read_at: string | null
+          ref_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          dedupe_key?: string | null
+          id?: string
+          kind: string
+          link?: string | null
+          read_at?: string | null
+          ref_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          dedupe_key?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          read_at?: string | null
+          ref_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       oracle_messages: {
         Row: {
           content: string
@@ -2301,6 +2340,7 @@ export type Database = {
         Returns: Json
       }
       generate_friend_code: { Args: never; Returns: string }
+      generate_my_nudges: { Args: never; Returns: number }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       has_role: {
         Args: {

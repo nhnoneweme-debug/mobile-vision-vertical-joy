@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
+import { NotificationsBell } from "./NotificationsBell";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
 
@@ -40,6 +41,7 @@ export function MobileShell({
 
   return (
     <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background">
+      {!hideNav && <NotificationsBell />}
       <main
         className="flex-1 pb-28"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
