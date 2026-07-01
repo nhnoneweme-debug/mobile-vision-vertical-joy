@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Map,
   CalendarDays,
@@ -19,9 +19,11 @@ import {
   Clock,
   MoonStar,
   MapPin,
+  MessageCircle,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -30,6 +32,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Crown } from "lucide-react";
+import { getMentorTip } from "@/lib/mentor-tips";
+
+const MENTOR_PREF_KEY = "mentor.enabled";
 
 type NavItem = {
   to: string;
