@@ -45,10 +45,18 @@ function NotificacoesPage() {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushPerm, setPushPerm] = useState<NotificationPermission>("default");
+  const [pushBusy, setPushBusy] = useState(false);
   const navigate = useNavigate();
+  const testPush = useServerFn(sendTestPush);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+    if (isPushSupported()) {
+      void getPushPermission().then(setPushPerm);
+      void hasActivePushSubscription().then(setPushOn);
+    }
   }, []);
 
   const load = useCallback(async () => {
