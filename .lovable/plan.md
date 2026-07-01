@@ -1,104 +1,67 @@
-# Plano de Consolidação — Ciclo de Ajustes Pós-Teste
+# Consolidação do Dump — 5 blocos, 4 fases
 
-Agrupei os apontamentos seus e do colega em **6 fases**, da mais crítica (bugs que travam o uso) à mais estratégica (monetização). Cada fase é executável de forma independente; podemos parar entre uma e outra para validar.
+Organizei os 5 pontos por domínio, removi duplicações e agrupei em fases executáveis. Cada fase entrega valor sozinha; se algo travar, paramos, ajustamos, seguimos.
 
----
+## Mapa Dump → Domínio
 
-## Fase 1 — Desbloqueio do Fluxo de Entrada (crítico)
+| # do dump | Domínio | Onde vive hoje | O que muda |
+|---|---|---|---|
+| 1 | Missões diárias/semanais editáveis + agenda + notificação | `area/treino`, `jornada`, `daily_quests` | Nova aba "Minhas Missões" com CRUD, horário e lembrete |
+| 2 | Salvar Treino & Dieta persistidos a partir da anamnese | `TreinoPlanCard`, `CozinhaDietCard` | Persistência real + histórico + versionamento |
+| 3 | Modelo individual (IA lê tudo de "Seu Mundo") | IA-Agregadora + `area_progress` | Perfil vivo consultável pela IA em toda geração |
+| 4 | Missões do Quarto (rituais de sono) + integração Samsung Health | `area/quarto`, `QuartoSleepCard` | CRUD de rituais noturnos + placeholder de integração wearables |
+| 5 | Diário mental com calendário e enfrentamento diário | `MentalJournalCard`, `mental_journal` | Vista de calendário + "enfrentei hoje?" toggle diário |
 
-Bugs que impedem o usuário de simplesmente entrar e usar.
+## Fase 1 — Missões editáveis, agendáveis e com lembrete (item 1)
 
-- **Erro ao salvar onboarding** ("Entrar no mundo"): diagnosticar via console/replay (provável RLS em `profiles` ou campo novo sem default) e corrigir.
-- **Loop de onboarding**: na URL raiz, sessões antigas em `localStorage` mandam direto pro onboarding mesmo quando o perfil já está completo. Acertar o gate em `_authenticated/route.tsx` para redirecionar perfil completo → `/mapa`, e revalidar a sessão sempre que `/` for aberta.
-- **Sem volta para a landing**: adicionar botão "Voltar para início" no header do `/onboarding` e no header do `/auth` (mode=signup). Sair de qualquer um leva para `/`.
-- **PWA install bar sobrepondo CTA**: mover o `PWAStatus` para uma faixa fixa no topo (ou bottom-sheet recolhível) com `safe-area` próprio, fora da área dos botões principais.
-- **Persistência confirmada**: auditar se `profiles.onboarding_completed` está realmente sendo gravado (ver bug acima); documentar que toda decisão de "primeira vez" lê do banco, nunca do `localStorage`.
+O usuário precisa hoje de um lugar para **criar, agendar e riscar** missões do dia/semana, além das sugeridas pela IA. É o bloqueio mais visível.
 
-Entregável: qualquer pessoa abre a URL, escolhe entrar ou criar conta, completa o onboarding sem erro e volta na próxima sessão direto pro mapa.
+- Nova tabela `user_missions` (título, área, tipo `daily|weekly`, `scheduled_time`, `remind_before_min`, `active`, `notes`) + `user_mission_logs` (por dia, done bool, done_at).
+- Nova rota `/_authenticated/missoes` com 3 abas: **Hoje · Semana · Todas**.
+- CRUD completo: criar, editar, arquivar, duplicar.
+- Presets rápidos por área (Treino de força, Mobilidade 10min, Cardio leve, Progressão de carga do exercício X).
+- Agendamento com horário; toast/notificação local usando Notification API + Service Worker já existente (PWA).
+- Integração no `BentoArea` da área Treino: botão "+" abre o composer já filtrado por área.
+- Corrige o "+" que hoje é reportado como fonte de dor.
 
----
+## Fase 2 — Treino & Dieta persistidos com histórico (itens 2 e 3)
 
-## Fase 2 — Guia Dinâmico ("Mentor") + Renomear "Lore"
+Hoje `TreinoPlanCard` e `CozinhaDietCard` geram, mas não guardam de forma versionada nem alimentam a IA de volta.
 
-Tornar o sistema autoexplicativo sem manual.
+- Tabelas `training_plans` e `diet_plans` com `version`, `source` (`ai_generated|manual|anamnese`), `payload jsonb`, `active`.
+- Anamnese estruturada: expandir `profiles` com `anamnesis jsonb` (objetivos, restrições, equipamentos, disponibilidade, biometria opcional).
+- `saveActiveTrainingPlan()` / `saveActiveDietPlan()` — RPCs que arquivam a versão anterior e ativam a nova.
+- Botão "Salvar como meu plano" em cada card; histórico visível ("v3 · 15/nov").
+- **Item 3**: o system prompt da IA-Agregadora passa a incluir automaticamente o snapshot da anamnese + plano ativo + últimos logs de missão/hábito antes de gerar qualquer coisa. É isso que gera o "modelo individual" — sem tabela nova, só contexto.
 
-- **Renomear "Lore"** para **"Saga"** (ou "Crônica" / "Capítulos" — confirmo com você antes de aplicar). Atualizar tabela `lore_chapters` via view/alias e todas as labels da UI.
-- **Mentor flutuante**: bolha persistente em todas as telas (canto, acima do BottomNav) que abre um drawer com:
-  - explicação contextual da tela atual (texto curto + 1 dica acionável),
-  - chat com a IA já com contexto da rota e do estado do usuário,
-  - botão "me mostre" que dispara um tour highlight nos elementos chave.
-- **Onboarding-tour pós-cadastro**: 4 passos rápidos sobre Mapa, IA central, Missões e Upper Menu — pulável, mas oferecido uma vez.
+## Fase 3 — Rituais do Quarto + preparação para wearables (item 4)
 
----
+- Reutiliza `user_missions` da Fase 1 com `area='quarto'` e `type='night_ritual'` — não precisa de tabela nova.
+- Presets sugeridos pela IA a partir de `sleep_logs` e `mental_journal`: "orar antes de dormir", "copo d'água", "sem tela 30min antes", "respiração 4-7-8".
+- CRUD manual como as outras missões.
+- **Integração Samsung Health / wearables**: implementação real depende de app nativo (Health Connect é Android-only e exige APK assinado). Nesta fase entrega:
+  - Campo `wearable_source` em `sleep_logs`.
+  - Import manual por CSV/JSON (o que o Samsung Health exporta hoje).
+  - Placeholder de "Conectar dispositivo" com texto honesto explicando que a integração nativa virá quando publicarmos o app.
+  Isso evita prometer o que o PWA não consegue entregar.
 
-## Fase 3 — IA-Coletora confiável + Jornada do Dia
+## Fase 4 — Diário Mental com calendário e enfrentamento (item 5)
 
-A IA precisa **salvar de fato** o que o usuário fala.
+- Estende `mental_journal` com `belief_text`, `confronted_today bool`, `confronted_dates date[]`.
+- Nova rota `/_authenticated/diario` (ou aba dentro de `area/mental`) com:
+  - Lista de crenças limitantes ativas.
+  - Toggle diário "enfrentei hoje" → grava data.
+  - Vista de calendário (heatmap tipo GitHub) mostrando dias com enfrentamento.
+  - Timeline: "há 30 dias você escreveu…".
+- Integra com a IA-Agregadora: ao abrir a IA na tela do diário, sugestões viram "vamos reescrever essa crença?".
 
-- **Bug do "confirme 3 vezes"**: revisar o loop de `applyAuditWrite` / status `pending`. Hoje a IA propõe → grava em `ai_audit_log` → espera confirmação. Vamos:
-  - permitir modo **auto-aplicar** (default ON) para ações de baixo risco (criar hábito, log de hábito, ritual upsert, captura de insight),
-  - manter confirmação só para `profile.update` e `goal.create`,
-  - mostrar toast "salvo por mim" com link de auditoria/undo.
-- **Dormir / Despertar não interagindo**: validar que `/api/sleep-chat` e `/api/wake-chat` estão recebendo bearer e respondendo stream; corrigir caso esteja caindo em 401/timeout.
-- **Jornada do Dia interativa**: usar `day_blocks` existente para montar blocos (refeição, treino, foco, ritual) que a IA preenche a partir do dump OU o usuário digita. Cada bloco tem check, ganha XP, e aparece na rota `/jornada`.
-- **Quests novas via Centro de Missões**: botão "+ Missão" funcional, criando em `daily_quests` ou `scheduled_quests`. Mais dois templates fixos no fim do dia: **"Planejar amanhã"** e **"Diário pós-quest"**.
+## Ordem sugerida e ponto de decisão
 
----
+1. **Fase 1 primeiro** — destrava o "+" e o pedido mais concreto (missões editáveis + agenda).
+2. **Fase 2** — dá memória real ao sistema; habilita o modelo individual do item 3.
+3. **Fase 3** — herda a infra da Fase 1; entrega os rituais e é honesta sobre wearables.
+4. **Fase 4** — polimento humano do lado mental.
 
-## Fase 4 — Áreas Aprofundadas (Casa, Jardim, Cozinha, Treino, Inclusão)
+Se você concordar com essa divisão, começo pela **Fase 1** já: migration `user_missions` + `user_mission_logs`, rota `/missoes` com 3 abas, presets de Treino, composer com horário e lembrete via Notification API, e o "+" das áreas passando a abrir o composer certo.
 
-Cada área ganha o conteúdo específico que faltou.
-
-- **Casa**: campo "Intenção da Semana" (frase livre) salva em `area_progress.meta` ou nova coluna.
-- **Jardim Mental**: bloco diário de **3 gratidões** + **1 crença limitante**; questionário guiado (8–10 perguntas) que classifica a crença dominante e gera missão de reframing.
-- **Cozinha**: campo "cole sua dieta" (texto livre) → IA parseia em refeições com horários → lembretes push + check por refeição (XP por check).
-- **Treino**: editor de treinos (exercícios, séries, reps, carga, tempo); IA monta treino inicial a partir de objetivo/limitações; histórico de progressão de carga.
-- **Trilha de Inclusão**: nova `level_track` "Adaptado" com perguntas extras sobre limitações; IA gera treinos/missões respeitando restrições.
-- **Erro nos botões "+"** das áreas (cozinha/quarto/jardim) e do **Orientador**: rastrear e corrigir (provável handler quebrado ou política RLS faltando).
-
----
-
-## Fase 5 — Social, Grupos e Comunidade
-
-Transformar `/social` em praça viva.
-
-- **Bug ao publicar**: investigar o `PostComposer` (upload pro bucket `social-media` + insert em `posts`); corrigir.
-- **Adicionar amigos** por código, email, telefone e link de convite WhatsApp (já parcialmente feito; finalizar fluxo email/telefone).
-- **Grupos/Comunidades** (`groups` + `group_members` já existem): UI para criar grupo, convidar, ver feed do grupo, chat interno simples (tabela nova `group_messages` com realtime).
-- **Encontros para treino**: tipo de post "evento" com data/local; RSVP.
-- **Desafios com postagens**: permitir post atrelado a um `studio_challenge` (já temos `challenge_progress`); feed filtrado por desafio.
-- **Orientador — código visível**: na tela Painel-Orientador, mostrar o `orientador_invites.code` do orientador logado com botão copiar/compartilhar.
-
----
-
-## Fase 6 — Calendário, XP semanal e Monetização
-
-- **Liberação semanal**: bloquear botão "avançar semana" no `/calendario` até a data real chegar; XP futuro aparece como "selado".
-- **XP fixo no calendário**: cada evento agendado tem XP pré-definido visível.
-- **Monetização**: definir modelo (assinatura mensal Brasas+, pacotes de Brasas, desbloqueio de Cristais premium, marketplace de planos de orientadores). Implementar via Stripe (vou recomendar provider). Esta fase exige decisão sua antes de codar.
-
----
-
-## Detalhes técnicos (referência)
-
-- Fase 1 toca: `src/routes/_authenticated/route.tsx`, `src/routes/_authenticated/onboarding.tsx`, `src/components/onboarding/OnboardingShell.tsx`, `src/components/pwa/PWAStatus.tsx`, possível migração em `profiles`.
-- Fase 2: novo `MentorBubble.tsx` global no `__root.tsx`, integra com `/api/chat` passando rota atual; renomeação de labels em `src/lib/lore.ts` e rotas relacionadas.
-- Fase 3: ajustar `src/lib/ia-capture.functions.ts` (auto-apply whitelist), revisar `src/routes/api/sleep-chat.ts` e `wake-chat.ts`, novo CRUD em `day_blocks`, botão "+" funcional em `/painel` e `/jornada`.
-- Fase 4: migrações para campos novos (intenção semana, gratidões, dieta parseada, treinos), parser de dieta via Lovable AI.
-- Fase 5: nova tabela `group_messages` com RLS por membership, realtime; correção do upload no bucket `social-media`.
-- Fase 6: lógica de "semana atual" no calendário; integração Stripe via `stripe--enable_stripe`.
-
----
-
-## Ordem sugerida de execução
-
-1. **Fase 1 agora** (1 ciclo) — destrava todo mundo.
-2. **Fase 3** (IA confiável) em seguida — é o coração da proposta.
-3. **Fase 2** (Mentor + renome) — eleva percepção de produto.
-4. **Fase 4** áreas — em sub-etapas (Casa+Jardim → Cozinha → Treino → Inclusão).
-5. **Fase 5** social — depois que o core estiver sólido.
-6. **Fase 6** monetização — só quando o engajamento estiver fluindo.
-
-Confirma se faz sentido, ou quer reordenar? Duas decisões que preciso de você antes da Fase 2:
-- **Substituto de "Lore"**: prefere "Saga", "Crônica" ou outro?
-- **Monetização (Fase 6)**: já miramos Stripe (assinatura + pacote de Brasas) ou quer explorar antes?
+Me diga: **sigo pela Fase 1 nessa ordem, ou você quer trocar a prioridade?**

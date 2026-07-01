@@ -27,6 +27,7 @@ import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedMissoesRouteImport } from './routes/_authenticated/missoes'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
 import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticated/jornada'
@@ -132,6 +133,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMissoesRoute = AuthenticatedMissoesRouteImport.update({
+  id: '/missoes',
+  path: '/missoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMapaRoute = AuthenticatedMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
+  '/missoes': typeof AuthenticatedMissoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
+  '/missoes': typeof AuthenticatedMissoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/_authenticated/jornada': typeof AuthenticatedJornadaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
+  '/_authenticated/missoes': typeof AuthenticatedMissoesRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/jornada'
     | '/loja'
     | '/mapa'
+    | '/missoes'
     | '/onboarding'
     | '/painel'
     | '/perfil'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/jornada'
     | '/loja'
     | '/mapa'
+    | '/missoes'
     | '/onboarding'
     | '/painel'
     | '/perfil'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jornada'
     | '/_authenticated/loja'
     | '/_authenticated/mapa'
+    | '/_authenticated/missoes'
     | '/_authenticated/onboarding'
     | '/_authenticated/painel'
     | '/_authenticated/perfil'
@@ -559,6 +571,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/missoes': {
+      id: '/_authenticated/missoes'
+      path: '/missoes'
+      fullPath: '/missoes'
+      preLoaderRoute: typeof AuthenticatedMissoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/mapa': {
       id: '/_authenticated/mapa'
       path: '/mapa'
@@ -681,6 +700,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedJornadaRoute: typeof AuthenticatedJornadaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
+  AuthenticatedMissoesRoute: typeof AuthenticatedMissoesRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
@@ -708,6 +728,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedJornadaRoute: AuthenticatedJornadaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
+  AuthenticatedMissoesRoute: AuthenticatedMissoesRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
@@ -738,13 +759,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

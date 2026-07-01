@@ -1917,6 +1917,92 @@ export type Database = {
           },
         ]
       }
+      user_mission_logs: {
+        Row: {
+          done: boolean
+          done_at: string
+          id: string
+          log_date: string
+          mission_id: string
+          user_id: string
+        }
+        Insert: {
+          done?: boolean
+          done_at?: string
+          id?: string
+          log_date?: string
+          mission_id: string
+          user_id: string
+        }
+        Update: {
+          done?: boolean
+          done_at?: string
+          id?: string
+          log_date?: string
+          mission_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_mission_logs_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "user_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_missions: {
+        Row: {
+          active: boolean
+          archived_at: string | null
+          area_slug: string | null
+          created_at: string
+          id: string
+          mission_type: string
+          notes: string | null
+          remind_before_min: number
+          scheduled_time: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          weekday_mask: number | null
+          xp_reward: number
+        }
+        Insert: {
+          active?: boolean
+          archived_at?: string | null
+          area_slug?: string | null
+          created_at?: string
+          id?: string
+          mission_type?: string
+          notes?: string | null
+          remind_before_min?: number
+          scheduled_time?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          weekday_mask?: number | null
+          xp_reward?: number
+        }
+        Update: {
+          active?: boolean
+          archived_at?: string | null
+          area_slug?: string | null
+          created_at?: string
+          id?: string
+          mission_type?: string
+          notes?: string | null
+          remind_before_min?: number
+          scheduled_time?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          weekday_mask?: number | null
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       user_perks: {
         Row: {
           id: string
