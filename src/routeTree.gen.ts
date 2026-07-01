@@ -44,6 +44,7 @@ import { Route as AuthenticatedConquistasRouteImport } from './routes/_authentic
 import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated/alarme'
+import { Route as AuthenticatedPainelAlunoIdRouteImport } from './routes/_authenticated/painel-aluno.$id'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
@@ -225,6 +226,12 @@ const AuthenticatedAlarmeRoute = AuthenticatedAlarmeRouteImport.update({
   path: '/alarme',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPainelAlunoIdRoute =
+  AuthenticatedPainelAlunoIdRouteImport.update({
+    id: '/painel-aluno/$id',
+    path: '/painel-aluno/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAreaOrientadorRoute =
   AuthenticatedAreaOrientadorRouteImport.update({
     id: '/area/orientador',
@@ -286,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
+  '/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -326,6 +334,7 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
+  '/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -368,6 +377,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
+  '/_authenticated/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/area/$slug'
     | '/area/orientador'
+    | '/painel-aluno/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/area/$slug'
     | '/area/orientador'
+    | '/painel-aluno/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   id:
@@ -491,6 +503,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
+    | '/_authenticated/painel-aluno/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
@@ -756,6 +769,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAlarmeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/painel-aluno/$id': {
+      id: '/_authenticated/painel-aluno/$id'
+      path: '/painel-aluno/$id'
+      fullPath: '/painel-aluno/$id'
+      preLoaderRoute: typeof AuthenticatedPainelAlunoIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area/orientador': {
       id: '/_authenticated/area/orientador'
       path: '/area/orientador'
@@ -816,6 +836,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
   AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
+  AuthenticatedPainelAlunoIdRoute: typeof AuthenticatedPainelAlunoIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -848,6 +869,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
   AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
+  AuthenticatedPainelAlunoIdRoute: AuthenticatedPainelAlunoIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

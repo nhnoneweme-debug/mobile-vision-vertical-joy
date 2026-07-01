@@ -333,11 +333,11 @@ function OrientadorDashboard({ userId }: { userId: string }) {
               ) : (
                 <div className="space-y-2">
                   {active.map((s) => (
-                    <button
+                    <Link
                       key={s.link.id}
-                      type="button"
-                      onClick={() => setActiveStudent(s)}
-                      className="w-full rounded-xl border border-border bg-card p-4 text-left active:scale-[0.99]"
+                      to="/painel-aluno/$id"
+                      params={{ id: s.link.student_id }}
+                      className="block w-full rounded-xl border border-border bg-card p-4 text-left active:scale-[0.99]"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
@@ -377,7 +377,10 @@ function OrientadorDashboard({ userId }: { userId: string }) {
                           }
                         />
                       </div>
-                    </button>
+                      <p className="mt-3 text-right font-display text-[10px] tracking-[0.3em] text-ember">
+                        VER PAINEL →
+                      </p>
+                    </Link>
                   ))}
                 </div>
               )}
