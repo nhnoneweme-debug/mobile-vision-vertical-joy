@@ -203,3 +203,42 @@ export async function completeOrientadorMission(missionId: string) {
     .eq("id", missionId);
   if (error) throw error;
 }
+
+export type StudentDeepSnapshot = {
+  profile: {
+    id: string;
+    display_name: string | null;
+    behavioral_class: string | null;
+    xp: number;
+    streak: number;
+    brasas: number;
+    avatar_url: string | null;
+    gender_track: string | null;
+    onboarding_complete: boolean;
+  };
+  areas: Array<{ area_slug: string; xp: number; level: number }>;
+  xp_daily: Array<{ day: string; xp: number; events: number }>;
+  missions: OrientadorMission[];
+  habits: Array<{
+    id: string;
+    title: string;
+    target_per_week: number;
+    active: boolean;
+    logs_30d: number;
+  }>;
+  rituals: Array<{ ritual_date: string; ritual_type: string }>;
+  sleep: Array<{ log_date: string; hours: number | null; quality: number | null; mood: string | null }>;
+  mood: Array<{ log_date: string; mood_score: number | null; tags: string[] | null }>;
+  window_days: number;
+  generated_at: string;
+};
+
+export async function getStudentDeepSnapshot(
+  studentId: string,
+): Promise<StudentDeepSnapshot> {
+  const { data, error } = await supabase.rpc("orientador_student_snapshot", {
+    _student: studentId,
+  });
+  if (error) throw error;
+  return data as unknown as StudentDeepSnapshot;
+}
