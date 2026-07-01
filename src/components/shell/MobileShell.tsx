@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
-import { MentorBubble } from "@/components/mentor/MentorBubble";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
 
@@ -18,7 +17,7 @@ function applyAccessibilityFromPrefs(prefs: {
 export function MobileShell({
   children,
   hideNav = false,
-  hideMentor = false,
+  hideMentor: _hideMentor = false, // kept for API compat; mentor moved into BottomNav
 }: {
   children: ReactNode;
   hideNav?: boolean;
@@ -48,7 +47,6 @@ export function MobileShell({
         {children}
       </main>
       {!hideNav && <BottomNav />}
-      {!hideMentor && <MentorBubble />}
     </div>
   );
 }

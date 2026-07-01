@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Map,
   CalendarDays,
@@ -19,9 +19,11 @@ import {
   Clock,
   MoonStar,
   MapPin,
+  MessageCircle,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -30,6 +32,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Crown } from "lucide-react";
+import { getMentorTip } from "@/lib/mentor-tips";
+
+const MENTOR_PREF_KEY = "mentor.enabled";
 
 type NavItem = {
   to: string;
@@ -103,7 +108,37 @@ function NavSlot({
 
 export function BottomNav() {
   const [open, setOpen] = useState(false);
+  const [iaOpen, setIaOpen] = useState(false);
+  const [mentorEnabled, setMentorEnabled] = useState(true);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(MENTOR_PREF_KEY);
+      if (v !== null) setMentorEnabled(v === "1");
+    } catch {}
+  }, []);
+
+  function toggleMentor(next: boolean) {
+    setMentorEnabled(next);
+    try {
+      localStorage.setItem(MENTOR_PREF_KEY, next ? "1" : "0");
+    } catch {}
+  }
+
+  const tip = getMentorTip(pathname);
+  const onIaRoute = pathname.startsWith("/ia");
+
+  function goToIA(seed?: string) {
+    setIaOpen(false);
+    if (seed) {
+      try {
+        sessionStorage.setItem("ia.seed", seed);
+      } catch {}
+    }
+    void navigate({ to: "/ia" });
+  }
 
   const upperMatch = ALL_UPPER_ITEMS.find((i) =>
     i.to === "/" ? pathname === "/" : pathname.startsWith(i.to),
@@ -123,12 +158,16 @@ export function BottomNav() {
           <NavSlot to="/calendario" label="PLANO" Icon={CalendarDays} active={pathname.startsWith("/calendario")} />
         </li>
 
-        {/* Centro destacado — IA */}
+        {/* Centro destacado — IA hub (dicas contextuais + chat) */}
         <li className="relative flex-1">
-          <Link
-            to="/ia"
-            className="group flex flex-col items-center gap-1 px-1 pt-1 text-muted-foreground"
-            activeProps={{ className: "text-ember" }}
+          <button
+            type="button"
+            onClick={() => setIaOpen(true)}
+            className={
+              "group flex w-full flex-col items-center gap-1 px-1 pt-1 " +
+              (onIaRoute ? "text-ember" : "text-muted-foreground")
+            }
+            aria-label="Abrir IA"
           >
             <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-ember text-charcoal-900 shadow-[0_8px_24px_-6px_var(--ember)] ring-4 ring-charcoal-900/90 transition-transform group-active:scale-95">
               <Sparkles className="h-6 w-6" strokeWidth={2.4} />
@@ -136,12 +175,102 @@ export function BottomNav() {
             <span className="font-display text-[10px] tracking-[0.18em] text-foreground">
               IA
             </span>
-          </Link>
+          </button>
+
+          <Sheet open={iaOpen} onOpenChange={setIaOpen}>
+            <SheetContent
+              side="bottom"
+              className="mx-auto max-w-[480px] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+            >
+              <SheetHeader className="text-left">
+                <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-ember/15 text-ember">
+                    <Sparkles className="h-4 w-4" strokeWidth={2.4} />
+                  </span>
+                  INTELIGÊNCIA
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="mt-4 space-y-4 pb-4">
+                {/* Toggle dicas contextuais */}
+                <label className="flex items-center justify-between rounded-xl border border-border bg-charcoal-800/40 px-3 py-2">
+                  <div>
+                    <p className="font-display text-[11px] tracking-[0.18em] text-foreground">
+                      DICAS DESTA TELA
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Mostrar explicação e perguntas rápidas ao abrir a IA.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={mentorEnabled}
+                    onClick={() => toggleMentor(!mentorEnabled)}
+                    className={
+                      "relative h-6 w-11 shrink-0 rounded-full transition-colors " +
+                      (mentorEnabled ? "bg-ember" : "bg-border")
+                    }
+                  >
+                    <span
+                      className={
+                        "absolute top-[2px] h-5 w-5 rounded-full bg-charcoal-900 transition-all " +
+                        (mentorEnabled ? "left-[22px]" : "left-[2px]")
+                      }
+                    />
+                  </button>
+                </label>
+
+                {/* Bloco contextual */}
+                {mentorEnabled && (
+                  <div className="rounded-xl border border-ember/30 bg-ember/5 p-3">
+                    <p className="font-display text-[10px] tracking-[0.3em] text-ember">
+                      NESTA TELA
+                    </p>
+                    <p className="mt-1 font-display text-base tracking-wide text-foreground">
+                      {tip.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-foreground/85">
+                      {tip.blurb}
+                    </p>
+
+                    <p className="mt-3 font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+                      PERGUNTAS RÁPIDAS
+                    </p>
+                    <div className="mt-1 space-y-2">
+                      {tip.questions.map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => goToIA(q)}
+                          className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm text-foreground active:scale-[0.99]"
+                        >
+                          <span className="flex-1">{q}</span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CTA principal */}
+                <button
+                  type="button"
+                  onClick={() => goToIA()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-ember px-4 py-3 font-display text-sm tracking-[0.25em] text-charcoal-900 active:scale-[0.99]"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {onIaRoute ? "CONTINUAR CONVERSA" : "ABRIR IA-COLETORA"}
+                </button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </li>
 
         <li className="relative flex-1">
           <NavSlot to="/habitos" label="HÁBITOS" Icon={Flame} active={pathname.startsWith("/habitos")} />
         </li>
+
 
         <li className="relative flex-1">
           <Sheet open={open} onOpenChange={setOpen}>
