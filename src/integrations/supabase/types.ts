@@ -2418,6 +2418,7 @@ export type Database = {
         Returns: boolean
       }
       join_group_by_invite: { Args: { _code: string }; Returns: string }
+      orientador_student_snapshot: { Args: { _student: string }; Returns: Json }
       player_level: { Args: { _xp: number }; Returns: number }
       purchase_shop_item: { Args: { _item_id: string }; Returns: Json }
       redeem_orientador_invite: { Args: { _code: string }; Returns: boolean }
