@@ -160,7 +160,7 @@ function NotificacoesPage() {
   async function handleTestPush() {
     setPushBusy(true);
     try {
-      const r = await testPush({ data: undefined as unknown as never });
+      const r = await testPush();
       const sent = (r as { sent?: number })?.sent ?? 0;
       if (sent > 0) toast.success(`Push de teste enviado (${sent} aparelho${sent > 1 ? "s" : ""})`);
       else toast.error("Nenhum aparelho inscrito");
