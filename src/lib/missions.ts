@@ -133,9 +133,9 @@ export async function createMission(userId: string, input: MissionInput): Promis
 }
 
 export async function updateMission(id: string, patch: Partial<MissionInput> & { active?: boolean }): Promise<void> {
-  const clean: Record<string, unknown> = { ...patch };
-  if (typeof clean.title === "string") clean.title = (clean.title as string).trim().slice(0, 140);
-  if (typeof clean.notes === "string") clean.notes = (clean.notes as string).trim().slice(0, 2000) || null;
+  const clean = { ...patch } as Partial<MissionInput> & { active?: boolean };
+  if (typeof clean.title === "string") clean.title = clean.title.trim().slice(0, 140);
+  if (typeof clean.notes === "string") clean.notes = clean.notes.trim().slice(0, 2000) || undefined;
   const { error } = await supabase.from("user_missions").update(clean).eq("id", id);
   if (error) throw error;
 }
