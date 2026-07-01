@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, Check, CheckCheck, RefreshCw, Trash2, Flame, Moon, Sun, Target, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
