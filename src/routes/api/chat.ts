@@ -45,40 +45,87 @@ export const Route = createFileRoute("/api/chat")({
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
 
         // Load profile + signals for context.
-        const [{ data: profile }, { data: areaProg }, { data: habits }, { data: history }, { data: inclusionRow }] =
-          await Promise.all([
-            supabase
-              .from("profiles")
-              .select(
-                "display_name,behavioral_class,goal,level,xp,streak,time_per_day_min,days_per_week",
-              )
-              .eq("id", userId)
-              .maybeSingle(),
-            supabase
-              .from("area_progress")
-              .select("area_slug,level,xp")
-              .eq("user_id", userId)
-              .order("xp", { ascending: false })
-              .limit(10),
-            supabase
-              .from("habits")
-              .select("title,target_per_week")
-              .eq("user_id", userId)
-              .eq("active", true)
-              .limit(10),
-            supabase
-              .from("oracle_messages")
-              .select("role,content")
-              .eq("user_id", userId)
-              .order("created_at", { ascending: true })
-              .limit(40),
-            supabase
-              .from("area_progress")
-              .select("meta")
-              .eq("user_id", userId)
-              .eq("area_slug", "inclusao")
-              .maybeSingle(),
-          ]);
+        const today = new Date().toISOString().slice(0, 10);
+        const [
+          { data: profile },
+          { data: areaProg },
+          { data: habits },
+          { data: history },
+          { data: inclusionRow },
+          { data: treinoRow },
+          { data: cozinhaRow },
+          { data: userMissions },
+          { data: recentMissionLogs },
+          { data: mentalRecent },
+          { data: sleepRecent },
+        ] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select(
+              "display_name,behavioral_class,goal,level,xp,streak,time_per_day_min,days_per_week,height_cm,weight_kg,age",
+            )
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("area_progress")
+            .select("area_slug,level,xp")
+            .eq("user_id", userId)
+            .order("xp", { ascending: false })
+            .limit(10),
+          supabase
+            .from("habits")
+            .select("title,target_per_week")
+            .eq("user_id", userId)
+            .eq("active", true)
+            .limit(10),
+          supabase
+            .from("oracle_messages")
+            .select("role,content")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(40),
+          supabase
+            .from("area_progress")
+            .select("meta")
+            .eq("user_id", userId)
+            .eq("area_slug", "inclusao")
+            .maybeSingle(),
+          supabase
+            .from("area_progress")
+            .select("meta")
+            .eq("user_id", userId)
+            .eq("area_slug", "treino")
+            .maybeSingle(),
+          supabase
+            .from("area_progress")
+            .select("meta")
+            .eq("user_id", userId)
+            .eq("area_slug", "cozinha")
+            .maybeSingle(),
+          supabase
+            .from("user_missions")
+            .select("id,title,area_slug,scheduled_time,days_mask")
+            .eq("user_id", userId)
+            .eq("active", true)
+            .limit(15),
+          supabase
+            .from("user_mission_logs")
+            .select("mission_id,done,log_date")
+            .eq("user_id", userId)
+            .eq("log_date", today),
+          supabase
+            .from("mental_journal")
+            .select("entry_date,mood,limiting_belief")
+            .eq("user_id", userId)
+            .order("entry_date", { ascending: false })
+            .limit(5),
+          supabase
+            .from("sleep_logs")
+            .select("sleep_date,duration_min,quality")
+            .eq("user_id", userId)
+            .order("sleep_date", { ascending: false })
+            .limit(5),
+        ]);
 
         const inclusion = ((inclusionRow?.meta ?? {}) as Record<string, unknown>).inclusion as
           | {
