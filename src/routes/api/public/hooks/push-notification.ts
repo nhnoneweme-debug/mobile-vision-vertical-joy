@@ -62,7 +62,7 @@ export const Route = createFileRoute('/api/public/hooks/push-notification')({
             .from('notifications')
             .update({ pushed_at: new Date().toISOString() })
             .eq('id', n.id)
-          return new Response(JSON.stringify({ ok: true, ...r }))
+          return new Response(JSON.stringify({ ok: true, sent: r.sent, removed: r.removed, errors: r.errors }))
         } catch (e) {
           console.error('push send failed', e)
           return new Response(

@@ -45,6 +45,7 @@ import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated/alarme'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
+import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
 import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -228,6 +229,12 @@ const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   path: '/area/$slug',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksPushNotificationRoute =
+  ApiPublicHooksPushNotificationRouteImport.update({
+    id: '/api/public/hooks/push-notification',
+    path: '/api/public/hooks/push-notification',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksGenerateNudgesRoute =
   ApiPublicHooksGenerateNudgesRouteImport.update({
     id: '/api/public/hooks/generate-nudges',
@@ -272,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
+  '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -310,6 +318,7 @@ export interface FileRoutesByTo {
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
+  '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -350,6 +359,7 @@ export interface FileRoutesById {
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
+  '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -390,6 +400,7 @@ export interface FileRouteTypes {
     | '/area/$slug'
     | '/area/orientador'
     | '/api/public/hooks/generate-nudges'
+    | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/area/$slug'
     | '/area/orientador'
     | '/api/public/hooks/generate-nudges'
+    | '/api/public/hooks/push-notification'
   id:
     | '__root__'
     | '/'
@@ -467,6 +479,7 @@ export interface FileRouteTypes {
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
     | '/api/public/hooks/generate-nudges'
+    | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -480,6 +493,7 @@ export interface RootRouteChildren {
   ApiWakeChatRoute: typeof ApiWakeChatRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   ApiPublicHooksGenerateNudgesRoute: typeof ApiPublicHooksGenerateNudgesRoute
+  ApiPublicHooksPushNotificationRoute: typeof ApiPublicHooksPushNotificationRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -736,6 +750,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAreaSlugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/push-notification': {
+      id: '/api/public/hooks/push-notification'
+      path: '/api/public/hooks/push-notification'
+      fullPath: '/api/public/hooks/push-notification'
+      preLoaderRoute: typeof ApiPublicHooksPushNotificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/generate-nudges': {
       id: '/api/public/hooks/generate-nudges'
       path: '/api/public/hooks/generate-nudges'
@@ -820,6 +841,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWakeChatRoute: ApiWakeChatRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   ApiPublicHooksGenerateNudgesRoute: ApiPublicHooksGenerateNudgesRoute,
+  ApiPublicHooksPushNotificationRoute: ApiPublicHooksPushNotificationRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
