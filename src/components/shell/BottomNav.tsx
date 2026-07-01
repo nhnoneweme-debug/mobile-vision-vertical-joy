@@ -21,9 +21,11 @@ import {
   MapPin,
   MessageCircle,
   ChevronRight,
+  Send,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import {
   Sheet,
   SheetContent,
@@ -110,8 +112,11 @@ export function BottomNav() {
   const [open, setOpen] = useState(false);
   const [iaOpen, setIaOpen] = useState(false);
   const [mentorEnabled, setMentorEnabled] = useState(true);
+  const [iaPrompt, setIaPrompt] = useState("");
+  const iaInputRef = useRef<HTMLTextAreaElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+
 
   useEffect(() => {
     try {
@@ -132,13 +137,22 @@ export function BottomNav() {
 
   function goToIA(seed?: string) {
     setIaOpen(false);
-    if (seed) {
+    const payload = (seed ?? iaPrompt).trim();
+    if (payload) {
       try {
-        sessionStorage.setItem("ia.seed", seed);
+        sessionStorage.setItem("ia.seed", payload);
       } catch {}
     }
+    setIaPrompt("");
     void navigate({ to: "/ia" });
   }
+
+  useEffect(() => {
+    if (!iaOpen) return;
+    const t = setTimeout(() => iaInputRef.current?.focus(), 120);
+    return () => clearTimeout(t);
+  }, [iaOpen]);
+
 
   const upperMatch = ALL_UPPER_ITEMS.find((i) =>
     i.to === "/" ? pathname === "/" : pathname.startsWith(i.to),
@@ -187,19 +201,63 @@ export function BottomNav() {
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-ember/15 text-ember">
                     <Sparkles className="h-4 w-4" strokeWidth={2.4} />
                   </span>
-                  INTELIGÊNCIA
+                  IA-AGREGADORA
                 </SheetTitle>
+                <p className="text-[11px] text-muted-foreground">
+                  Coleta, agrega e dá sentido. Digite abaixo e envie — ou escolha uma sugestão desta tela.
+                </p>
               </SheetHeader>
 
               <div className="mt-4 space-y-4 pb-4">
+                {/* Composer — foco imediato, menor fricção */}
+                <div className="rounded-2xl border border-ember/40 bg-charcoal-800/60 p-2">
+                  <textarea
+                    ref={iaInputRef}
+                    value={iaPrompt}
+                    onChange={(e) => setIaPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        goToIA();
+                      }
+                    }}
+                    rows={2}
+                    placeholder="Fale, despeje, pergunte…"
+                    className="max-h-40 min-h-[56px] w-full resize-none bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  />
+                  <div className="flex items-center justify-between gap-2 px-1 pt-1">
+                    <span className="text-[10px] text-muted-foreground">
+                      Enter envia · Shift+Enter quebra linha
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => goToIA()}
+                      disabled={!iaPrompt.trim() && !onIaRoute}
+                      className="flex h-9 items-center gap-2 rounded-xl bg-ember px-3 font-display text-[11px] tracking-[0.22em] text-charcoal-900 transition-opacity disabled:opacity-40"
+                    >
+                      {iaPrompt.trim() ? (
+                        <>
+                          <Send className="h-3.5 w-3.5" />
+                          ENVIAR
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {onIaRoute ? "CONTINUAR" : "ABRIR CHAT"}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Toggle dicas contextuais */}
                 <label className="flex items-center justify-between rounded-xl border border-border bg-charcoal-800/40 px-3 py-2">
                   <div>
                     <p className="font-display text-[11px] tracking-[0.18em] text-foreground">
-                      DICAS DESTA TELA
+                      GUIA DESTA TELA
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Mostrar explicação e perguntas rápidas ao abrir a IA.
+                      Explicação do ambiente e perguntas rápidas.
                     </p>
                   </div>
                   <button
@@ -235,7 +293,7 @@ export function BottomNav() {
                     </p>
 
                     <p className="mt-3 font-display text-[10px] tracking-[0.3em] text-muted-foreground">
-                      PERGUNTAS RÁPIDAS
+                      SUGESTÕES RÁPIDAS
                     </p>
                     <div className="mt-1 space-y-2">
                       {tip.questions.map((q) => (
@@ -252,17 +310,8 @@ export function BottomNav() {
                     </div>
                   </div>
                 )}
-
-                {/* CTA principal */}
-                <button
-                  type="button"
-                  onClick={() => goToIA()}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-ember px-4 py-3 font-display text-sm tracking-[0.25em] text-charcoal-900 active:scale-[0.99]"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  {onIaRoute ? "CONTINUAR CONVERSA" : "ABRIR IA-COLETORA"}
-                </button>
               </div>
+
             </SheetContent>
           </Sheet>
         </li>
