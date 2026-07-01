@@ -122,6 +122,55 @@ function NotificacoesPage() {
     }
   }
 
+  async function handleEnablePush() {
+    setPushBusy(true);
+    try {
+      const r = await enablePush();
+      if (!r.ok) {
+        toast.error(
+          r.error === "permission_denied"
+            ? "Permissão negada no navegador"
+            : r.error === "not_supported"
+              ? "Push não suportado neste navegador"
+              : r.error === "not_authenticated"
+                ? "Faça login novamente"
+                : r.error ?? "Erro",
+        );
+      } else {
+        setPushOn(true);
+        setPushPerm("granted");
+        toast.success("Push ativado neste aparelho");
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handleDisablePush() {
+    setPushBusy(true);
+    try {
+      await disablePush();
+      setPushOn(false);
+      toast.success("Push desativado");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handleTestPush() {
+    setPushBusy(true);
+    try {
+      const r = await testPush({ data: undefined as unknown as never });
+      const sent = (r as { sent?: number })?.sent ?? 0;
+      if (sent > 0) toast.success(`Push de teste enviado (${sent} aparelho${sent > 1 ? "s" : ""})`);
+      else toast.error("Nenhum aparelho inscrito");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
   const unread = items.filter((x) => !x.read_at).length;
 
   return (
