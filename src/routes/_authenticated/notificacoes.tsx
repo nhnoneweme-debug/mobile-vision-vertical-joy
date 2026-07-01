@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Bell, Check, CheckCheck, RefreshCw, Trash2, Flame, Moon, Sun, Target, Sparkles } from "lucide-react";
+import { Bell, BellOff, Check, CheckCheck, RefreshCw, Trash2, Flame, Moon, Sun, Target, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import {
@@ -12,6 +13,14 @@ import {
   markRead,
   type Notification,
 } from "@/lib/notifications";
+import {
+  disablePush,
+  enablePush,
+  getPushPermission,
+  hasActivePushSubscription,
+  isPushSupported,
+} from "@/lib/push";
+import { sendTestPush } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/_authenticated/notificacoes")({
   head: () => ({
