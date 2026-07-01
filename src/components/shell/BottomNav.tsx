@@ -137,13 +137,22 @@ export function BottomNav() {
 
   function goToIA(seed?: string) {
     setIaOpen(false);
-    if (seed) {
+    const payload = (seed ?? iaPrompt).trim();
+    if (payload) {
       try {
-        sessionStorage.setItem("ia.seed", seed);
+        sessionStorage.setItem("ia.seed", payload);
       } catch {}
     }
+    setIaPrompt("");
     void navigate({ to: "/ia" });
   }
+
+  useEffect(() => {
+    if (!iaOpen) return;
+    const t = setTimeout(() => iaInputRef.current?.focus(), 120);
+    return () => clearTimeout(t);
+  }, [iaOpen]);
+
 
   const upperMatch = ALL_UPPER_ITEMS.find((i) =>
     i.to === "/" ? pathname === "/" : pathname.startsWith(i.to),
