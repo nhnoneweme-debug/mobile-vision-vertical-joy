@@ -45,40 +45,87 @@ export const Route = createFileRoute("/api/chat")({
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
 
         // Load profile + signals for context.
-        const [{ data: profile }, { data: areaProg }, { data: habits }, { data: history }, { data: inclusionRow }] =
-          await Promise.all([
-            supabase
-              .from("profiles")
-              .select(
-                "display_name,behavioral_class,goal,level,xp,streak,time_per_day_min,days_per_week",
-              )
-              .eq("id", userId)
-              .maybeSingle(),
-            supabase
-              .from("area_progress")
-              .select("area_slug,level,xp")
-              .eq("user_id", userId)
-              .order("xp", { ascending: false })
-              .limit(10),
-            supabase
-              .from("habits")
-              .select("title,target_per_week")
-              .eq("user_id", userId)
-              .eq("active", true)
-              .limit(10),
-            supabase
-              .from("oracle_messages")
-              .select("role,content")
-              .eq("user_id", userId)
-              .order("created_at", { ascending: true })
-              .limit(40),
-            supabase
-              .from("area_progress")
-              .select("meta")
-              .eq("user_id", userId)
-              .eq("area_slug", "inclusao")
-              .maybeSingle(),
-          ]);
+        const today = new Date().toISOString().slice(0, 10);
+        const [
+          { data: profile },
+          { data: areaProg },
+          { data: habits },
+          { data: history },
+          { data: inclusionRow },
+          { data: treinoRow },
+          { data: cozinhaRow },
+          { data: userMissions },
+          { data: recentMissionLogs },
+          { data: mentalRecent },
+          { data: sleepRecent },
+        ] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select(
+              "display_name,behavioral_class,goal,level,xp,streak,time_per_day_min,days_per_week,height_cm,weight_kg,age",
+            )
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("area_progress")
+            .select("area_slug,level,xp")
+            .eq("user_id", userId)
+            .order("xp", { ascending: false })
+            .limit(10),
+          supabase
+            .from("habits")
+            .select("title,target_per_week")
+            .eq("user_id", userId)
+            .eq("active", true)
+            .limit(10),
+          supabase
+            .from("oracle_messages")
+            .select("role,content")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(40),
+          supabase
+            .from("area_progress")
+            .select("meta")
+            .eq("user_id", userId)
+            .eq("area_slug", "inclusao")
+            .maybeSingle(),
+          supabase
+            .from("area_progress")
+            .select("meta")
+            .eq("user_id", userId)
+            .eq("area_slug", "treino")
+            .maybeSingle(),
+          supabase
+            .from("area_progress")
+            .select("meta")
+            .eq("user_id", userId)
+            .eq("area_slug", "cozinha")
+            .maybeSingle(),
+          supabase
+            .from("user_missions")
+            .select("id,title,area_slug,scheduled_time,weekday_mask")
+            .eq("user_id", userId)
+            .eq("active", true)
+            .limit(15),
+          supabase
+            .from("user_mission_logs")
+            .select("mission_id,done,log_date")
+            .eq("user_id", userId)
+            .eq("log_date", today),
+          supabase
+            .from("mental_journal")
+            .select("log_date,limiting_belief,reframe")
+            .eq("user_id", userId)
+            .order("log_date", { ascending: false })
+            .limit(5),
+          supabase
+            .from("sleep_logs")
+            .select("date,quality,bed_at,wake_at")
+            .eq("user_id", userId)
+            .order("date", { ascending: false })
+            .limit(5),
+        ]);
 
         const inclusion = ((inclusionRow?.meta ?? {}) as Record<string, unknown>).inclusion as
           | {
@@ -91,6 +138,18 @@ export const Route = createFileRoute("/api/chat")({
             }
           | undefined;
 
+        const trainingPlan = ((treinoRow?.meta ?? {}) as Record<string, unknown>)
+          .training_plan as
+          | { split?: string; days_per_week?: number; sessions?: Array<{ day: string; focus: string; exercises: Array<{ name: string; sets: number; reps: string }> }> }
+          | undefined;
+        const dietPlan = ((cozinhaRow?.meta ?? {}) as Record<string, unknown>)
+          .diet_plan as
+          | { hydration_ml?: number; meals?: Array<{ time: string; name: string; items: string[] }> }
+          | undefined;
+
+        const doneToday = new Set(
+          (recentMissionLogs ?? []).filter((l) => l.done).map((l) => l.mission_id),
+        );
 
         // Persist the user message right away.
         if (lastUser) {
@@ -108,7 +167,8 @@ export const Route = createFileRoute("/api/chat")({
           "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
           "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
           "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
-          "Usa o contexto do jogador para sugerir próximos passos concretos (missões, hábitos, áreas).",
+          "Você TEM acesso ao histórico do jogador (treino, dieta, hábitos, missões, sono, mental) e deve usá-lo de forma individualizada.",
+          "Sugira sempre próximo passo concreto (missão, hábito, ajuste no treino/dieta).",
           "Respostas curtas (até ~6 linhas), markdown leve permitido. Sem listas gigantes.",
           "",
           "## Contexto do jogador",
@@ -117,6 +177,9 @@ export const Route = createFileRoute("/api/chat")({
           `Objetivo: ${profile?.goal ?? "—"} | Nível interno: ${profile?.level ?? "—"}`,
           `XP global: ${profile?.xp ?? 0} | Streak: ${profile?.streak ?? 0} dias`,
           `Tempo/dia: ${profile?.time_per_day_min ?? "—"} min | Dias/semana: ${profile?.days_per_week ?? "—"}`,
+          profile?.height_cm || profile?.weight_kg || profile?.age
+            ? `Corpo: ${profile?.height_cm ?? "—"}cm · ${profile?.weight_kg ?? "—"}kg · ${profile?.age ?? "—"}a`
+            : "",
           "",
           "Áreas em progresso:",
           (areaProg ?? [])
@@ -126,6 +189,40 @@ export const Route = createFileRoute("/api/chat")({
           "Hábitos ativos:",
           (habits ?? []).map((h) => `- ${h.title} (${h.target_per_week}x/sem)`).join("\n") ||
             "- nenhum ainda",
+          "",
+          "Missões do jogador (hoje):",
+          (userMissions ?? [])
+            .map((m) => `- [${doneToday.has(m.id) ? "x" : " "}] ${m.title}${m.scheduled_time ? ` @${m.scheduled_time}` : ""} (${m.area_slug})`)
+            .join("\n") || "- nenhuma cadastrada",
+          "",
+          trainingPlan
+            ? `Treino atual (${trainingPlan.split ?? "?"} · ${trainingPlan.days_per_week ?? "?"}x/sem):\n${(trainingPlan.sessions ?? [])
+                .map(
+                  (s) =>
+                    `- ${s.day} (${s.focus}): ${(s.exercises ?? [])
+                      .slice(0, 6)
+                      .map((e) => `${e.name} ${e.sets}x${e.reps}`)
+                      .join(", ")}`,
+                )
+                .join("\n")}`
+            : "Treino: não cadastrado.",
+          "",
+          dietPlan
+            ? `Dieta atual${dietPlan.hydration_ml ? ` (hidratação ${dietPlan.hydration_ml}ml)` : ""}:\n${(dietPlan.meals ?? [])
+                .map((m) => `- ${m.time} ${m.name}: ${(m.items ?? []).slice(0, 5).join(", ")}`)
+                .join("\n")}`
+            : "Dieta: não cadastrada.",
+          "",
+          (sleepRecent ?? []).length
+            ? `Sono recente:\n${(sleepRecent ?? [])
+                .map((s) => `- ${s.date}: qualidade ${s.quality ?? "?"}${s.bed_at ? ` | dormiu ${s.bed_at}` : ""}${s.wake_at ? ` | acordou ${s.wake_at}` : ""}`)
+                .join("\n")}`
+            : "",
+          (mentalRecent ?? []).length
+            ? `Diário mental recente:\n${(mentalRecent ?? [])
+                .map((m) => `- ${m.log_date}${m.limiting_belief ? ` | crença: ${m.limiting_belief}` : ""}${m.reframe ? ` → reframe: ${m.reframe}` : ""}`)
+                .join("\n")}`
+            : "",
           "",
           "## Inclusão (respeite SEMPRE)",
           inclusion?.pronouns ? `Pronomes: ${inclusion.pronouns}` : "Pronomes: não informados",
