@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
-import { MentorBubble } from "@/components/mentor/MentorBubble";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
 
