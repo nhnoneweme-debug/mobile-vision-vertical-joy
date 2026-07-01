@@ -157,6 +157,7 @@ function AreaPage() {
         {userId && area.slug === "cozinha" && <CozinhaDietCard />}
         {userId && area.slug === "treino" && <TreinoPlanCard />}
         {userId && area.slug === "quarto" && <QuartoSleepCard />}
+        {userId && area.slug === "quarto" && <QuartoRitualsCard />}
         {userId && area.slug === "inclusao" && <InclusaoCard userId={userId} />}
 
 
