@@ -111,7 +111,7 @@ export function QuartoRitualsCard() {
   async function handleToggle(m: UserMissionWithMeta) {
     if (!userId) return;
     try {
-      await toggleMissionToday(userId, m.id, !m.done_today);
+      await toggleMissionToday(m, userId);
       await refresh(userId);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
