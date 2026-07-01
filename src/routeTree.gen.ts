@@ -27,6 +27,7 @@ import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedNotificacoesRouteImport } from './routes/_authenticated/notificacoes'
 import { Route as AuthenticatedMissoesRouteImport } from './routes/_authenticated/missoes'
 import { Route as AuthenticatedMentalRouteImport } from './routes/_authenticated/mental'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
@@ -134,6 +135,12 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNotificacoesRoute =
+  AuthenticatedNotificacoesRouteImport.update({
+    id: '/notificacoes',
+    path: '/notificacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMissoesRoute = AuthenticatedMissoesRouteImport.update({
   id: '/missoes',
   path: '/missoes',
@@ -240,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/mapa': typeof AuthenticatedMapaRoute
   '/mental': typeof AuthenticatedMentalRoute
   '/missoes': typeof AuthenticatedMissoesRoute
+  '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -276,6 +284,7 @@ export interface FileRoutesByTo {
   '/mapa': typeof AuthenticatedMapaRoute
   '/mental': typeof AuthenticatedMentalRoute
   '/missoes': typeof AuthenticatedMissoesRoute
+  '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -314,6 +323,7 @@ export interface FileRoutesById {
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/mental': typeof AuthenticatedMentalRoute
   '/_authenticated/missoes': typeof AuthenticatedMissoesRoute
+  '/_authenticated/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/mapa'
     | '/mental'
     | '/missoes'
+    | '/notificacoes'
     | '/onboarding'
     | '/painel'
     | '/perfil'
@@ -388,6 +399,7 @@ export interface FileRouteTypes {
     | '/mapa'
     | '/mental'
     | '/missoes'
+    | '/notificacoes'
     | '/onboarding'
     | '/painel'
     | '/perfil'
@@ -425,6 +437,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mapa'
     | '/_authenticated/mental'
     | '/_authenticated/missoes'
+    | '/_authenticated/notificacoes'
     | '/_authenticated/onboarding'
     | '/_authenticated/painel'
     | '/_authenticated/perfil'
@@ -583,6 +596,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/notificacoes': {
+      id: '/_authenticated/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/notificacoes'
+      preLoaderRoute: typeof AuthenticatedNotificacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/missoes': {
       id: '/_authenticated/missoes'
       path: '/missoes'
@@ -721,6 +741,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedMentalRoute: typeof AuthenticatedMentalRoute
   AuthenticatedMissoesRoute: typeof AuthenticatedMissoesRoute
+  AuthenticatedNotificacoesRoute: typeof AuthenticatedNotificacoesRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
@@ -750,6 +771,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedMentalRoute: AuthenticatedMentalRoute,
   AuthenticatedMissoesRoute: AuthenticatedMissoesRoute,
+  AuthenticatedNotificacoesRoute: AuthenticatedNotificacoesRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
