@@ -2341,6 +2341,8 @@ export type Database = {
       }
       generate_friend_code: { Args: never; Returns: string }
       generate_my_nudges: { Args: never; Returns: number }
+      generate_nudges_all_users: { Args: never; Returns: Json }
+      generate_nudges_for: { Args: { _user_id: string }; Returns: number }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       has_role: {
         Args: {
