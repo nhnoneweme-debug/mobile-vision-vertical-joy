@@ -47,7 +47,6 @@ export function MobileShell({
         {children}
       </main>
       {!hideNav && <BottomNav />}
-      {!hideMentor && <MentorBubble />}
     </div>
   );
 }
