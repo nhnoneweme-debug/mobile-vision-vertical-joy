@@ -1,4 +1,4 @@
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -154,7 +154,17 @@ function AreaPage() {
 
       <div className="space-y-3 px-4 py-5 pb-32">
         {userId && area.slug === "casa" && <CasaIntentionCard userId={userId} />}
-        {userId && area.slug === "mental" && <MentalJournalCard userId={userId} />}
+        {userId && area.slug === "mental" && (
+          <>
+            <MentalJournalCard userId={userId} />
+            <Link
+              to="/mental"
+              className="flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 py-2.5 font-display text-[10px] tracking-[0.25em] text-emerald-400"
+            >
+              ABRIR JARDIM MENTAL COMPLETO →
+            </Link>
+          </>
+        )}
         {userId && area.slug === "cozinha" && <CozinhaDietCard />}
         {userId && area.slug === "treino" && <TreinoPlanCard />}
         {userId && area.slug === "quarto" && <QuartoSleepCard />}

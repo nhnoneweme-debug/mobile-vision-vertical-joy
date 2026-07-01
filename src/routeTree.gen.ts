@@ -28,6 +28,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMissoesRouteImport } from './routes/_authenticated/missoes'
+import { Route as AuthenticatedMentalRouteImport } from './routes/_authenticated/mental'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
 import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticated/jornada'
@@ -138,6 +139,11 @@ const AuthenticatedMissoesRoute = AuthenticatedMissoesRouteImport.update({
   path: '/missoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMentalRoute = AuthenticatedMentalRouteImport.update({
+  id: '/mental',
+  path: '/mental',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMapaRoute = AuthenticatedMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -232,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
+  '/mental': typeof AuthenticatedMentalRoute
   '/missoes': typeof AuthenticatedMissoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
   '/mapa': typeof AuthenticatedMapaRoute
+  '/mental': typeof AuthenticatedMentalRoute
   '/missoes': typeof AuthenticatedMissoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/_authenticated/jornada': typeof AuthenticatedJornadaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
+  '/_authenticated/mental': typeof AuthenticatedMentalRoute
   '/_authenticated/missoes': typeof AuthenticatedMissoesRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
@@ -341,6 +350,7 @@ export interface FileRouteTypes {
     | '/jornada'
     | '/loja'
     | '/mapa'
+    | '/mental'
     | '/missoes'
     | '/onboarding'
     | '/painel'
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/jornada'
     | '/loja'
     | '/mapa'
+    | '/mental'
     | '/missoes'
     | '/onboarding'
     | '/painel'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jornada'
     | '/_authenticated/loja'
     | '/_authenticated/mapa'
+    | '/_authenticated/mental'
     | '/_authenticated/missoes'
     | '/_authenticated/onboarding'
     | '/_authenticated/painel'
@@ -578,6 +590,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMissoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mental': {
+      id: '/_authenticated/mental'
+      path: '/mental'
+      fullPath: '/mental'
+      preLoaderRoute: typeof AuthenticatedMentalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/mapa': {
       id: '/_authenticated/mapa'
       path: '/mapa'
@@ -700,6 +719,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedJornadaRoute: typeof AuthenticatedJornadaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
+  AuthenticatedMentalRoute: typeof AuthenticatedMentalRoute
   AuthenticatedMissoesRoute: typeof AuthenticatedMissoesRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
@@ -728,6 +748,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedJornadaRoute: AuthenticatedJornadaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
+  AuthenticatedMentalRoute: AuthenticatedMentalRoute,
   AuthenticatedMissoesRoute: AuthenticatedMissoesRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
