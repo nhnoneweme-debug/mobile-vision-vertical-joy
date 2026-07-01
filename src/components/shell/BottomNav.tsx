@@ -112,8 +112,11 @@ export function BottomNav() {
   const [open, setOpen] = useState(false);
   const [iaOpen, setIaOpen] = useState(false);
   const [mentorEnabled, setMentorEnabled] = useState(true);
+  const [iaPrompt, setIaPrompt] = useState("");
+  const iaInputRef = useRef<HTMLTextAreaElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+
 
   useEffect(() => {
     try {
