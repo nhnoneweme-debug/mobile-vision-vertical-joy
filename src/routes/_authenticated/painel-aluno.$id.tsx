@@ -11,12 +11,14 @@ import {
   Target,
 } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { ChatThread } from "@/components/orientador/ChatThread";
 import {
   getStudentDeepSnapshot,
   sendMission,
   type StudentDeepSnapshot,
 } from "@/lib/orientador";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/_authenticated/painel-aluno/$id")({
   head: () => ({
@@ -89,8 +91,17 @@ function AlunoPage() {
         <SignalsBlock snap={snap} />
         {me && <QuickMissionForm orientadorId={me} studentId={id} onSent={() =>
           getStudentDeepSnapshot(id).then(setSnap).catch(() => {})} />}
+        {me && (
+          <section>
+            <h2 className="mb-2 flex items-center gap-1.5 font-display text-[10px] tracking-[0.35em] text-muted-foreground">
+              CONVERSA
+            </h2>
+            <ChatThread orientadorId={me} studentId={id} heightClass="h-[50vh]" />
+          </section>
+        )}
         <MissionsList snap={snap} />
       </div>
+
     </MobileShell>
   );
 }
