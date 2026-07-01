@@ -17,7 +17,7 @@ function applyAccessibilityFromPrefs(prefs: {
 export function MobileShell({
   children,
   hideNav = false,
-  hideMentor = false,
+  hideMentor: _hideMentor = false, // kept for API compat; mentor moved into BottomNav
 }: {
   children: ReactNode;
   hideNav?: boolean;
