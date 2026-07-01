@@ -104,7 +104,7 @@ export const Route = createFileRoute("/api/chat")({
             .maybeSingle(),
           supabase
             .from("user_missions")
-            .select("id,title,area_slug,scheduled_time,days_mask")
+            .select("id,title,area_slug,scheduled_time,weekday_mask")
             .eq("user_id", userId)
             .eq("active", true)
             .limit(15),
@@ -115,15 +115,15 @@ export const Route = createFileRoute("/api/chat")({
             .eq("log_date", today),
           supabase
             .from("mental_journal")
-            .select("entry_date,mood,limiting_belief")
+            .select("log_date,limiting_belief,reframe")
             .eq("user_id", userId)
-            .order("entry_date", { ascending: false })
+            .order("log_date", { ascending: false })
             .limit(5),
           supabase
             .from("sleep_logs")
-            .select("sleep_date,duration_min,quality")
+            .select("date,quality,bed_at,wake_at")
             .eq("user_id", userId)
-            .order("sleep_date", { ascending: false })
+            .order("date", { ascending: false })
             .limit(5),
         ]);
 
