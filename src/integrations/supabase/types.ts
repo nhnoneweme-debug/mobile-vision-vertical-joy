@@ -1595,39 +1595,69 @@ export type Database = {
       shop_items: {
         Row: {
           active: boolean
+          available_from: string | null
+          available_until: string | null
+          bundle_items: Json
           category: string
           created_at: string
           description: string | null
+          duration_hours: number | null
+          featured: boolean
+          icon: string | null
           id: string
+          kind: string
           name: string
           payload: Json
+          perk_code: string | null
           price: number
           required_level: number
+          season_tag: string | null
           slug: string
+          stock: number | null
         }
         Insert: {
           active?: boolean
+          available_from?: string | null
+          available_until?: string | null
+          bundle_items?: Json
           category: string
           created_at?: string
           description?: string | null
+          duration_hours?: number | null
+          featured?: boolean
+          icon?: string | null
           id?: string
+          kind?: string
           name: string
           payload?: Json
+          perk_code?: string | null
           price: number
           required_level?: number
+          season_tag?: string | null
           slug: string
+          stock?: number | null
         }
         Update: {
           active?: boolean
+          available_from?: string | null
+          available_until?: string | null
+          bundle_items?: Json
           category?: string
           created_at?: string
           description?: string | null
+          duration_hours?: number | null
+          featured?: boolean
+          icon?: string | null
           id?: string
+          kind?: string
           name?: string
           payload?: Json
+          perk_code?: string | null
           price?: number
           required_level?: number
+          season_tag?: string | null
           slug?: string
+          stock?: number | null
         }
         Relationships: []
       }
@@ -2019,23 +2049,32 @@ export type Database = {
         Row: {
           acquired_at: string
           equipped: boolean
+          expires_at: string | null
           id: string
           item_id: string
+          source: string
           user_id: string
+          uses_left: number | null
         }
         Insert: {
           acquired_at?: string
           equipped?: boolean
+          expires_at?: string | null
           id?: string
           item_id: string
+          source?: string
           user_id: string
+          uses_left?: number | null
         }
         Update: {
           acquired_at?: string
           equipped?: boolean
+          expires_at?: string | null
           id?: string
           item_id?: string
+          source?: string
           user_id?: string
+          uses_left?: number | null
         }
         Relationships: [
           {
@@ -2503,6 +2542,10 @@ export type Database = {
       generate_nudges_all_users: { Args: never; Returns: Json }
       generate_nudges_for: { Args: { _user_id: string }; Returns: number }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
+      has_active_perk: {
+        Args: { _perk_code: string; _user: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
