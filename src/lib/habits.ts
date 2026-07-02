@@ -158,3 +158,44 @@ export async function seedHabitsForClass(
   const { error } = await supabase.from("habits").insert(rows);
   if (error) throw error;
 }
+
+export async function monthlyHabitProgress(
+  userId: string,
+  year: number,
+  month: number, // 0-indexed
+): Promise<{ done: number; target: number; pct: number }> {
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  const startISO = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const endISO = `${year}-${String(month + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  const daysInMonth = end.getDate();
+
+  const { data: habits, error } = await supabase
+    .from("habits")
+    .select("id, target_per_week")
+    .eq("user_id", userId)
+    .eq("active", true);
+  if (error) throw error;
+  if (!habits || habits.length === 0) return { done: 0, target: 0, pct: 0 };
+
+  const weeks = daysInMonth / 7;
+  const target = Math.max(
+    0,
+    Math.round(habits.reduce((s, h) => s + (h.target_per_week ?? 0) * weeks, 0)),
+  );
+
+  const ids = habits.map((h) => h.id);
+  const { data: logs, error: logsErr } = await supabase
+    .from("habit_logs")
+    .select("id")
+    .in("habit_id", ids)
+    .gte("log_date", startISO)
+    .lte("log_date", endISO);
+  if (logsErr) throw logsErr;
+
+  const done = logs?.length ?? 0;
+  const pct = target > 0 ? Math.max(0, Math.min(100, Math.round((done / target) * 100))) : 0;
+  // silence unused start
+  void start;
+  return { done, target, pct };
+}
