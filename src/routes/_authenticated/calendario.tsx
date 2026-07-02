@@ -168,7 +168,35 @@ function MonthView({ userId }: { userId: string }) {
         </button>
       </div>
 
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-border bg-card px-3 py-2">
+          <div className="flex items-baseline justify-between">
+            <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">METAS</span>
+            <span className="font-display text-[10px] tracking-[0.25em] text-ember">{goalProg.pct}%</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-charcoal-800">
+            <div className="h-full bg-ember transition-all" style={{ width: `${goalProg.pct}%` }} />
+          </div>
+          <p className="mt-1 font-body text-[10px] text-muted-foreground">
+            {goalProg.count > 0 ? `${goalProg.current}/${goalProg.target} no trimestre` : "Sem metas neste trimestre"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-3 py-2">
+          <div className="flex items-baseline justify-between">
+            <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">HÁBITOS</span>
+            <span className="font-display text-[10px] tracking-[0.25em] text-ember">{habitProg.pct}%</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-charcoal-800">
+            <div className="h-full bg-ember transition-all" style={{ width: `${habitProg.pct}%` }} />
+          </div>
+          <p className="mt-1 font-body text-[10px] text-muted-foreground">
+            {habitProg.target > 0 ? `${habitProg.done}/${habitProg.target} check-ins no mês` : "Sem hábitos ativos"}
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-7 gap-1 px-1 pb-1">
+
         {["S","T","Q","Q","S","S","D"].map((d, i) => (
           <div key={i} className="text-center font-display text-[9px] tracking-[0.2em] text-muted-foreground">{d}</div>
         ))}
