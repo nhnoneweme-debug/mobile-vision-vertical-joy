@@ -136,17 +136,27 @@ export function BottomNav() {
   const tip = getMentorTip(pathname);
   const onIaRoute = pathname.startsWith("/ia");
 
-  function goToIA(seed?: string) {
+  function goToIA(seed?: string, autosend = true) {
     setIaOpen(false);
     const payload = (seed ?? iaPrompt).trim();
     if (payload) {
       try {
         sessionStorage.setItem("ia.seed", payload);
+        if (autosend) sessionStorage.setItem("ia.autosend", "1");
+        else sessionStorage.removeItem("ia.autosend");
       } catch {}
     }
     setIaPrompt("");
+    if (payload && onIaRoute) {
+      // Já está em /ia: componente não remonta — sinaliza via evento
+      try {
+        window.dispatchEvent(new CustomEvent("ia:seed"));
+      } catch {}
+      return;
+    }
     void navigate({ to: "/ia" });
   }
+
 
   useEffect(() => {
     if (!iaOpen) return;
