@@ -15,6 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "sonner";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import { PWAStatus } from "@/components/pwa/PWAStatus";
+import { ViewportProvider } from "@/providers/ViewportProvider";
+import { ViewportGuard } from "@/components/ViewportGuard";
+import { ViewportValidation } from "@/components/ViewportValidation";
 
 
 function NotFoundComponent() {
