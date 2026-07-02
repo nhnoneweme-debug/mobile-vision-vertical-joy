@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Coins, Lock, Check, Sparkles, History } from "lucide-react";
+import { Coins, Lock, Sparkles, History, Zap, Flame, Timer, Star } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -10,25 +10,30 @@ import {
   listBrasasEvents,
   purchaseShopItem,
   equipInventoryItem,
-  CATEGORY_LABEL,
+  isItemAvailableWindow,
+  timeLeft,
+  TAB_LABEL,
   SOURCE_LABEL,
   type ShopItem,
   type InventoryItem,
   type BrasasEvent,
-  type ShopCategory,
+  type ShopTab,
 } from "@/lib/shop";
 
 export const Route = createFileRoute("/_authenticated/loja")({
   head: () => ({
     meta: [
-      { title: "Loja de Brasas — Personal IA" },
-      { name: "description", content: "Troque suas Brasas por molduras, títulos e temas exclusivos." },
+      { title: "Marketplace de Brasas — Personal IA" },
+      {
+        name: "description",
+        content: "Perks temporários, pacotes sazonais e cosméticos. Economia viva movida a Brasas.",
+      },
     ],
   }),
   component: LojaPage,
 });
 
-const CATEGORIES: ShopCategory[] = ["frame", "title", "avatar_icon", "theme"];
+const TABS: ShopTab[] = ["featured", "perk", "seasonal", "frame", "title", "avatar_icon", "theme"];
 
 function LojaPage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -37,9 +42,15 @@ function LojaPage() {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [events, setEvents] = useState<BrasasEvent[]>([]);
-  const [tab, setTab] = useState<ShopCategory>("frame");
+  const [tab, setTab] = useState<ShopTab>("featured");
   const [showHistory, setShowHistory] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const loadAll = useCallback(async (uid: string) => {
     const [prof, sh, inv, ev] = await Promise.all([
@@ -68,8 +79,25 @@ function LojaPage() {
     };
   }, [loadAll]);
 
+  const activePerks = useMemo(
+    () =>
+      inventory.filter(
+        (i) =>
+          i.item?.kind === "perk" &&
+          (!i.expires_at || new Date(i.expires_at).getTime() > now),
+      ),
+    [inventory, now],
+  );
+
   const ownedIds = useMemo(() => new Set(inventory.map((i) => i.item_id)), [inventory]);
-  const visibleItems = items.filter((i) => i.category === tab);
+
+  const visibleItems = useMemo(() => {
+    const inWindow = items.filter((i) => isItemAvailableWindow(i));
+    if (tab === "featured") return inWindow.filter((i) => i.featured);
+    if (tab === "perk") return inWindow.filter((i) => i.kind === "perk");
+    if (tab === "seasonal") return inWindow.filter((i) => i.kind === "seasonal");
+    return inWindow.filter((i) => i.category === tab && i.kind !== "perk");
+  }, [items, tab]);
 
   async function handleBuy(item: ShopItem) {
     if (!userId || pending) return;
@@ -78,7 +106,10 @@ function LojaPage() {
       const res = await purchaseShopItem(item.id);
       if (res.ok) {
         toast.success(`Adquirido: ${item.name}`, {
-          description: `−${item.price} Brasas`,
+          description:
+            item.kind === "perk" && res.expires_at
+              ? `Ativo por ${timeLeft(res.expires_at)}`
+              : `−${item.price} Brasas`,
         });
         await loadAll(userId);
       } else {
@@ -87,6 +118,10 @@ function LojaPage() {
           level_locked: `Requer nível ${res.required_level}.`,
           already_owned: "Você já possui este item.",
           item_unavailable: "Item indisponível.",
+          not_yet_available: "Ainda não disponível.",
+          expired: "Item fora da temporada.",
+          sold_out: "Esgotado.",
+          perk_already_active: "Este perk já está ativo.",
         };
         toast.error(map[res.error] ?? "Compra recusada.");
       }
@@ -115,7 +150,7 @@ function LojaPage() {
       >
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="font-display text-[10px] tracking-[0.3em] text-ember">LOJA</p>
+            <p className="font-display text-[10px] tracking-[0.3em] text-ember">MARKETPLACE</p>
             <h1 className="font-display text-2xl tracking-wide text-foreground">Forja de Brasas</h1>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-ember/30 bg-charcoal-800 px-3 py-2">
@@ -124,21 +159,45 @@ function LojaPage() {
           </div>
         </div>
         <p className="mt-2 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
-          NÍVEL {String(level).padStart(2, "0")} · 1 BRASA A CADA 10 XP CONQUISTADO
+          NÍVEL {String(level).padStart(2, "0")} · PERKS · PACOTES · SAZONAIS
         </p>
 
+        {activePerks.length > 0 && (
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {activePerks.map((p) => (
+              <div
+                key={p.id}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-ember/40 bg-ember/10 px-2.5 py-1.5"
+              >
+                <Zap className="h-3.5 w-3.5 text-ember" strokeWidth={2.6} />
+                <span className="font-display text-[10px] tracking-[0.2em] text-foreground">
+                  {p.item.name.toUpperCase()}
+                </span>
+                {p.expires_at && (
+                  <span className="font-display text-[9px] tracking-widest text-ember">
+                    {timeLeft(p.expires_at)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         <nav className="mt-4 flex gap-1 overflow-x-auto pb-1">
-          {CATEGORIES.map((c) => (
+          {TABS.map((c) => (
             <button
               key={c}
-              onClick={() => setTab(c)}
+              onClick={() => {
+                setTab(c);
+                setShowHistory(false);
+              }}
               className={`whitespace-nowrap rounded-lg px-3 py-1.5 font-display text-[11px] tracking-[0.2em] transition-colors ${
-                tab === c
+                tab === c && !showHistory
                   ? "bg-ember text-charcoal-900"
                   : "border border-border bg-charcoal-800 text-muted-foreground"
               }`}
             >
-              {CATEGORY_LABEL[c].toUpperCase()}
+              {TAB_LABEL[c].toUpperCase()}
             </button>
           ))}
           <button
@@ -160,20 +219,25 @@ function LojaPage() {
           <>
             {visibleItems.length === 0 && (
               <p className="rounded-xl border border-dashed border-border bg-charcoal-800/40 p-4 text-center font-display text-xs tracking-wider text-muted-foreground">
-                Nenhum item nesta categoria ainda.
+                Nada aqui agora. Volte em breve.
               </p>
             )}
             {visibleItems.map((item) => {
-              const owned = ownedIds.has(item.id);
-              const invRow = inventory.find((i) => i.item_id === item.id);
+              const invRow = inventory.find(
+                (i) =>
+                  i.item_id === item.id &&
+                  (!i.expires_at || new Date(i.expires_at).getTime() > now),
+              );
+              const owned = item.kind === "perk" ? !!invRow : ownedIds.has(item.id);
               const locked = level < item.required_level;
-              const cantAfford = !owned && brasas < item.price;
+              const cantAfford = brasas < item.price;
               return (
                 <ShopItemRow
                   key={item.id}
                   item={item}
                   owned={owned}
                   equipped={invRow?.equipped ?? false}
+                  expiresAt={invRow?.expires_at ?? null}
                   locked={locked}
                   cantAfford={cantAfford}
                   pending={pending === item.id}
@@ -185,7 +249,6 @@ function LojaPage() {
           </>
         )}
       </div>
-
     </MobileShell>
   );
 }
@@ -194,6 +257,7 @@ function ShopItemRow({
   item,
   owned,
   equipped,
+  expiresAt,
   locked,
   cantAfford,
   pending,
@@ -203,52 +267,106 @@ function ShopItemRow({
   item: ShopItem;
   owned: boolean;
   equipped: boolean;
+  expiresAt: string | null;
   locked: boolean;
   cantAfford: boolean;
   pending: boolean;
   onBuy: () => void;
   onEquip: () => void;
 }) {
+  const isPerk = item.kind === "perk";
+  const isSeasonal = item.kind === "seasonal";
+  const remainingWindow =
+    item.available_until && new Date(item.available_until).getTime() > Date.now()
+      ? timeLeft(item.available_until)
+      : null;
+
   return (
     <article
       className={`flex items-center gap-3 rounded-2xl border p-3 ${
         equipped
           ? "border-ember/60 bg-ember/5"
-          : owned
-            ? "border-border bg-charcoal-800/60"
-            : "border-border bg-card"
+          : isSeasonal
+            ? "border-ember/40 bg-ember/[0.04]"
+            : owned && !isPerk
+              ? "border-border bg-charcoal-800/60"
+              : "border-border bg-card"
       }`}
     >
       <div
-        className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl ${
+        className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl text-2xl ${
           locked ? "bg-charcoal-900 text-muted-foreground" : "bg-charcoal-800 text-ember"
         }`}
       >
-        {locked ? <Lock className="h-5 w-5" /> : <Sparkles className="h-5 w-5" strokeWidth={2.2} />}
+        {locked ? (
+          <Lock className="h-5 w-5" />
+        ) : item.icon ? (
+          <span>{item.icon}</span>
+        ) : isPerk ? (
+          <Zap className="h-5 w-5" strokeWidth={2.4} />
+        ) : isSeasonal ? (
+          <Star className="h-5 w-5" strokeWidth={2.2} />
+        ) : (
+          <Sparkles className="h-5 w-5" strokeWidth={2.2} />
+        )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <h3 className="truncate font-display text-base tracking-wide text-foreground">{item.name}</h3>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <h3 className="truncate font-display text-base tracking-wide text-foreground">
+            {item.name}
+          </h3>
+          {item.featured && (
+            <span className="rounded-md border border-ember/40 bg-ember/10 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
+              DESTAQUE
+            </span>
+          )}
+          {isSeasonal && (
+            <span className="rounded-md border border-ember/50 bg-ember/15 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
+              SAZONAL
+            </span>
+          )}
           {equipped && (
             <span className="rounded-md border border-ember/40 bg-ember/10 px-1.5 py-0.5 font-display text-[9px] tracking-[0.2em] text-ember">
               EQUIPADO
             </span>
           )}
         </div>
-        <p className="line-clamp-2 mt-0.5 font-sans text-xs text-muted-foreground">{item.description}</p>
-        <div className="mt-1.5 flex items-center gap-3">
-          {!owned && (
-            <span className="flex items-center gap-1 font-display text-xs tracking-wider text-ember">
-              <Coins className="h-3 w-3" strokeWidth={2.4} />
-              {item.price}
-            </span>
-          )}
+        <p className="line-clamp-2 mt-0.5 font-sans text-xs text-muted-foreground">
+          {item.description}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="flex items-center gap-1 font-display text-xs tracking-wider text-ember">
+            <Coins className="h-3 w-3" strokeWidth={2.4} />
+            {item.price}
+          </span>
           <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
             NÍVEL {item.required_level}+
           </span>
+          {isPerk && item.duration_hours && (
+            <span className="flex items-center gap-1 font-display text-[10px] tracking-[0.2em] text-muted-foreground">
+              <Timer className="h-3 w-3" strokeWidth={2.4} />
+              {item.duration_hours}H
+            </span>
+          )}
+          {owned && expiresAt && (
+            <span className="flex items-center gap-1 font-display text-[10px] tracking-[0.2em] text-ember">
+              <Flame className="h-3 w-3" strokeWidth={2.4} />
+              ATIVO · {timeLeft(expiresAt)}
+            </span>
+          )}
+          {remainingWindow && (
+            <span className="font-display text-[10px] tracking-[0.2em] text-ember">
+              JANELA: {remainingWindow}
+            </span>
+          )}
+          {item.stock !== null && item.stock !== undefined && (
+            <span className="font-display text-[10px] tracking-[0.2em] text-muted-foreground">
+              RESTAM {item.stock}
+            </span>
+          )}
         </div>
       </div>
-      {owned ? (
+      {owned && !isPerk ? (
         <button
           onClick={onEquip}
           className={`shrink-0 rounded-lg px-3 py-2 font-display text-[11px] tracking-[0.2em] ${
@@ -262,10 +380,18 @@ function ShopItemRow({
       ) : (
         <button
           onClick={onBuy}
-          disabled={locked || cantAfford || pending}
+          disabled={locked || cantAfford || pending || (owned && isPerk)}
           className="shrink-0 rounded-lg bg-ember px-3 py-2 font-display text-[11px] tracking-[0.2em] text-charcoal-900 disabled:opacity-40"
         >
-          {pending ? "..." : locked ? <Lock className="h-3.5 w-3.5" /> : owned ? <Check className="h-3.5 w-3.5" /> : "FORJAR"}
+          {pending
+            ? "..."
+            : locked
+              ? <Lock className="h-3.5 w-3.5" />
+              : owned && isPerk
+                ? "ATIVO"
+                : isPerk
+                  ? "ATIVAR"
+                  : "FORJAR"}
         </button>
       )}
     </article>
