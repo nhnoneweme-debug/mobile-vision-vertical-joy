@@ -52,6 +52,11 @@
 :root {
   --radius: 0.875rem;
 
+  /* Largura máxima do shell mobile — cresce com o viewport em desktop */
+  --shell-max: clamp(360px, 100vw, 480px);
+
+
+
   /* Charcoal scale (#1a1a1a → #4a4a4a) */
   --charcoal-900: oklch(0.18 0 0);
   --charcoal-800: oklch(0.245 0 0);
