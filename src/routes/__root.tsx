@@ -154,9 +154,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster position="top-center" theme="dark" richColors />
-      <PWAStatus />
+      <ViewportProvider>
+        <ViewportGuard label="route">
+          <Outlet />
+        </ViewportGuard>
+        <Toaster position="top-center" theme="dark" richColors />
+        <PWAStatus />
+        <ViewportValidation />
+      </ViewportProvider>
     </QueryClientProvider>
   );
 
