@@ -15,6 +15,9 @@ export function ViewportValidation() {
   const lastCountRef = useRef(resizeCount);
   const heardRef = useRef(false);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   if (resizeCount > lastCountRef.current) {
     heardRef.current = true;
     lastCountRef.current = resizeCount;
