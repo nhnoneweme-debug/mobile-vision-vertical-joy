@@ -45,7 +45,9 @@ const DrawerContent = React.forwardRef<
       {...props}
     >
       <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
+      <ViewportGuard label="drawer" isOverlay>
+        {children}
+      </ViewportGuard>
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ));
