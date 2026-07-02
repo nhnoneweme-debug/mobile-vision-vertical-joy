@@ -100,6 +100,12 @@ function MonthView({ userId }: { userId: string }) {
   const [activity, setActivity] = useState<Record<string, CalendarDay>>({});
   const [scheduled, setScheduled] = useState<Record<string, ScheduledQuest[]>>({});
   const [selected, setSelected] = useState<string | null>(null);
+  const [goalProg, setGoalProg] = useState<{ current: number; target: number; pct: number; count: number }>({
+    current: 0, target: 0, pct: 0, count: 0,
+  });
+  const [habitProg, setHabitProg] = useState<{ done: number; target: number; pct: number }>({
+    done: 0, target: 0, pct: 0,
+  });
 
   const weeks = useMemo(() => monthMatrix(cursor.year, cursor.month), [cursor]);
   const start = weeks[0][0];
@@ -107,9 +113,11 @@ function MonthView({ userId }: { userId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const [act, sched] = await Promise.all([
+      const [act, sched, gp, hp] = await Promise.all([
         calendarActivity(start, end),
         listScheduled(userId, start, end),
+        monthlyGoalProgress(userId, cursor.year, cursor.month).catch(() => ({ current: 0, target: 0, pct: 0, count: 0 })),
+        monthlyHabitProgress(userId, cursor.year, cursor.month).catch(() => ({ done: 0, target: 0, pct: 0 })),
       ]);
       setActivity(Object.fromEntries(act.map((d) => [d.day, d])));
       const grouped: Record<string, ScheduledQuest[]> = {};
@@ -117,10 +125,12 @@ function MonthView({ userId }: { userId: string }) {
         (grouped[s.scheduled_date] ??= []).push(s);
       }
       setScheduled(grouped);
+      setGoalProg(gp);
+      setHabitProg(hp);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao carregar calendário");
     }
-  }, [userId, start, end]);
+  }, [userId, start, end, cursor.year, cursor.month]);
 
   useEffect(() => { load(); }, [load]);
 
