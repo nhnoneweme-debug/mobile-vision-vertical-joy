@@ -39,7 +39,7 @@ export function ViewportValidation() {
     });
   }, [guards, width, height, breakpoint, resizeCount, isListening]);
 
-  if (!IS_DEV) return null;
+  if (!IS_DEV || !mounted) return null;
 
   const guardList = Object.values(guards);
   const anyOut = guardList.some((g) => g.outOfBounds);
