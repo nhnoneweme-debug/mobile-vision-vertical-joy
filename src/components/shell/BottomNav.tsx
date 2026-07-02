@@ -381,7 +381,7 @@ export function BottomNav() {
                                 : "border-border/60 text-muted-foreground hover:text-foreground")
                             }
                           >
-                            <Icon className="h-5 w-5" strokeWidth={2.2} />
+                            <Icon className="h-4 w-4" strokeWidth={2.2} />
                             <span className="font-display text-[10px] tracking-[0.15em]">
                               {item.label.toUpperCase()}
                             </span>
