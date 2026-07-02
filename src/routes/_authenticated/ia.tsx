@@ -39,14 +39,41 @@ function IAPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
+  }, []);
+
+  // Fila de auto-envio: seeds pendentes que aguardam token disponível.
+  // Refs impedem envio duplicado se o efeito re-executar.
+  const pendingSeedRef = useRef<string | null>(null);
+  const pendingAutosendRef = useRef<boolean>(false);
+  const lastSentRef = useRef<string | null>(null);
+
+  const drainSeed = useCallback(() => {
     try {
       const seed = sessionStorage.getItem("ia.seed");
-      if (seed) {
-        sessionStorage.removeItem("ia.seed");
-        setInput(seed);
-      }
+      const autosend = sessionStorage.getItem("ia.autosend") === "1";
+      if (!seed) return;
+      sessionStorage.removeItem("ia.seed");
+      sessionStorage.removeItem("ia.autosend");
+      pendingSeedRef.current = seed;
+      pendingAutosendRef.current = autosend;
+      setInput(seed);
     } catch {}
   }, []);
+
+  // Consome ao montar e reage a novos seeds enquanto já montado
+  useEffect(() => {
+    drainSeed();
+    const onSeed = () => drainSeed();
+    const onVisible = () => { if (document.visibilityState === "visible") drainSeed(); };
+    window.addEventListener("ia:seed", onSeed);
+    window.addEventListener("focus", onSeed);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("ia:seed", onSeed);
+      window.removeEventListener("focus", onSeed);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [drainSeed]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -74,6 +101,20 @@ function IAPage() {
       setBusy(false);
     }
   }
+
+  // Auto-envia quando token chega e há seed pendente com autosend
+  useEffect(() => {
+    if (!token || busy) return;
+    const seed = pendingSeedRef.current;
+    if (!seed || !pendingAutosendRef.current) return;
+    if (lastSentRef.current === seed) return;
+    lastSentRef.current = seed;
+    pendingSeedRef.current = null;
+    pendingAutosendRef.current = false;
+    void send(seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, busy, input]);
+
 
   async function approve(p: Proposal) {
     setProposalStatus((s) => ({ ...s, [p.audit_id]: "loading" }));
