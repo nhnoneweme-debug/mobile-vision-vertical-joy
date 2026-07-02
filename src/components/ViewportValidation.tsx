@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useViewport } from "@/providers/ViewportProvider";
 
 const IS_DEV = import.meta.env.DEV;
@@ -14,6 +14,9 @@ export function ViewportValidation() {
   } = useViewport();
   const lastCountRef = useRef(resizeCount);
   const heardRef = useRef(false);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   if (resizeCount > lastCountRef.current) {
     heardRef.current = true;
@@ -36,7 +39,7 @@ export function ViewportValidation() {
     });
   }, [guards, width, height, breakpoint, resizeCount, isListening]);
 
-  if (!IS_DEV) return null;
+  if (!IS_DEV || !mounted) return null;
 
   const guardList = Object.values(guards);
   const anyOut = guardList.some((g) => g.outOfBounds);
