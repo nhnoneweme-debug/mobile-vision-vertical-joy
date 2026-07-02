@@ -1679,6 +1679,7 @@ export type Database = {
           sleep_at: string | null
           user_id: string
           wake_at: string | null
+          wearable_source: string | null
         }
         Insert: {
           bed_at?: string | null
@@ -1691,6 +1692,7 @@ export type Database = {
           sleep_at?: string | null
           user_id: string
           wake_at?: string | null
+          wearable_source?: string | null
         }
         Update: {
           bed_at?: string | null
@@ -1703,6 +1705,7 @@ export type Database = {
           sleep_at?: string | null
           user_id?: string
           wake_at?: string | null
+          wearable_source?: string | null
         }
         Relationships: []
       }
@@ -2342,6 +2345,75 @@ export type Database = {
           },
         ]
       }
+      wearable_connections: {
+        Row: {
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          meta: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          meta?: Json | null
+          source: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          meta?: Json | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wearable_samples: {
+        Row: {
+          created_at: string
+          id: string
+          metric: string
+          raw: Json | null
+          sample_date: string
+          source: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metric: string
+          raw?: Json | null
+          sample_date: string
+          source?: string
+          updated_at?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metric?: string
+          raw?: Json | null
+          sample_date?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       xp_events: {
         Row: {
           amount: number
@@ -2437,6 +2509,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      import_wearable_samples: {
+        Args: { _samples: Json; _source: string }
+        Returns: Json
       }
       is_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
       is_crystal_active: {
