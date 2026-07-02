@@ -260,7 +260,7 @@ function IAPage() {
       </div>
 
       <div
-        className="fixed inset-x-0 bottom-16 z-30 mx-auto w-full max-w-[480px] border-t border-border bg-charcoal-900/95 px-3 py-3 backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-16 z-30 mx-auto w-full max-w-[var(--shell-max)] border-t border-border bg-charcoal-900/95 px-3 py-3 backdrop-blur-xl"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
       >
         <div className="flex items-end gap-2">

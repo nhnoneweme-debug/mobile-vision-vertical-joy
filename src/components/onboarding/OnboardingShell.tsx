@@ -23,7 +23,7 @@ export function OnboardingShell({
   footer,
 }: Props) {
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-col bg-background">
       <header
         className="px-4 pb-4"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}

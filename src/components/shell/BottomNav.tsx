@@ -162,7 +162,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-charcoal-900/90 backdrop-blur-xl"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)] border-t border-border bg-charcoal-900/90 backdrop-blur-xl"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="relative flex items-stretch justify-around px-2 pt-2">
@@ -195,7 +195,7 @@ export function BottomNav() {
           <Sheet open={iaOpen} onOpenChange={setIaOpen}>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[480px] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
               <SheetHeader className="text-left">
                 <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
@@ -340,7 +340,7 @@ export function BottomNav() {
             </SheetTrigger>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[480px] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
               <SheetHeader>
                 <SheetTitle className="font-display tracking-[0.18em] text-foreground">

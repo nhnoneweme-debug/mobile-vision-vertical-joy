@@ -285,3 +285,11 @@ html.high-contrast {
   --border: oklch(100% 0 0 / 0.6);
   --muted-foreground: oklch(95% 0 0);
 }
+
+/* Shell responsivo — desktop alarga o container centralizado */
+@media (min-width: 1024px) {
+  :root { --shell-max: 640px; }
+}
+@media (min-width: 1280px) {
+  :root { --shell-max: 720px; }
+}

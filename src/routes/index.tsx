@@ -59,7 +59,7 @@ export const Route = createFileRoute("/")({
 
 function Splash() {
   return (
-    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col justify-between overflow-hidden bg-background px-6 pb-10 pt-16">
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-col justify-between overflow-hidden bg-background px-6 pb-10 pt-16">
       {/* Ambient ember glow */}
       <div
         aria-hidden
