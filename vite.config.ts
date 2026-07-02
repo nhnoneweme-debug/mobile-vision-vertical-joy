@@ -20,12 +20,7 @@ export default defineConfig({
         injectRegister: null,
         filename: "sw.js",
         devOptions: { enabled: false },
-        includeAssets: [
-          "favicon-64.png",
-          "apple-touch-icon.png",
-          "icon-192.png",
-          "icon-512.png",
-        ],
+        includeAssets: ["favicon-64.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"],
         manifest: false,
         workbox: {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],

@@ -93,7 +93,9 @@ export async function createGoal(input: {
 
 export async function updateGoal(
   id: string,
-  patch: Partial<Pick<StrategicGoal, "title" | "description" | "current_value" | "target_value" | "status">>,
+  patch: Partial<
+    Pick<StrategicGoal, "title" | "description" | "current_value" | "target_value" | "status">
+  >,
 ): Promise<StrategicGoal> {
   const body: Partial<StrategicGoal> = { ...patch };
   if (patch.status === "completed") body.completed_at = new Date().toISOString();

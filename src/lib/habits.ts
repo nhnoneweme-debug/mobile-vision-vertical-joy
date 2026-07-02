@@ -70,10 +70,7 @@ export async function listHabits(userId: string): Promise<HabitWithMeta[]> {
   });
 }
 
-export async function toggleHabit(
-  habit: HabitWithMeta,
-  userId: string,
-): Promise<void> {
+export async function toggleHabit(habit: HabitWithMeta, userId: string): Promise<void> {
   if (habit.done_today && habit.log_id) {
     const { error } = await supabase.from("habit_logs").delete().eq("id", habit.log_id);
     if (error) throw error;
@@ -86,7 +83,10 @@ export async function toggleHabit(
     status: "completed",
   });
   if (error) throw error;
-  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
+  supabase.rpc("check_perk_unlocks").then(
+    () => {},
+    () => {},
+  );
 }
 
 export async function createHabit(
@@ -147,7 +147,7 @@ export async function seedHabitsForClass(
   userId: string,
   klass: BehavioralClass | string,
 ): Promise<void> {
-  const seeds = SEED_BY_CLASS[(klass as BehavioralClass)] ?? SEED_BY_CLASS.executor;
+  const seeds = SEED_BY_CLASS[klass as BehavioralClass] ?? SEED_BY_CLASS.executor;
   const { data: existing } = await supabase
     .from("habits")
     .select("id")
