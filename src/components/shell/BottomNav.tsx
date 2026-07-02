@@ -94,7 +94,7 @@ function NavSlot({
       className="group flex flex-1 flex-col items-center gap-1 px-2 py-2 text-muted-foreground transition-colors"
       activeProps={{ className: "text-ember" }}
     >
-      <Icon className="h-5 w-5" strokeWidth={2.2} />
+<Icon className="h-5 w-5" strokeWidth={2.2} />
       <span className="font-display text-[11px] tracking-[0.18em]">{label}</span>
       {active ? (
         <span className="absolute -top-[1px] h-[2px] w-8 rounded-full bg-ember shadow-[0_0_8px_var(--ember)]" />
@@ -381,7 +381,7 @@ export function BottomNav() {
                                 : "border-border/60 text-muted-foreground hover:text-foreground")
                             }
                           >
-                            <Icon className="h-5 w-5" strokeWidth={2.2} />
+                            <Icon className="h-4 w-4" strokeWidth={2.2} />
                             <span className="font-display text-[10px] tracking-[0.15em]">
                               {item.label.toUpperCase()}
                             </span>
