@@ -16,6 +16,7 @@ import {
   listGoals,
   listScheduled,
   monthMatrix,
+  monthlyGoalProgress,
   quarterRange,
   updateGoal,
   updateScheduledStatus,
@@ -23,6 +24,7 @@ import {
   type ScheduledQuest,
   type StrategicGoal,
 } from "@/lib/planning";
+import { monthlyHabitProgress } from "@/lib/habits";
 
 export const Route = createFileRoute("/_authenticated/calendario")({
   head: () => ({
