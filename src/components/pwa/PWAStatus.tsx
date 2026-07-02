@@ -53,7 +53,7 @@ export function PWAStatus() {
     <>
       {offline && (
         <div
-          className="fixed inset-x-0 top-0 z-50 mx-auto flex w-full max-w-[480px] items-center justify-center gap-2 bg-charcoal-900/95 px-4 py-1.5 text-[11px] font-display tracking-[0.25em] text-ember backdrop-blur-md"
+          className="fixed inset-x-0 top-0 z-50 mx-auto flex w-full max-w-[var(--shell-max)] items-center justify-center gap-2 bg-charcoal-900/95 px-4 py-1.5 text-[11px] font-display tracking-[0.25em] text-ember backdrop-blur-md"
           style={{ paddingTop: "calc(env(safe-area-inset-top) + 4px)" }}
         >
           <WifiOff className="h-3.5 w-3.5" strokeWidth={2.4} />
@@ -63,7 +63,7 @@ export function PWAStatus() {
 
       {installEvt && (
         <div
-          className="fixed inset-x-0 top-0 z-40 mx-auto w-full max-w-[480px] px-3"
+          className="fixed inset-x-0 top-0 z-40 mx-auto w-full max-w-[var(--shell-max)] px-3"
           style={{ paddingTop: `calc(env(safe-area-inset-top) + ${offline ? 28 : 6}px)` }}
         >
           <div className="flex items-center gap-2 rounded-xl border border-ember/30 bg-charcoal-900/95 px-3 py-2 shadow-lg backdrop-blur-xl">

@@ -64,7 +64,7 @@ export function MentorBubble() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="mx-auto w-full max-w-[480px] rounded-t-3xl border-t border-border bg-card p-5"
+            className="mx-auto w-full max-w-[var(--shell-max)] rounded-t-3xl border-t border-border bg-card p-5"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
             onClick={(e) => e.stopPropagation()}
           >

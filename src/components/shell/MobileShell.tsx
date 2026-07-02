@@ -40,7 +40,7 @@ export function MobileShell({
   }, []);
 
   return (
-    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background">
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-col bg-background">
       {!hideNav && <NotificationsBell />}
       <main
         className="flex-1 pb-28"

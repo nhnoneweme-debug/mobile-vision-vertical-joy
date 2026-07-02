@@ -26,13 +26,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Crown } from "lucide-react";
 import { getMentorTip } from "@/lib/mentor-tips";
 
@@ -118,7 +112,6 @@ export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
-
   useEffect(() => {
     try {
       const v = localStorage.getItem(MENTOR_PREF_KEY);
@@ -136,15 +129,24 @@ export function BottomNav() {
   const tip = getMentorTip(pathname);
   const onIaRoute = pathname.startsWith("/ia");
 
-  function goToIA(seed?: string) {
+  function goToIA(seed?: string, autosend = true) {
     setIaOpen(false);
     const payload = (seed ?? iaPrompt).trim();
     if (payload) {
       try {
         sessionStorage.setItem("ia.seed", payload);
+        if (autosend) sessionStorage.setItem("ia.autosend", "1");
+        else sessionStorage.removeItem("ia.autosend");
       } catch {}
     }
     setIaPrompt("");
+    if (payload && onIaRoute) {
+      // Já está em /ia: componente não remonta — sinaliza via evento
+      try {
+        window.dispatchEvent(new CustomEvent("ia:seed"));
+      } catch {}
+      return;
+    }
     void navigate({ to: "/ia" });
   }
 
@@ -154,7 +156,6 @@ export function BottomNav() {
     return () => clearTimeout(t);
   }, [iaOpen]);
 
-
   const upperMatch = ALL_UPPER_ITEMS.find((i) =>
     i.to === "/" ? pathname === "/" : pathname.startsWith(i.to),
   );
@@ -162,15 +163,25 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-charcoal-900/90 backdrop-blur-xl"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)] border-t border-border bg-charcoal-900/90 backdrop-blur-xl"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="relative flex items-stretch justify-around px-2 pt-2">
         <li className="relative flex-1">
-          <NavSlot to="/mapa" label="MAPA" Icon={Map} active={pathname.startsWith("/mapa") || pathname.startsWith("/area")} />
+          <NavSlot
+            to="/mapa"
+            label="MAPA"
+            Icon={Map}
+            active={pathname.startsWith("/mapa") || pathname.startsWith("/area")}
+          />
         </li>
         <li className="relative flex-1">
-          <NavSlot to="/calendario" label="PLANO" Icon={CalendarDays} active={pathname.startsWith("/calendario")} />
+          <NavSlot
+            to="/calendario"
+            label="PLANO"
+            Icon={CalendarDays}
+            active={pathname.startsWith("/calendario")}
+          />
         </li>
 
         {/* Centro destacado — IA hub (dicas contextuais + chat) */}
@@ -187,15 +198,13 @@ export function BottomNav() {
             <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-ember text-charcoal-900 shadow-[0_8px_24px_-6px_var(--ember)] ring-4 ring-charcoal-900/90 transition-transform group-active:scale-95">
               <Sparkles className="h-6 w-6" strokeWidth={2.4} />
             </span>
-            <span className="font-display text-[10px] tracking-[0.18em] text-foreground">
-              IA
-            </span>
+            <span className="font-display text-[10px] tracking-[0.18em] text-foreground">IA</span>
           </button>
 
           <Sheet open={iaOpen} onOpenChange={setIaOpen}>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[480px] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
               <SheetHeader className="text-left">
                 <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
@@ -205,7 +214,8 @@ export function BottomNav() {
                   IA-AGREGADORA
                 </SheetTitle>
                 <p className="text-[11px] text-muted-foreground">
-                  Coleta, agrega e dá sentido. Digite abaixo e envie — ou escolha uma sugestão desta tela.
+                  Coleta, agrega e dá sentido. Digite abaixo e envie — ou escolha uma sugestão desta
+                  tela.
                 </p>
               </SheetHeader>
 
@@ -289,9 +299,7 @@ export function BottomNav() {
                     <p className="mt-1 font-display text-base tracking-wide text-foreground">
                       {tip.title}
                     </p>
-                    <p className="mt-1 text-sm leading-relaxed text-foreground/85">
-                      {tip.blurb}
-                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-foreground/85">{tip.blurb}</p>
 
                     <p className="mt-3 font-display text-[10px] tracking-[0.3em] text-muted-foreground">
                       SUGESTÕES RÁPIDAS
@@ -312,15 +320,18 @@ export function BottomNav() {
                   </div>
                 )}
               </div>
-
             </SheetContent>
           </Sheet>
         </li>
 
         <li className="relative flex-1">
-          <NavSlot to="/habitos" label="HÁBITOS" Icon={Flame} active={pathname.startsWith("/habitos")} />
+          <NavSlot
+            to="/habitos"
+            label="HÁBITOS"
+            Icon={Flame}
+            active={pathname.startsWith("/habitos")}
+          />
         </li>
-
 
         <li className="relative flex-1">
           <Sheet open={open} onOpenChange={setOpen}>
@@ -340,7 +351,7 @@ export function BottomNav() {
             </SheetTrigger>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[480px] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
               <SheetHeader>
                 <SheetTitle className="font-display tracking-[0.18em] text-foreground">
@@ -356,9 +367,7 @@ export function BottomNav() {
                     <div className="grid grid-cols-3 gap-2">
                       {section.items.map((item) => {
                         const active =
-                          item.to === "/"
-                            ? pathname === "/"
-                            : pathname.startsWith(item.to);
+                          item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
                         const Icon = item.icon;
                         return (
                           <Link

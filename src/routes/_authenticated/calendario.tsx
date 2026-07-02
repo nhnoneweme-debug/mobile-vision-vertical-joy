@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Target, CalendarDays, Sparkles, Trash2, Check, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Target,
+  CalendarDays,
+  Sparkles,
+  Trash2,
+  Check,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -16,6 +26,7 @@ import {
   listGoals,
   listScheduled,
   monthMatrix,
+  monthlyGoalProgress,
   quarterRange,
   updateGoal,
   updateScheduledStatus,
@@ -23,12 +34,17 @@ import {
   type ScheduledQuest,
   type StrategicGoal,
 } from "@/lib/planning";
+import { monthlyHabitProgress } from "@/lib/habits";
 
 export const Route = createFileRoute("/_authenticated/calendario")({
   head: () => ({
     meta: [
       { title: "Calendário — Personal IA" },
-      { name: "description", content: "Planeje quests futuras, acompanhe metas trimestrais e veja seu heatmap de constância." },
+      {
+        name: "description",
+        content:
+          "Planeje quests futuras, acompanhe metas trimestrais e veja seu heatmap de constância.",
+      },
     ],
   }),
   component: CalendarioPage,
@@ -98,6 +114,22 @@ function MonthView({ userId }: { userId: string }) {
   const [activity, setActivity] = useState<Record<string, CalendarDay>>({});
   const [scheduled, setScheduled] = useState<Record<string, ScheduledQuest[]>>({});
   const [selected, setSelected] = useState<string | null>(null);
+  const [goalProg, setGoalProg] = useState<{
+    current: number;
+    target: number;
+    pct: number;
+    count: number;
+  }>({
+    current: 0,
+    target: 0,
+    pct: 0,
+    count: 0,
+  });
+  const [habitProg, setHabitProg] = useState<{ done: number; target: number; pct: number }>({
+    done: 0,
+    target: 0,
+    pct: 0,
+  });
 
   const weeks = useMemo(() => monthMatrix(cursor.year, cursor.month), [cursor]);
   const start = weeks[0][0];
@@ -105,9 +137,20 @@ function MonthView({ userId }: { userId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const [act, sched] = await Promise.all([
+      const [act, sched, gp, hp] = await Promise.all([
         calendarActivity(start, end),
         listScheduled(userId, start, end),
+        monthlyGoalProgress(userId, cursor.year, cursor.month).catch(() => ({
+          current: 0,
+          target: 0,
+          pct: 0,
+          count: 0,
+        })),
+        monthlyHabitProgress(userId, cursor.year, cursor.month).catch(() => ({
+          done: 0,
+          target: 0,
+          pct: 0,
+        })),
       ]);
       setActivity(Object.fromEntries(act.map((d) => [d.day, d])));
       const grouped: Record<string, ScheduledQuest[]> = {};
@@ -115,12 +158,16 @@ function MonthView({ userId }: { userId: string }) {
         (grouped[s.scheduled_date] ??= []).push(s);
       }
       setScheduled(grouped);
+      setGoalProg(gp);
+      setHabitProg(hp);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao carregar calendário");
     }
-  }, [userId, start, end]);
+  }, [userId, start, end, cursor.year, cursor.month]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const monthName = new Date(cursor.year, cursor.month, 1).toLocaleDateString("pt-BR", {
     month: "long",
@@ -141,24 +188,79 @@ function MonthView({ userId }: { userId: string }) {
   }
 
   const todayKey = dateKey(new Date());
-  const selectedQuests = selected ? scheduled[selected] ?? [] : [];
+  const selectedQuests = selected ? (scheduled[selected] ?? []) : [];
   const selectedAct = selected ? activity[selected] : undefined;
 
   return (
     <section className="px-4">
       <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-card px-3 py-2">
-        <button onClick={() => shift(-1)} className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800">
+        <button
+          onClick={() => shift(-1)}
+          className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800"
+        >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <p className="font-display text-sm tracking-[0.2em] text-foreground uppercase">{monthName}</p>
-        <button onClick={() => shift(1)} className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800">
+        <p className="font-display text-sm tracking-[0.2em] text-foreground uppercase">
+          {monthName}
+        </p>
+        <button
+          onClick={() => shift(1)}
+          className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800"
+        >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-border bg-card px-3 py-2">
+          <div className="flex items-baseline justify-between">
+            <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+              METAS
+            </span>
+            <span className="font-display text-[10px] tracking-[0.25em] text-ember">
+              {goalProg.pct}%
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-charcoal-800">
+            <div className="h-full bg-ember transition-all" style={{ width: `${goalProg.pct}%` }} />
+          </div>
+          <p className="mt-1 font-body text-[10px] text-muted-foreground">
+            {goalProg.count > 0
+              ? `${goalProg.current}/${goalProg.target} no trimestre`
+              : "Sem metas neste trimestre"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-3 py-2">
+          <div className="flex items-baseline justify-between">
+            <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+              HÁBITOS
+            </span>
+            <span className="font-display text-[10px] tracking-[0.25em] text-ember">
+              {habitProg.pct}%
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-charcoal-800">
+            <div
+              className="h-full bg-ember transition-all"
+              style={{ width: `${habitProg.pct}%` }}
+            />
+          </div>
+          <p className="mt-1 font-body text-[10px] text-muted-foreground">
+            {habitProg.target > 0
+              ? `${habitProg.done}/${habitProg.target} check-ins no mês`
+              : "Sem hábitos ativos"}
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-7 gap-1 px-1 pb-1">
-        {["S","T","Q","Q","S","S","D"].map((d, i) => (
-          <div key={i} className="text-center font-display text-[9px] tracking-[0.2em] text-muted-foreground">{d}</div>
+        {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
+          <div
+            key={i}
+            className="text-center font-display text-[9px] tracking-[0.2em] text-muted-foreground"
+          >
+            {d}
+          </div>
         ))}
       </div>
 
@@ -179,7 +281,9 @@ function MonthView({ userId }: { userId: string }) {
                 !inMonth ? "opacity-30" : ""
               } ${isSel ? "ring-2 ring-ember" : isToday ? "ring-1 ring-foreground/60" : ""}`}
             >
-              <span className={xp > 200 ? "text-charcoal-900" : "text-foreground/80"}>{d.getDate()}</span>
+              <span className={xp > 200 ? "text-charcoal-900" : "text-foreground/80"}>
+                {d.getDate()}
+              </span>
               {planned > 0 && (
                 <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-ember-glow" />
               )}
@@ -189,19 +293,29 @@ function MonthView({ userId }: { userId: string }) {
       </div>
 
       <div className="mt-3 flex items-center justify-between rounded-xl border border-border bg-charcoal-900/50 px-3 py-2">
-        <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">MENOS</span>
+        <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+          MENOS
+        </span>
         <div className="flex gap-1">
-          {["bg-charcoal-800", "bg-ember/20", "bg-ember/40", "bg-ember/60", "bg-ember/90"].map((c, i) => (
-            <span key={i} className={`h-3 w-3 rounded ${c}`} />
-          ))}
+          {["bg-charcoal-800", "bg-ember/20", "bg-ember/40", "bg-ember/60", "bg-ember/90"].map(
+            (c, i) => (
+              <span key={i} className={`h-3 w-3 rounded ${c}`} />
+            ),
+          )}
         </div>
-        <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">MAIS</span>
+        <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+          MAIS
+        </span>
       </div>
 
       {selected && (
         <div className="mt-4 rounded-2xl border border-ember/30 bg-card p-4">
           <p className="font-display text-[10px] tracking-[0.3em] text-ember">
-            {new Date(selected).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+            {new Date(selected).toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "2-digit",
+              month: "long",
+            })}
           </p>
           <p className="mt-1 font-display text-2xl tracking-wide text-foreground">
             {selectedAct?.xp ?? 0} XP · {selectedAct?.events ?? 0} eventos
@@ -209,9 +323,14 @@ function MonthView({ userId }: { userId: string }) {
           {selectedQuests.length > 0 ? (
             <ul className="mt-3 space-y-2">
               {selectedQuests.map((q) => (
-                <li key={q.id} className="rounded-lg border border-border bg-charcoal-900 px-3 py-2">
+                <li
+                  key={q.id}
+                  className="rounded-lg border border-border bg-charcoal-900 px-3 py-2"
+                >
                   <p className="font-display text-sm tracking-wide text-foreground">{q.title}</p>
-                  {q.subtitle && <p className="font-body text-xs text-muted-foreground">{q.subtitle}</p>}
+                  {q.subtitle && (
+                    <p className="font-body text-xs text-muted-foreground">{q.subtitle}</p>
+                  )}
                   <p className="mt-1 font-display text-[10px] tracking-[0.25em] text-ember">
                     {q.status.toUpperCase()} · +{q.xp_reward} XP
                   </p>
@@ -235,7 +354,13 @@ function AgendaView({ userId }: { userId: string }) {
   const today = new Date();
   const end = new Date(today.getFullYear(), today.getMonth() + 2, today.getDate());
   const [items, setItems] = useState<ScheduledQuest[]>([]);
-  const [form, setForm] = useState({ title: "", subtitle: "", date: dateKey(today), area_slug: "", xp_reward: 50 });
+  const [form, setForm] = useState({
+    title: "",
+    subtitle: "",
+    date: dateKey(today),
+    area_slug: "",
+    xp_reward: 50,
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -247,7 +372,9 @@ function AgendaView({ userId }: { userId: string }) {
     }
   }, [userId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function handleCreate() {
     if (!form.title.trim() || submitting) return;
@@ -292,7 +419,9 @@ function AgendaView({ userId }: { userId: string }) {
   return (
     <section className="px-4 space-y-4">
       <div className="rounded-2xl border border-border bg-card p-4">
-        <p className="font-display text-[10px] tracking-[0.3em] text-ember mb-2">NOVA MISSÃO AGENDADA</p>
+        <p className="font-display text-[10px] tracking-[0.3em] text-ember mb-2">
+          NOVA MISSÃO AGENDADA
+        </p>
         <input
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -319,12 +448,16 @@ function AgendaView({ userId }: { userId: string }) {
           >
             <option value="">Sem área</option>
             {AREAS.map((a) => (
-              <option key={a.slug} value={a.slug}>{a.name}</option>
+              <option key={a.slug} value={a.slug}>
+                {a.name}
+              </option>
             ))}
           </select>
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <label className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">XP</label>
+          <label className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+            XP
+          </label>
           <input
             type="number"
             min={10}
@@ -358,14 +491,28 @@ function AgendaView({ userId }: { userId: string }) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-display text-[10px] tracking-[0.25em] text-ember">
-                      {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).toUpperCase()}
-                      {" · +"}{q.xp_reward} XP
+                      {d
+                        .toLocaleDateString("pt-BR", {
+                          weekday: "short",
+                          day: "2-digit",
+                          month: "short",
+                        })
+                        .toUpperCase()}
+                      {" · +"}
+                      {q.xp_reward} XP
                       {q.status !== "planned" && ` · ${q.status.toUpperCase()}`}
                     </p>
-                    <p className="font-display text-base tracking-wide text-foreground">{q.title}</p>
-                    {q.subtitle && <p className="font-body text-xs text-muted-foreground">{q.subtitle}</p>}
+                    <p className="font-display text-base tracking-wide text-foreground">
+                      {q.title}
+                    </p>
+                    {q.subtitle && (
+                      <p className="font-body text-xs text-muted-foreground">{q.subtitle}</p>
+                    )}
                   </div>
-                  <button onClick={() => handleDelete(q.id)} className="text-muted-foreground active:text-destructive">
+                  <button
+                    onClick={() => handleDelete(q.id)}
+                    className="text-muted-foreground active:text-destructive"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -413,7 +560,9 @@ function GoalsView({ userId }: { userId: string }) {
     }
   }, [userId, quarter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const range = quarterRange(quarter);
 
@@ -477,30 +626,45 @@ function GoalsView({ userId }: { userId: string }) {
     const [y, q] = quarter.split("-Q").map(Number);
     let nq = q + delta;
     let ny = y;
-    if (nq > 4) { nq = 1; ny++; }
-    if (nq < 1) { nq = 4; ny--; }
+    if (nq > 4) {
+      nq = 1;
+      ny++;
+    }
+    if (nq < 1) {
+      nq = 4;
+      ny--;
+    }
     setQuarter(`${ny}-Q${nq}`);
   }
 
   return (
     <section className="px-4 space-y-4">
       <div className="flex items-center justify-between rounded-2xl border border-border bg-card px-3 py-2">
-        <button onClick={() => shiftQuarter(-1)} className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800">
+        <button
+          onClick={() => shiftQuarter(-1)}
+          className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800"
+        >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="text-center">
           <p className="font-display text-base tracking-[0.2em] text-foreground">{quarter}</p>
           <p className="font-display text-[9px] tracking-[0.3em] text-muted-foreground">
-            {range.start.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} → {range.end.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+            {range.start.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} →{" "}
+            {range.end.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
           </p>
         </div>
-        <button onClick={() => shiftQuarter(1)} className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800">
+        <button
+          onClick={() => shiftQuarter(1)}
+          className="rounded-lg p-2 text-muted-foreground active:bg-charcoal-800"
+        >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4">
-        <p className="font-display text-[10px] tracking-[0.3em] text-ember mb-2">NOVA META TRIMESTRAL</p>
+        <p className="font-display text-[10px] tracking-[0.3em] text-ember mb-2">
+          NOVA META TRIMESTRAL
+        </p>
         <input
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -522,11 +686,15 @@ function GoalsView({ userId }: { userId: string }) {
           >
             <option value="">Sem área</option>
             {AREAS.map((a) => (
-              <option key={a.slug} value={a.slug}>{a.name}</option>
+              <option key={a.slug} value={a.slug}>
+                {a.name}
+              </option>
             ))}
           </select>
           <div className="flex items-center gap-2 rounded-lg border border-border bg-charcoal-900 px-3 py-2">
-            <label className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">META</label>
+            <label className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+              META
+            </label>
             <input
               type="number"
               min={1}
@@ -561,19 +729,34 @@ function GoalsView({ userId }: { userId: string }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <p className="font-display text-[10px] tracking-[0.25em] text-ember">
-                      {g.status.toUpperCase()}{area ? ` · ${area.name.toUpperCase()}` : ""}
+                      {g.status.toUpperCase()}
+                      {area ? ` · ${area.name.toUpperCase()}` : ""}
                     </p>
-                    <p className="font-display text-base tracking-wide text-foreground">{g.title}</p>
-                    {g.description && <p className="mt-0.5 font-body text-xs text-muted-foreground">{g.description}</p>}
+                    <p className="font-display text-base tracking-wide text-foreground">
+                      {g.title}
+                    </p>
+                    {g.description && (
+                      <p className="mt-0.5 font-body text-xs text-muted-foreground">
+                        {g.description}
+                      </p>
+                    )}
                   </div>
-                  <button onClick={() => removeGoal(g.id)} className="text-muted-foreground active:text-destructive">
+                  <button
+                    onClick={() => removeGoal(g.id)}
+                    className="text-muted-foreground active:text-destructive"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="mt-3">
                   <div className="flex items-baseline justify-between">
-                    <span className="font-display text-2xl tracking-wide text-foreground">{g.current_value}<span className="text-muted-foreground text-sm">/{target}</span></span>
-                    <span className="font-display text-[10px] tracking-[0.3em] text-ember">{pct}%</span>
+                    <span className="font-display text-2xl tracking-wide text-foreground">
+                      {g.current_value}
+                      <span className="text-muted-foreground text-sm">/{target}</span>
+                    </span>
+                    <span className="font-display text-[10px] tracking-[0.3em] text-ember">
+                      {pct}%
+                    </span>
                   </div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-charcoal-800">
                     <div className="h-full bg-ember transition-all" style={{ width: `${pct}%` }} />
@@ -584,15 +767,21 @@ function GoalsView({ userId }: { userId: string }) {
                     <button
                       onClick={() => bumpProgress(g, -1)}
                       className="rounded-lg border border-border bg-charcoal-900 px-3 py-1.5 font-display text-sm text-muted-foreground"
-                    >−</button>
+                    >
+                      −
+                    </button>
                     <button
                       onClick={() => bumpProgress(g, 1)}
                       className="flex-1 rounded-lg bg-ember/15 px-3 py-1.5 font-display text-[11px] tracking-[0.2em] text-ember"
-                    >+1 PROGRESSO</button>
+                    >
+                      +1 PROGRESSO
+                    </button>
                     <button
                       onClick={() => abandon(g)}
                       className="rounded-lg border border-border bg-charcoal-900 px-3 py-1.5 font-display text-[10px] tracking-[0.2em] text-muted-foreground"
-                    >X</button>
+                    >
+                      X
+                    </button>
                   </div>
                 )}
               </li>

@@ -36,7 +36,7 @@ export function CheckinSheet({
     >
       <SheetContent
         side="bottom"
-        className="mx-auto max-w-[480px] rounded-t-3xl border-ember/20 bg-charcoal-900 px-5 pb-8 pt-6 text-foreground"
+        className="mx-auto max-w-[var(--shell-max)] rounded-t-3xl border-ember/20 bg-charcoal-900 px-5 pb-8 pt-6 text-foreground"
       >
         <SheetHeader className="text-left">
           <p className="font-display text-[10px] tracking-[0.4em] text-ember">

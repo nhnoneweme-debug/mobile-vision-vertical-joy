@@ -152,7 +152,7 @@ function AuthPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background px-6 pb-10">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-col bg-background px-6 pb-10">
       <header
         className="flex items-center gap-3 pb-6"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}

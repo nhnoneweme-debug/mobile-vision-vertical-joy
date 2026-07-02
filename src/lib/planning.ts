@@ -93,7 +93,9 @@ export async function createGoal(input: {
 
 export async function updateGoal(
   id: string,
-  patch: Partial<Pick<StrategicGoal, "title" | "description" | "current_value" | "target_value" | "status">>,
+  patch: Partial<
+    Pick<StrategicGoal, "title" | "description" | "current_value" | "target_value" | "status">
+  >,
 ): Promise<StrategicGoal> {
   const body: Partial<StrategicGoal> = { ...patch };
   if (patch.status === "completed") body.completed_at = new Date().toISOString();
@@ -208,4 +210,26 @@ export function monthMatrix(year: number, month: number): Date[][] {
 
 export function dateKey(d: Date): string {
   return isoDate(d);
+}
+
+export async function monthlyGoalProgress(
+  userId: string,
+  year: number,
+  month: number, // 0-indexed
+): Promise<{ current: number; target: number; pct: number; count: number }> {
+  // Metas são trimestrais — usa o trimestre que contém o mês
+  const q = Math.floor(month / 3) + 1;
+  const quarter = `${year}-Q${q}`;
+  const { data, error } = await supabase
+    .from("strategic_goals")
+    .select("target_value, current_value, status")
+    .eq("user_id", userId)
+    .eq("quarter", quarter)
+    .neq("status", "abandoned");
+  if (error) throw error;
+  if (!data || data.length === 0) return { current: 0, target: 0, pct: 0, count: 0 };
+  const target = data.reduce((s, g) => s + Math.max(0, g.target_value ?? 1), 0);
+  const current = data.reduce((s, g) => s + Math.max(0, g.current_value ?? 0), 0);
+  const pct = target > 0 ? Math.max(0, Math.min(100, Math.round((current / target) * 100))) : 0;
+  return { current, target, pct, count: data.length };
 }

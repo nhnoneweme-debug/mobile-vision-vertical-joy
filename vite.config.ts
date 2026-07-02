@@ -10,6 +10,9 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  // Preset do Nitro condicional: quando NITRO_PRESET está definido (ex.: node-server para self-host),
+  // repassa ao wrapper. Sem a var, o build padrão da Lovable/Cloudflare permanece intacto.
+  nitro: process.env.NITRO_PRESET ? { preset: process.env.NITRO_PRESET } : undefined,
   vite: {
     plugins: [
       VitePWA({
@@ -17,12 +20,7 @@ export default defineConfig({
         injectRegister: null,
         filename: "sw.js",
         devOptions: { enabled: false },
-        includeAssets: [
-          "favicon-64.png",
-          "apple-touch-icon.png",
-          "icon-192.png",
-          "icon-512.png",
-        ],
+        includeAssets: ["favicon-64.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"],
         manifest: false,
         workbox: {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],

@@ -544,7 +544,7 @@ function Composer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-auto max-h-[92vh] w-full max-w-[480px] overflow-y-auto rounded-t-2xl border border-border bg-charcoal-900 p-5 pb-8">
+      <div className="mx-auto max-h-[92vh] w-full max-w-[var(--shell-max)] overflow-y-auto rounded-t-2xl border border-border bg-charcoal-900 p-5 pb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-lg tracking-wide">
             {initial ? "EDITAR MISSÃO" : "NOVA MISSÃO"}

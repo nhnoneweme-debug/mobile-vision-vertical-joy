@@ -514,7 +514,7 @@ function SendMissionSheet({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[480px] rounded-t-3xl border border-border bg-card p-5"
+        className="w-full max-w-[var(--shell-max)] rounded-t-3xl border border-border bg-card p-5"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
         onClick={(e) => e.stopPropagation()}
       >
