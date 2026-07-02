@@ -59,7 +59,9 @@ function IAPage() {
       pendingSeedRef.current = seed;
       pendingAutosendRef.current = autosend;
       setInput(seed);
-    } catch {}
+    } catch {
+      /* sessionStorage indisponível */
+    }
   }, []);
 
   // Consome ao montar e reage a novos seeds enquanto já montado
