@@ -18,6 +18,7 @@ import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
 import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedWearablesRouteImport } from './routes/_authenticated/wearables'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedSonhosRouteImport } from './routes/_authenticated/sonhos'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
@@ -94,6 +95,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedWearablesRoute = AuthenticatedWearablesRouteImport.update({
+  id: '/wearables',
+  path: '/wearables',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   id: '/studio',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/social': typeof AuthenticatedSocialRoute
   '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/wearables': typeof AuthenticatedWearablesRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
@@ -336,6 +343,7 @@ export interface FileRoutesByTo {
   '/social': typeof AuthenticatedSocialRoute
   '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/wearables': typeof AuthenticatedWearablesRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
@@ -380,6 +388,7 @@ export interface FileRoutesById {
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/sonhos': typeof AuthenticatedSonhosRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
   '/api/chat': typeof ApiChatRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
@@ -424,6 +433,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/sonhos'
     | '/studio'
+    | '/wearables'
     | '/api/chat'
     | '/api/ia-capture'
     | '/api/sleep-chat'
@@ -466,6 +476,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/sonhos'
     | '/studio'
+    | '/wearables'
     | '/api/chat'
     | '/api/ia-capture'
     | '/api/sleep-chat'
@@ -509,6 +520,7 @@ export interface FileRouteTypes {
     | '/_authenticated/social'
     | '/_authenticated/sonhos'
     | '/_authenticated/studio'
+    | '/_authenticated/wearables'
     | '/api/chat'
     | '/api/ia-capture'
     | '/api/sleep-chat'
@@ -599,6 +611,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/wearables': {
+      id: '/_authenticated/wearables'
+      path: '/wearables'
+      fullPath: '/wearables'
+      preLoaderRoute: typeof AuthenticatedWearablesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/studio': {
       id: '/_authenticated/studio'
@@ -855,6 +874,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedSonhosRoute: typeof AuthenticatedSonhosRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedWearablesRoute: typeof AuthenticatedWearablesRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
   AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
   AuthenticatedPainelAlunoIdRoute: typeof AuthenticatedPainelAlunoIdRoute
@@ -889,6 +909,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedSonhosRoute: AuthenticatedSonhosRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedWearablesRoute: AuthenticatedWearablesRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
   AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
   AuthenticatedPainelAlunoIdRoute: AuthenticatedPainelAlunoIdRoute,

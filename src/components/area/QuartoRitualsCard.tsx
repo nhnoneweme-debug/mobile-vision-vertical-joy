@@ -251,9 +251,13 @@ export function QuartoRitualsCard() {
         </button>
       </div>
 
-      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-        Integrações com relógios e apps de sono (Samsung Health, Google Fit, Apple Health) chegam em breve — os dados alimentarão a IA para análises comportamentais mais finas.
-      </p>
+      <a
+        href="/wearables"
+        className="mt-3 flex items-center justify-between rounded-lg border border-border bg-background/40 px-3 py-2 text-[11px] text-muted-foreground hover:text-foreground"
+      >
+        <span>Importar dados do Apple Health, Google Fit ou Samsung Health</span>
+        <span className="font-display text-[9px] tracking-[0.2em] text-ember">ABRIR →</span>
+      </a>
     </div>
   );
 }
