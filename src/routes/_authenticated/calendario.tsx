@@ -292,21 +292,6 @@ function MonthView({ userId }: { userId: string }) {
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-border bg-charcoal-900/50 px-3 py-2">
-        <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
-          MENOS
-        </span>
-        <div className="flex gap-1">
-          {["bg-charcoal-800", "bg-ember/20", "bg-ember/40", "bg-ember/60", "bg-ember/90"].map(
-            (c, i) => (
-              <span key={i} className={`h-3 w-3 rounded ${c}`} />
-            ),
-          )}
-        </div>
-        <span className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
-          MAIS
-        </span>
-      </div>
 
       {selected && (
         <div className="mt-4 rounded-2xl border border-ember/30 bg-card p-4">
