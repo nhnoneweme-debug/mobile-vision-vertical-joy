@@ -153,6 +153,15 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
 
+  useEffect(() => {
+    const dispose = installSmoothScroll();
+    const unsub = router.subscribe("onResolved", () => jumpToTop());
+    return () => {
+      dispose();
+      unsub();
+    };
+  }, [router]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ViewportProvider>
