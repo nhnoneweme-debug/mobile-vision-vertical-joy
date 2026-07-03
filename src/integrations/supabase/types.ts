@@ -789,6 +789,24 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       lore_chapters: {
         Row: {
           body: string
@@ -2493,6 +2511,8 @@ export type Database = {
           id: string | null
           level: string | null
           level_track: string | null
+          streak: number | null
+          xp: number | null
         }
         Insert: {
           behavioral_class?: string | null
@@ -2501,6 +2521,8 @@ export type Database = {
           id?: string | null
           level?: string | null
           level_track?: string | null
+          streak?: number | null
+          xp?: number | null
         }
         Update: {
           behavioral_class?: string | null
@@ -2509,6 +2531,8 @@ export type Database = {
           id?: string | null
           level?: string | null
           level_track?: string | null
+          streak?: number | null
+          xp?: number | null
         }
         Relationships: []
       }
@@ -2541,6 +2565,7 @@ export type Database = {
       generate_my_nudges: { Args: never; Returns: number }
       generate_nudges_all_users: { Args: never; Returns: Json }
       generate_nudges_for: { Args: { _user_id: string }; Returns: number }
+      get_group_invite_code: { Args: { _group: string }; Returns: string }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       has_active_perk: {
         Args: { _perk_code: string; _user: string }
