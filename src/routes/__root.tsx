@@ -18,6 +18,7 @@ import { PWAStatus } from "@/components/pwa/PWAStatus";
 import { ViewportProvider } from "@/providers/ViewportProvider";
 import { ViewportGuard } from "@/components/ViewportGuard";
 import { ViewportValidation } from "@/components/ViewportValidation";
+import { installSmoothScroll, jumpToTop } from "@/lib/smooth-scroll";
 
 
 function NotFoundComponent() {
