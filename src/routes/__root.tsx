@@ -18,6 +18,7 @@ import { PWAStatus } from "@/components/pwa/PWAStatus";
 import { ViewportProvider } from "@/providers/ViewportProvider";
 import { ViewportGuard } from "@/components/ViewportGuard";
 import { ViewportValidation } from "@/components/ViewportValidation";
+import { installSmoothScroll, jumpToTop } from "@/lib/smooth-scroll";
 
 
 function NotFoundComponent() {
@@ -151,6 +152,15 @@ function RootComponent() {
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
+
+  useEffect(() => {
+    const dispose = installSmoothScroll();
+    const unsub = router.subscribe("onResolved", () => jumpToTop());
+    return () => {
+      dispose();
+      unsub();
+    };
+  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>

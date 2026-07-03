@@ -204,8 +204,9 @@ export function BottomNav() {
           <Sheet open={iaOpen} onOpenChange={setIaOpen}>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto flex max-h-[85vh] max-w-[var(--shell-max)] flex-col overflow-hidden rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
+
               <SheetHeader className="text-left">
                 <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-ember/15 text-ember">
@@ -219,7 +220,7 @@ export function BottomNav() {
                 </p>
               </SheetHeader>
 
-              <div className="mt-4 space-y-4 pb-4">
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto pb-4" data-lenis-prevent>
                 {/* Composer — foco imediato, menor fricção */}
                 <div className="rounded-2xl border border-ember/40 bg-charcoal-800/60 p-2">
                   <textarea
@@ -351,20 +352,23 @@ export function BottomNav() {
             </SheetTrigger>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto flex max-h-[85vh] max-w-[var(--shell-max)] flex-col rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
               <SheetHeader>
                 <SheetTitle className="font-display tracking-[0.18em] text-foreground">
                   NAVEGAR
                 </SheetTitle>
               </SheetHeader>
-              <div className="mt-4 space-y-5 pb-6">
+              <div
+                className="mt-4 flex-1 space-y-5 overflow-y-auto pb-6"
+                data-lenis-prevent
+              >
                 {UPPER_MENU.map((section) => (
                   <div key={section.section}>
                     <p className="mb-2 font-display text-[11px] tracking-[0.22em] text-muted-foreground">
                       {section.section.toUpperCase()}
                     </p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-5">
                       {section.items.map((item) => {
                         const active =
                           item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
@@ -375,14 +379,14 @@ export function BottomNav() {
                             to={item.to}
                             onClick={() => setOpen(false)}
                             className={
-                              "flex flex-col items-center gap-2 rounded-xl border px-2 py-3 text-center transition-colors " +
+                              "flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-center transition-colors " +
                               (active
                                 ? "border-ember/60 bg-ember/10 text-ember"
                                 : "border-border/60 text-muted-foreground hover:text-foreground")
                             }
                           >
-                            <Icon className="h-4 w-4" strokeWidth={2.2} />
-                            <span className="font-display text-[10px] tracking-[0.15em]">
+                            <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                            <span className="font-display text-[9px] leading-tight tracking-[0.14em]">
                               {item.label.toUpperCase()}
                             </span>
                           </Link>
@@ -393,6 +397,7 @@ export function BottomNav() {
                 ))}
               </div>
             </SheetContent>
+
           </Sheet>
         </li>
       </ul>
