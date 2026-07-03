@@ -204,8 +204,9 @@ export function BottomNav() {
           <Sheet open={iaOpen} onOpenChange={setIaOpen}>
             <SheetContent
               side="bottom"
-              className="mx-auto max-w-[var(--shell-max)] rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+              className="mx-auto flex max-h-[85vh] max-w-[var(--shell-max)] flex-col overflow-hidden rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
             >
+
               <SheetHeader className="text-left">
                 <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-ember/15 text-ember">
