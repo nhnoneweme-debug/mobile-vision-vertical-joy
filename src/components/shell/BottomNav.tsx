@@ -220,7 +220,7 @@ export function BottomNav() {
                 </p>
               </SheetHeader>
 
-              <div className="mt-4 space-y-4 pb-4">
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto pb-4" data-lenis-prevent>
                 {/* Composer — foco imediato, menor fricção */}
                 <div className="rounded-2xl border border-ember/40 bg-charcoal-800/60 p-2">
                   <textarea
