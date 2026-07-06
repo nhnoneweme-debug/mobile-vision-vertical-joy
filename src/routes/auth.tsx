@@ -177,7 +177,6 @@ function AuthPage() {
         } else {
           navigate({ to: "/mapa", replace: true });
         }
-        navigate({ to: "/mapa", replace: true });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Algo deu errado.";
