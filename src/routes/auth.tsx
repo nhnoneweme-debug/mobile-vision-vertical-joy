@@ -72,11 +72,20 @@ function AuthPage() {
   async function handleGoogle() {
     setGoogleLoading(true);
     try {
+      const next = safeNext(search.next);
+      const redirectBase = `${window.location.origin}/auth`;
+      const redirectUri = next
+        ? `${redirectBase}?next=${encodeURIComponent(next)}`
+        : redirectBase;
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectUri,
       });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
       if (result.redirected) return; // browser navigated away
+      if (next) {
+        window.location.href = next;
+        return;
+      }
       // Sessão setada — vamos para onboarding (a rota redireciona se já completo)
       navigate({ to: "/onboarding", replace: true });
     } catch (err) {
