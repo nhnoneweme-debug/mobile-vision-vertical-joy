@@ -9,7 +9,14 @@ import { PhoneInput } from "@/components/auth/PhoneInput";
 import { COUNTRIES, DEFAULT_COUNTRY, formatE164, type Country } from "@/lib/countries";
 import { signInWithPhone } from "@/lib/phone-login.functions";
 
-type AuthSearch = { mode?: "login" | "signup" };
+type AuthSearch = { mode?: "login" | "signup"; next?: string };
+
+function safeNext(next: string | undefined): string | undefined {
+  if (!next) return undefined;
+  // Only allow same-origin relative paths.
+  if (!next.startsWith("/") || next.startsWith("//")) return undefined;
+  return next;
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -27,11 +34,13 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
     mode: search.mode === "login" || search.mode === "signup" ? search.mode : undefined,
+    next: typeof search.next === "string" ? search.next : undefined,
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
     if (data.session) {
-      throw redirect({ to: "/mapa" });
+      const next = safeNext(search.next);
+      throw redirect(next ? { href: next } : { to: "/mapa" });
     }
   },
   component: AuthPage,
