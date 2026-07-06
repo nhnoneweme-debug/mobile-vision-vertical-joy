@@ -119,11 +119,15 @@ function AuthPage() {
           toast.error("Informe um e-mail para receber confirmações.");
           return;
         }
+        const nextPath = safeNext(search.next);
+        const emailRedirectTo = nextPath
+          ? `${window.location.origin}/auth?next=${encodeURIComponent(nextPath)}`
+          : `${window.location.origin}/onboarding`;
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
+            emailRedirectTo,
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
@@ -137,7 +141,11 @@ function AuthPage() {
             .eq("id", data.user.id);
         }
         toast.success("Avatar criado. Hora do diagnóstico.");
-        navigate({ to: "/onboarding", replace: true });
+        if (nextPath) {
+          window.location.href = nextPath;
+        } else {
+          navigate({ to: "/onboarding", replace: true });
+        }
       } else {
         // LOGIN
         if (method === "phone") {
@@ -163,6 +171,12 @@ function AuthPage() {
           if (error) throw error;
         }
         toast.success("De volta à jornada.");
+        const nextPath = safeNext(search.next);
+        if (nextPath) {
+          window.location.href = nextPath;
+        } else {
+          navigate({ to: "/mapa", replace: true });
+        }
         navigate({ to: "/mapa", replace: true });
       }
     } catch (err) {
