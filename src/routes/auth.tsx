@@ -40,7 +40,11 @@ export const Route = createFileRoute("/auth")({
     const { data } = await supabase.auth.getSession();
     if (data.session) {
       const next = safeNext(search.next);
-      throw redirect(next ? { href: next } : { to: "/mapa" });
+      if (next) {
+        window.location.href = next;
+        throw redirect({ to: "/mapa" });
+      }
+      throw redirect({ to: "/mapa" });
     }
   },
   component: AuthPage,
