@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://bqqxvhvztzpvrjfbkcnr.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "personal-ia-mcp",
+      "version": "0.1.0",
+      "title": "Personal IA"
+    },
+    "tools": [
+      {
+        "name": "get_profile",
+        "title": "Meu perfil",
+        "description": "Retorna o perfil do usuário autenticado (nome, classe, XP, streak, brasas, nível, objetivo).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_missions",
+        "title": "Listar missões",
+        "description": "Lista as missões ativas do usuário autenticado, com horário e área. Marca as concluídas hoje.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Máximo de missões a retornar. Padrão 25.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_habits",
+        "title": "Listar hábitos",
+        "description": "Lista os hábitos ativos do usuário autenticado com meta semanal.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Máximo. Padrão 50.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_notifications",
+        "title": "Listar notificações",
+        "description": "Lista as notificações mais recentes do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Máximo. Padrão 20.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "only_unread": {
+              "description": "Se true, retorna apenas não-lidas.",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_nudges",
+        "title": "Gerar nudges do dia",
+        "description": "Roda o motor de nudges para o usuário autenticado (missões pendentes, streak em risco, rituais do dia). Retorna quantas notificações foram criadas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
