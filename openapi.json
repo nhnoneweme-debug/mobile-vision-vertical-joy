@@ -1,0 +1,1428 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Vertical Vision — API & Rotas",
+    "version": "2026.07.06",
+    "description": "Catalogo OpenAPI de TODAS as rotas do Vertical Vision (repositorio mobile-vision-vertical-joy, sincronizado com o Lovable). Cobre paginas publicas, paginas autenticadas (layout _authenticated), endpoints server-side (IA + webhooks) e o servidor MCP embutido (personal-ia-mcp) com OAuth via Supabase. Gerado a partir do estado do repo em 06/jul/2026 (commit 75ec44d)."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "App (TanStack Start server)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "app-pages-public",
+      "description": "Paginas publicas (sem sessao)"
+    },
+    {
+      "name": "app-pages-auth",
+      "description": "Paginas que exigem sessao Supabase (_authenticated)"
+    },
+    {
+      "name": "api-ai",
+      "description": "Endpoints de IA autenticados por Bearer JWT do Supabase"
+    },
+    {
+      "name": "api-webhooks",
+      "description": "Webhooks internos protegidos por apikey (pg_cron / Edge)"
+    },
+    {
+      "name": "mcp",
+      "description": "Servidor MCP embutido (personal-ia-mcp) + descoberta OAuth"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Supabase JWT (access_token)",
+        "description": "Authorization: Bearer <access_token> do usuario autenticado."
+      },
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-access-token",
+        "description": "Sessao Supabase no navegador. _authenticated/route.tsx roda getUser() em beforeLoad; sem sessao -> /auth."
+      },
+      "webhookApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "apikey",
+        "description": "Chave anon/publishable do Supabase em apikey ou x-api-key. Internamente usa service_role."
+      },
+      "mcpOAuth": {
+        "type": "oauth2",
+        "description": "OAuth 2.0 via Supabase (issuer .../auth/v1, audience 'authenticated'). Descoberta em /.well-known/oauth-protected-resource.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://bqqxvhvztzpvrjfbkcnr.supabase.co/auth/v1/authorize",
+            "tokenUrl": "https://bqqxvhvztzpvrjfbkcnr.supabase.co/auth/v1/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "UIMessage": {
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "parts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ]
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "text"
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ChatMessage": {
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "Proposal": {
+        "type": "object",
+        "properties": {
+          "audit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "table": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "summary": {
+            "type": "string"
+          },
+          "auto_applied": {
+            "type": "boolean"
+          },
+          "apply_error": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Token/sessao ausente, malformado ou invalido.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "HtmlPage": {
+        "description": "Documento HTML da SPA (TanStack Start).",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Redirect": {
+        "description": "Redireciona para /auth quando nao ha sessao (ou gate de onboarding)."
+      }
+    }
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "app-pages-public"
+        ],
+        "summary": "Landing / entrada do app (index)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          }
+        }
+      }
+    },
+    "/auth": {
+      "get": {
+        "tags": [
+          "app-pages-public"
+        ],
+        "summary": "Login / cadastro (email+senha e telefone)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          }
+        }
+      }
+    },
+    "/checkout/return": {
+      "get": {
+        "tags": [
+          "app-pages-public"
+        ],
+        "summary": "Retorno do checkout Stripe",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          }
+        }
+      }
+    },
+    "/sitemap.xml": {
+      "get": {
+        "tags": [
+          "app-pages-public"
+        ],
+        "summary": "Sitemap XML",
+        "responses": {
+          "200": {
+            "description": "Sitemap",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.lovable/oauth/consent": {
+      "get": {
+        "tags": [
+          "app-pages-public"
+        ],
+        "summary": "Tela de consentimento OAuth (aprovar/negar acesso de um cliente MCP). Exige usuario logado no Supabase.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          }
+        }
+      }
+    },
+    "/alarme": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Alarme / despertador",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/calendario": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Calendario",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/classe": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Classe do jogador",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/conquistas": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Conquistas",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/cristais": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Cristais (moeda)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/desafios": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Desafios",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/despertar": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Fluxo de despertar",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/dormir": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Fluxo de dormir",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/habitos": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Habitos",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/ia": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Assistente de IA (IA-Coletora)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/jornada": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Jornada",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/loja": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Loja",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/mapa": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Mapa (home gamificada)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/mental": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Area mental / journaling",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/missoes": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Missoes",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/notificacoes": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Central de notificacoes",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/onboarding": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Onboarding",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/orientador-chat": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Chat com o Orientador (threads)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/painel": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Painel",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/perfil": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Perfil",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/planos": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Planos / assinatura",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/preferencias-notificacoes": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Preferencias de notificacoes/push",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/progresso": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Progresso",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/ritual": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Ritual",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/social": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Feed social",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/sonhos": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Sonhos / metas",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/studio": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Studio",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/wearables": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Integracao com wearables",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/area/{slug}": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Area da vida por slug",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Slug da area (treino, cozinha, quarto...)"
+          }
+        ]
+      }
+    },
+    "/area/orientador": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Area do Orientador",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/painel-aluno/{id}": {
+      "get": {
+        "tags": [
+          "app-pages-auth"
+        ],
+        "summary": "Painel do aluno (visao do orientador)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HtmlPage"
+          },
+          "302": {
+            "$ref": "#/components/responses/Redirect"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID do aluno"
+          }
+        ]
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "api-ai"
+        ],
+        "operationId": "postChat",
+        "summary": "Chat com o Orientador (continuo, contexto de perfil/areas/habitos)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/UIMessage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stream UI Message (SSE); persiste em oracle_messages.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Config ausente."
+          }
+        }
+      }
+    },
+    "/api/ia-capture": {
+      "post": {
+        "tags": [
+          "api-ai"
+        ],
+        "operationId": "postIaCapture",
+        "summary": "IA-Coletora - extrai dumps e propoe escritas auditadas",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "messages"
+                ],
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ChatMessage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta + propostas de escrita.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "proposals": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Proposal"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Erro IA/config.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wake-chat": {
+      "post": {
+        "tags": [
+          "api-ai"
+        ],
+        "operationId": "postWakeChat",
+        "summary": "Companheira do Despertar - snooze, sonho, acordar",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "messages"
+                ],
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/UIMessage"
+                    }
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stream (SSE). Tools: setSnooze, playMusic, speakThought, markAwake, logDream, createDayBlock.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Config ausente."
+          }
+        }
+      }
+    },
+    "/api/sleep-chat": {
+      "post": {
+        "tags": [
+          "api-ai"
+        ],
+        "operationId": "postSleepChat",
+        "summary": "Companheira do Sono - ritual da noite, sleep log e insights",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "messages"
+                ],
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/UIMessage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stream (SSE). Tools: saveNightRitual, logSleep, createDayBlock, logCompletedHabit, scheduleTomorrowQuest, captureInsight.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Config ausente."
+          }
+        }
+      }
+    },
+    "/api/public/hooks/generate-nudges": {
+      "post": {
+        "tags": [
+          "api-webhooks"
+        ],
+        "operationId": "postGenerateNudges",
+        "summary": "Gera nudges para todos os usuarios e faz flush de push pendentes",
+        "security": [
+          {
+            "webhookApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado + contagem de push.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "pushSent": {
+                      "type": "integer"
+                    },
+                    "pushErrors": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "server_misconfigured / erro RPC."
+          }
+        }
+      }
+    },
+    "/api/public/hooks/push-notification": {
+      "post": {
+        "tags": [
+          "api-webhooks"
+        ],
+        "operationId": "postPushNotification",
+        "summary": "Dispara push de uma notificacao (por notification_id)",
+        "security": [
+          {
+            "webhookApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "notification_id"
+                ],
+                "properties": {
+                  "notification_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Push processado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_json / missing_notification_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "server_misconfigured."
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "operationId": "mcpEndpoint",
+        "summary": "Endpoint MCP (JSON-RPC) do servidor personal-ia-mcp",
+        "description": "Tools expostas: get_profile, list_missions, list_habits, list_notifications (read-only) e generate_nudges (escrita, idempotente).",
+        "security": [
+          {
+            "mcpOAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Requisicao JSON-RPC 2.0 do Model Context Protocol (initialize, tools/list, tools/call...)"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta JSON-RPC (ou stream SSE).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/.mcp/list-tools": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "operationId": "mcpListTools",
+        "summary": "Lista as tools do servidor MCP",
+        "security": [
+          {
+            "mcpOAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de tools (nome, titulo, schema).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "405": {
+            "description": "Metodo nao suportado."
+          }
+        }
+      }
+    },
+    "/.mcp/invoke-tool/{tool}": {
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "operationId": "mcpInvokeTool",
+        "summary": "Invoca uma tool MCP por nome",
+        "security": [
+          {
+            "mcpOAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tool",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Nome da tool (get_profile, list_missions, list_habits, list_notifications, generate_nudges)"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Argumentos da tool."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da tool.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "405": {
+            "description": "Metodo nao suportado."
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "operationId": "oauthProtectedResource",
+        "summary": "Metadados de descoberta OAuth do recurso protegido (MCP)",
+        "responses": {
+          "200": {
+            "description": "Metadata OAuth (RFC 9728).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
