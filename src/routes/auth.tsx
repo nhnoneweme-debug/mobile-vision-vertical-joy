@@ -9,7 +9,14 @@ import { PhoneInput } from "@/components/auth/PhoneInput";
 import { COUNTRIES, DEFAULT_COUNTRY, formatE164, type Country } from "@/lib/countries";
 import { signInWithPhone } from "@/lib/phone-login.functions";
 
-type AuthSearch = { mode?: "login" | "signup" };
+type AuthSearch = { mode?: "login" | "signup"; next?: string };
+
+function safeNext(next: string | undefined): string | undefined {
+  if (!next) return undefined;
+  // Only allow same-origin relative paths.
+  if (!next.startsWith("/") || next.startsWith("//")) return undefined;
+  return next;
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -27,10 +34,16 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
     mode: search.mode === "login" || search.mode === "signup" ? search.mode : undefined,
+    next: typeof search.next === "string" ? search.next : undefined,
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
     if (data.session) {
+      const next = safeNext(search.next);
+      if (next) {
+        window.location.href = next;
+        throw redirect({ to: "/mapa" });
+      }
       throw redirect({ to: "/mapa" });
     }
   },
@@ -59,11 +72,20 @@ function AuthPage() {
   async function handleGoogle() {
     setGoogleLoading(true);
     try {
+      const next = safeNext(search.next);
+      const redirectBase = `${window.location.origin}/auth`;
+      const redirectUri = next
+        ? `${redirectBase}?next=${encodeURIComponent(next)}`
+        : redirectBase;
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectUri,
       });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
       if (result.redirected) return; // browser navigated away
+      if (next) {
+        window.location.href = next;
+        return;
+      }
       // Sessão setada — vamos para onboarding (a rota redireciona se já completo)
       navigate({ to: "/onboarding", replace: true });
     } catch (err) {
@@ -97,11 +119,15 @@ function AuthPage() {
           toast.error("Informe um e-mail para receber confirmações.");
           return;
         }
+        const nextPath = safeNext(search.next);
+        const emailRedirectTo = nextPath
+          ? `${window.location.origin}/auth?next=${encodeURIComponent(nextPath)}`
+          : `${window.location.origin}/onboarding`;
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
+            emailRedirectTo,
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
@@ -115,7 +141,11 @@ function AuthPage() {
             .eq("id", data.user.id);
         }
         toast.success("Avatar criado. Hora do diagnóstico.");
-        navigate({ to: "/onboarding", replace: true });
+        if (nextPath) {
+          window.location.href = nextPath;
+        } else {
+          navigate({ to: "/onboarding", replace: true });
+        }
       } else {
         // LOGIN
         if (method === "phone") {
@@ -141,7 +171,12 @@ function AuthPage() {
           if (error) throw error;
         }
         toast.success("De volta à jornada.");
-        navigate({ to: "/mapa", replace: true });
+        const nextPath = safeNext(search.next);
+        if (nextPath) {
+          window.location.href = nextPath;
+        } else {
+          navigate({ to: "/mapa", replace: true });
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Algo deu errado.";
