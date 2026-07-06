@@ -49,6 +49,7 @@ import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPainelAlunoIdRouteImport } from './routes/_authenticated/painel-aluno.$id'
 import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
 import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
 
@@ -256,6 +257,11 @@ const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   path: '/area/$slug',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksPushNotificationRoute =
   ApiPublicHooksPushNotificationRouteImport.update({
     id: '/api/public/hooks/push-notification',
@@ -306,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
   '/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
@@ -349,6 +356,7 @@ export interface FileRoutesByTo {
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
   '/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
@@ -394,6 +402,7 @@ export interface FileRoutesById {
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/api/wake-chat': typeof ApiWakeChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
   '/_authenticated/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/api/sleep-chat'
     | '/api/wake-chat'
     | '/checkout/return'
+    | '/.lovable/oauth/consent'
     | '/area/$slug'
     | '/area/orientador'
     | '/painel-aluno/$id'
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/api/sleep-chat'
     | '/api/wake-chat'
     | '/checkout/return'
+    | '/.lovable/oauth/consent'
     | '/area/$slug'
     | '/area/orientador'
     | '/painel-aluno/$id'
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/api/sleep-chat'
     | '/api/wake-chat'
     | '/checkout/return'
+    | '/.lovable/oauth/consent'
     | '/_authenticated/area/$slug'
     | '/_authenticated/area/orientador'
     | '/_authenticated/painel-aluno/$id'
@@ -543,6 +555,7 @@ export interface RootRouteChildren {
   ApiSleepChatRoute: typeof ApiSleepChatRoute
   ApiWakeChatRoute: typeof ApiWakeChatRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicHooksGenerateNudgesRoute: typeof ApiPublicHooksGenerateNudgesRoute
   ApiPublicHooksPushNotificationRoute: typeof ApiPublicHooksPushNotificationRoute
 }
@@ -829,6 +842,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAreaSlugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/push-notification': {
       id: '/api/public/hooks/push-notification'
       path: '/api/public/hooks/push-notification'
@@ -928,6 +948,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSleepChatRoute: ApiSleepChatRoute,
   ApiWakeChatRoute: ApiWakeChatRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicHooksGenerateNudgesRoute: ApiPublicHooksGenerateNudgesRoute,
   ApiPublicHooksPushNotificationRoute: ApiPublicHooksPushNotificationRoute,
 }
