@@ -20,10 +20,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
-# Env (segredos e overrides locais). .env.example pode ser versionado.
-.env.mock
-.env.local
-.env.*.local
+# Env (segredos e overrides locais). Só .env.example é versionado.
+.env
+.env.*
 !.env.example
 
 # Editor directories and files
