@@ -11,6 +11,7 @@ próprio** exposto pelo app.
 - **Sincroniza com o Lovable** pela branch `main` (não reescrever histórico — sem force-push/rebase).
 - **App publicado:** https://mobile-vision-vertical-joy.lovable.app
 - **Documentação de rotas:** [`openapi.json`](./openapi.json) (swagger de todas as rotas).
+- **Arquitetura detalhada:** [`ARCHITECTURE.md`](./ARCHITECTURE.md) — descrição por arquivo, mapa de dependências (quem depende de quem), fluxos de interação e catálogo de rotas com diagramas.
 
 ## Stack
 
