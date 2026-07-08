@@ -1,67 +1,49 @@
-# Consolidação do Dump — 5 blocos, 4 fases
 
-Organizei os 5 pontos por domínio, removi duplicações e agrupei em fases executáveis. Cada fase entrega valor sozinha; se algo travar, paramos, ajustamos, seguimos.
+## Relatório de validação (somente leitura — nada foi alterado)
 
-## Mapa Dump → Domínio
+### 1) Rotas removidas — referências restantes
 
-| # do dump | Domínio | Onde vive hoje | O que muda |
-|---|---|---|---|
-| 1 | Missões diárias/semanais editáveis + agenda + notificação | `area/treino`, `jornada`, `daily_quests` | Nova aba "Minhas Missões" com CRUD, horário e lembrete |
-| 2 | Salvar Treino & Dieta persistidos a partir da anamnese | `TreinoPlanCard`, `CozinhaDietCard` | Persistência real + histórico + versionamento |
-| 3 | Modelo individual (IA lê tudo de "Seu Mundo") | IA-Agregadora + `area_progress` | Perfil vivo consultável pela IA em toda geração |
-| 4 | Missões do Quarto (rituais de sono) + integração Samsung Health | `area/quarto`, `QuartoSleepCard` | CRUD de rituais noturnos + placeholder de integração wearables |
-| 5 | Diário mental com calendário e enfrentamento diário | `MentalJournalCard`, `mental_journal` | Vista de calendário + "enfrentei hoje?" toggle diário |
+Rotas checadas: `alarme`, `despertar`, `sonhos`, `cristais`, `classe`, `painel`, `painel-aluno.$id`, `area.orientador`, `planos`, `api/wake-chat`.
 
-## Fase 1 — Missões editáveis, agendáveis e com lembrete (item 1)
+- **Nenhum `<Link to=...>`, `navigate(...)`, `redirect(...)` ou `import` aponta para essas rotas.** Rotas confirmadas ausentes em `src/routes/_authenticated/` e `src/routes/api/`.
+- **Único resíduo:** `src/lib/mentor-tips.ts` mantém entradas de dicas para os paths `/painel`, `/classe`, `/despertar`, `/sonhos` (chaves de objeto usadas para tooltips por rota). Não quebra build nem navegação — vira código morto até serem removidas.
+- `src/routes/_authenticated/jornada.tsx` menciona a palavra "despertar" só em texto/copy (prompt do gerador de blocos). Não é link.
 
-O usuário precisa hoje de um lugar para **criar, agendar e riscar** missões do dia/semana, além das sugeridas pela IA. É o bloqueio mais visível.
+**Conclusão:** sem imports/links quebrados. Cleanup opcional em `mentor-tips.ts`.
 
-- Nova tabela `user_missions` (título, área, tipo `daily|weekly`, `scheduled_time`, `remind_before_min`, `active`, `notes`) + `user_mission_logs` (por dia, done bool, done_at).
-- Nova rota `/_authenticated/missoes` com 3 abas: **Hoje · Semana · Todas**.
-- CRUD completo: criar, editar, arquivar, duplicar.
-- Presets rápidos por área (Treino de força, Mobilidade 10min, Cardio leve, Progressão de carga do exercício X).
-- Agendamento com horário; toast/notificação local usando Notification API + Service Worker já existente (PWA).
-- Integração no `BentoArea` da área Treino: botão "+" abre o composer já filtrado por área.
-- Corrige o "+" que hoje é reportado como fonte de dor.
+### 2) Migration `20260708000000_security_hardening_frontend_trust.sql`
 
-## Fase 2 — Treino & Dieta persistidos com histórico (itens 2 e 3)
+- Arquivo presente e consistente:
+  - Cria trigger `trg_protect_profile_economy` (BEFORE UPDATE em `profiles`) que zera alterações de `xp/brasas/level/streak` vindas de `authenticated`/`anon` (SECURITY DEFINER preserva funções internas).
+  - `REVOKE INSERT/UPDATE/DELETE ON public.user_crystals FROM authenticated` + drop da policy `user_crystals_modify_own`.
+  - Recria view `public_profiles` (id, display_name, behavioral_class, xp, level) — **atenção: essa lista é MAIS ENXUTA que a `public_profiles` atual em produção** (que hoje inclui friend_code, streak, level_track, etc., conforme migration 20260703). Rodar isso vai **remover colunas** que outras telas podem estar lendo. Verificar consumidores de `public_profiles` antes de aplicar.
+  - Drops de policies `Authenticated can read public profile fields` e `Public profile fields readable via view` são no-op (já não existem).
 
-Hoje `TreinoPlanCard` e `CozinhaDietCard` geram, mas não guardam de forma versionada nem alimentam a IA de volta.
+- **Status no banco: NÃO aplicada.**
+  - `pg_trigger` não contém `trg_protect_profile_economy`.
+  - Policies atuais de `profiles`: só `Users can insert/update/view their own profile` + `orientador reads linked student profiles`.
+  - `user_crystals`: só `user_crystals_select_own`, sem grants de escrita para `authenticated` (já revogados — provavelmente estado anterior; o REVOKE do arquivo será no-op).
+  - View `public_profiles` existe (da migration anterior, com o schema mais amplo).
 
-- Tabelas `training_plans` e `diet_plans` com `version`, `source` (`ai_generated|manual|anamnese`), `payload jsonb`, `active`.
-- Anamnese estruturada: expandir `profiles` com `anamnesis jsonb` (objetivos, restrições, equipamentos, disponibilidade, biometria opcional).
-- `saveActiveTrainingPlan()` / `saveActiveDietPlan()` — RPCs que arquivam a versão anterior e ativam a nova.
-- Botão "Salvar como meu plano" em cada card; histórico visível ("v3 · 15/nov").
-- **Item 3**: o system prompt da IA-Agregadora passa a incluir automaticamente o snapshot da anamnese + plano ativo + últimos logs de missão/hábito antes de gerar qualquer coisa. É isso que gera o "modelo individual" — sem tabela nova, só contexto.
+### 3) IA — `/api/chat` e `/api/converse`
 
-## Fase 3 — Rituais do Quarto + preparação para wearables (item 4)
+- Ambos usam `createChatModelWithFallback` de `src/lib/ai-gateway.server.ts`, que **prefere `OPENAI_API_KEY`** (OpenAI direto) e cai para `LOVABLE_API_KEY` (Lovable Gateway) se OpenAI ausente.
+- **`OPENAI_API_KEY` NÃO está configurado nos secrets do projeto.** Os secrets presentes incluem `LOVABLE_API_KEY`.
+- Consequência: os endpoints **funcionam via Lovable AI Gateway** (modelo `openai/gpt-5.5` + fallback `openai/gpt-5-mini`), não via OpenAI direto. Sem quebra.
+- Guardas de auth OK (`Bearer` + `supabase.auth.getClaims`). `converse` também tem modo dev:mock condicional a `VITE_USE_MOCKS`.
 
-- Reutiliza `user_missions` da Fase 1 com `area='quarto'` e `type='night_ritual'` — não precisa de tabela nova.
-- Presets sugeridos pela IA a partir de `sleep_logs` e `mental_journal`: "orar antes de dormir", "copo d'água", "sem tela 30min antes", "respiração 4-7-8".
-- CRUD manual como as outras missões.
-- **Integração Samsung Health / wearables**: implementação real depende de app nativo (Health Connect é Android-only e exige APK assinado). Nesta fase entrega:
-  - Campo `wearable_source` em `sleep_logs`.
-  - Import manual por CSV/JSON (o que o Samsung Health exporta hoje).
-  - Placeholder de "Conectar dispositivo" com texto honesto explicando que a integração nativa virá quando publicarmos o app.
-  Isso evita prometer o que o PWA não consegue entregar.
+### 4) Fluxos com Supabase/RLS
 
-## Fase 4 — Diário Mental com calendário e enfrentamento (item 5)
+RLS conferido em `pg_policies`:
 
-- Estende `mental_journal` com `belief_text`, `confronted_today bool`, `confronted_dates date[]`.
-- Nova rota `/_authenticated/diario` (ou aba dentro de `area/mental`) com:
-  - Lista de crenças limitantes ativas.
-  - Toggle diário "enfrentei hoje" → grava data.
-  - Vista de calendário (heatmap tipo GitHub) mostrando dias com enfrentamento.
-  - Timeline: "há 30 dias você escreveu…".
-- Integra com a IA-Agregadora: ao abrir a IA na tela do diário, sugestões viram "vamos reescrever essa crença?".
+- **login**: gerenciado por `_authenticated/route.tsx` (client-only, `supabase.auth.getUser`) + gate de onboarding. OK.
+- **habits (criar)**: `INSERT with_check (auth.uid() = user_id)` ✅ + SELECT/UPDATE/DELETE próprios ✅.
+- **user_missions (criar compromisso)**: `INSERT with_check (auth.uid() = user_id)` ✅ + SELECT/UPDATE/DELETE próprios ✅.
+- **user_mission_logs (marcar feito)**: `INSERT with_check (auth.uid() = user_id)` ✅ + SELECT/UPDATE/DELETE próprios ✅. Trigger `award_user_mission_xp` continua rodando (SECURITY DEFINER, não afetado por RLS).
 
-## Ordem sugerida e ponto de decisão
+**Nenhum fluxo listado quebra.** Observação: se a migration §2 for aplicada como está, updates de `profiles` (ex.: preferências de perfil que também tocam colunas de economia num mesmo payload por engano) terão os campos de economia silenciosamente ignorados — comportamento esperado, mas vale auditar chamadas de `profiles.update({...})` no cliente antes de aplicar.
 
-1. **Fase 1 primeiro** — destrava o "+" e o pedido mais concreto (missões editáveis + agenda).
-2. **Fase 2** — dá memória real ao sistema; habilita o modelo individual do item 3.
-3. **Fase 3** — herda a infra da Fase 1; entrega os rituais e é honesta sobre wearables.
-4. **Fase 4** — polimento humano do lado mental.
-
-Se você concordar com essa divisão, começo pela **Fase 1** já: migration `user_missions` + `user_mission_logs`, rota `/missoes` com 3 abas, presets de Treino, composer com horário e lembrete via Notification API, e o "+" das áreas passando a abrir o composer certo.
-
-Me diga: **sigo pela Fase 1 nessa ordem, ou você quer trocar a prioridade?**
+### Ações sugeridas (fora deste turno)
+- Remover entradas de rotas mortas em `src/lib/mentor-tips.ts`.
+- Antes de aplicar a migration 20260708: alinhar a lista de colunas da view `public_profiles` com o que a UI já consome (ver migration 20260703).
+- Se quiser OpenAI direto, adicionar `OPENAI_API_KEY` em Project Settings → Secrets; caso contrário, Lovable Gateway já cobre.

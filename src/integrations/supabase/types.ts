@@ -758,8 +758,10 @@ export type Database = {
           active: boolean
           area_slug: string
           created_at: string
+          frequency: string
           icon: string
           id: string
+          target: number
           target_per_week: number
           title: string
           updated_at: string
@@ -769,8 +771,10 @@ export type Database = {
           active?: boolean
           area_slug?: string
           created_at?: string
+          frequency?: string
           icon?: string
           id?: string
+          target?: number
           target_per_week?: number
           title: string
           updated_at?: string
@@ -780,8 +784,10 @@ export type Database = {
           active?: boolean
           area_slug?: string
           created_at?: string
+          frequency?: string
           icon?: string
           id?: string
+          target?: number
           target_per_week?: number
           title?: string
           updated_at?: string
@@ -2174,6 +2180,7 @@ export type Database = {
           archived_at: string | null
           area_slug: string | null
           created_at: string
+          end_time: string | null
           id: string
           mission_type: string
           notes: string | null
@@ -2190,6 +2197,7 @@ export type Database = {
           archived_at?: string | null
           area_slug?: string | null
           created_at?: string
+          end_time?: string | null
           id?: string
           mission_type?: string
           notes?: string | null
@@ -2206,6 +2214,7 @@ export type Database = {
           archived_at?: string | null
           area_slug?: string | null
           created_at?: string
+          end_time?: string | null
           id?: string
           mission_type?: string
           notes?: string | null
