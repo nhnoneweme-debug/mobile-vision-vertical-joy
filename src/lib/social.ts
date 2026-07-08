@@ -198,25 +198,26 @@ export async function createGroup(
   if (error) throw error;
 }
 
-export async function joinGroupByCode(userId: string, code: string) {
+export async function joinGroupByCode(_userId: string, code: string) {
   const cleaned = code.trim().toUpperCase();
   if (!cleaned) throw new Error("Informe um código.");
-  const { data: group, error: e1 } = await supabase
-    .from("groups")
-    .select("id")
-    .eq("invite_code", cleaned)
-    .maybeSingle();
-  if (e1) throw e1;
-  if (!group) throw new Error("Guilda não encontrada.");
-
-  const { error } = await supabase
-    .from("group_members")
-    .insert({ group_id: group.id, user_id: userId, role: "member" });
+  const { data, error } = await supabase.rpc("join_group_by_invite", { _code: cleaned });
   if (error) {
+    const msg = String(error.message || "");
+    if (msg.includes("invalid_invite")) throw new Error("Guilda não encontrada.");
     if (error.code === "23505") throw new Error("Você já pertence a esta guilda.");
     throw error;
   }
-  return group.id;
+  return data as string;
+}
+
+export async function leaveGroup(groupId: string, userId: string) {
+  const { error } = await supabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", userId);
+  if (error) throw error;
 }
 
 export async function leaveGroup(groupId: string, userId: string) {
