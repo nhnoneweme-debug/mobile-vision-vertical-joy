@@ -144,9 +144,11 @@ export async function listMyGroups(userId: string): Promise<GroupRow[]> {
   const ids = (mems ?? []).map((m) => m.group_id);
   if (ids.length === 0) return [];
 
+  // invite_code is column-restricted; select it separately so PostgREST doesn't
+  // prune the whole row. Owners fetch it via the get_group_invite_code RPC.
   const { data: groups, error: e2 } = await supabase
     .from("groups")
-    .select("*")
+    .select("id, name, description, owner_id, created_at")
     .in("id", ids);
   if (e2) throw e2;
 
@@ -158,11 +160,20 @@ export async function listMyGroups(userId: string): Promise<GroupRow[]> {
   const countMap = new Map<string, number>();
   (counts ?? []).forEach((c) => countMap.set(c.group_id, (countMap.get(c.group_id) ?? 0) + 1));
 
+  const ownedIds = (groups ?? []).filter((g) => g.owner_id === userId).map((g) => g.id);
+  const codeMap = new Map<string, string>();
+  await Promise.all(
+    ownedIds.map(async (gid) => {
+      const { data } = await supabase.rpc("get_group_invite_code", { _group: gid });
+      if (typeof data === "string") codeMap.set(gid, data);
+    }),
+  );
+
   return (groups ?? []).map((g) => ({
     id: g.id,
     name: g.name,
     description: g.description,
-    invite_code: g.invite_code,
+    invite_code: codeMap.get(g.id) ?? "",
     owner_id: g.owner_id,
     created_at: g.created_at,
     member_count: countMap.get(g.id) ?? 1,
