@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Body = { messages?: UIMessage[] };
@@ -17,6 +17,37 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ---- Modo de desenvolvimento (dev:mock) ---------------------------
+        // Só ativa com VITE_USE_MOCKS=true. Em produção este bloco é inerte e
+        // o caminho normal (auth + Supabase) abaixo continua valendo.
+        // Permite conversar com o LLM real localmente, sem auth/Supabase,
+        // bastando ter LOVABLE_API_KEY no .env e internet.
+        if (process.env.VITE_USE_MOCKS === "true") {
+          if (!process.env.OPENAI_API_KEY && !process.env.LOVABLE_API_KEY) {
+            return new Response(
+              "IA local indisponível: defina OPENAI_API_KEY (ou LOVABLE_API_KEY) no seu .env (e tenha internet) para conversar em dev:mock.",
+              { status: 500 },
+            );
+          }
+          const devBody = (await request.json()) as Body;
+          const devIncoming = devBody.messages ?? [];
+          const devSys = [
+            "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
+            "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
+            "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
+            "Respostas curtas (até ~6 linhas), markdown leve permitido.",
+            "(Ambiente de desenvolvimento: sem acesso ao histórico real do jogador.)",
+          ].join("\n");
+          const devModel = createChatModelWithFallback();
+          const devResult = streamText({
+            model: devModel,
+            system: devSys,
+            messages: await convertToModelMessages(devIncoming),
+          });
+          return devResult.toUIMessageStreamResponse({ originalMessages: devIncoming });
+        }
+        // -------------------------------------------------------------------
+
         const auth = request.headers.get("authorization") ?? "";
         if (!auth.startsWith("Bearer ")) {
           return new Response("Unauthorized", { status: 401 });
@@ -26,8 +57,8 @@ export const Route = createFileRoute("/api/chat")({
         const SUPABASE_URL = process.env.SUPABASE_URL!;
         const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
         const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-        if (!LOVABLE_API_KEY) {
-          return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) {
+          return new Response("Missing AI key (OPENAI_API_KEY ou LOVABLE_API_KEY)", { status: 500 });
         }
 
         const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -247,8 +278,7 @@ export const Route = createFileRoute("/api/chat")({
           ...(lastUser ? [lastUser] : []),
         ];
 
-        const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-        const model = gateway("google/gemini-3-flash-preview");
+        const model = createChatModelWithFallback(LOVABLE_API_KEY);
         const result = streamText({
           model,
           system: sys,

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
 import {
   ACTION_TO_TABLE,
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/ia-capture")({
         const SUPABASE_URL = process.env.SUPABASE_URL!;
         const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
         const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-        if (!LOVABLE_API_KEY) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) return new Response("Missing AI key", { status: 500 });
 
         const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
           global: { headers: { Authorization: `Bearer ${token}` } },
@@ -167,8 +167,7 @@ export const Route = createFileRoute("/api/ia-capture")({
           "Áreas top: " + ((areas ?? []).map((a) => `${a.area_slug} NV${a.level}`).join(", ") || "—"),
         ].join("\n");
 
-        const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-        const model = gateway("google/gemini-3-flash-preview");
+        const model = createChatModelWithFallback(LOVABLE_API_KEY);
 
         try {
           const result = await generateText({

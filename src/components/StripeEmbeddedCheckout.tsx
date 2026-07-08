@@ -18,12 +18,14 @@ export function StripeEmbeddedCheckout({
   returnUrl,
 }: Props) {
   const fetchClientSecret = async (): Promise<string> => {
+    // customerEmail/userId NÃO são mais enviados: o servidor deriva a identidade
+    // do token autenticado (ver createCheckoutSession).
+    void customerEmail;
+    void userId;
     const result = await createCheckoutSession({
       data: {
         priceId,
         quantity,
-        customerEmail,
-        userId,
         returnUrl: returnUrl || window.location.href,
         environment: getStripeEnvironment(),
       },

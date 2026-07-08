@@ -49,7 +49,7 @@ function OnboardingPage() {
         .maybeSingle();
       if (!active) return;
       if (data?.onboarding_completed) {
-        navigate({ to: "/mapa", replace: true });
+        navigate({ to: "/home", replace: true });
         return;
       }
       setAvatar((a) => ({
@@ -125,7 +125,7 @@ function OnboardingPage() {
         // hábitos sugeridos são best-effort; não bloqueia onboarding
       }
       toast.success("Bem-vindo ao mundo, " + avatar.display_name + ".");
-      navigate({ to: "/mapa", replace: true });
+      navigate({ to: "/home", replace: true });
     } catch (err) {
       // Surfaces PostgREST errors (which are plain objects, not Error instances)
       const anyErr = err as { message?: string; details?: string; hint?: string; code?: string } | null;

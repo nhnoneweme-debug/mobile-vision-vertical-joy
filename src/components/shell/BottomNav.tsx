@@ -8,16 +8,12 @@ import {
   User,
   ShoppingBag,
   Trophy,
-  BookOpen,
   Users,
   LineChart,
   ClipboardCheck,
   Moon,
-  Gem,
   Swords,
   Wand2,
-  Clock,
-  MoonStar,
   MapPin,
   MessageCircle,
   ChevronRight,
@@ -27,7 +23,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Crown } from "lucide-react";
 import { getMentorTip } from "@/lib/mentor-tips";
 
 const MENTOR_PREF_KEY = "mentor.enabled";
@@ -44,12 +39,7 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/progresso", label: "Progresso", icon: LineChart },
       { to: "/missoes", label: "Minhas Missões", icon: ClipboardCheck },
-      { to: "/classe", label: "Classe & Perks", icon: Sparkles },
       { to: "/conquistas", label: "Conquistas & Saga", icon: Trophy },
-      { to: "/cristais", label: "Cristais do Poder", icon: Gem },
-      { to: "/alarme", label: "Despertar/Alarme", icon: Clock },
-      { to: "/despertar", label: "Acordar agora", icon: Sparkles },
-      { to: "/sonhos", label: "Sonhos", icon: MoonStar },
       { to: "/dormir", label: "Dormir (Dump do dia)", icon: Moon },
       { to: "/jornada", label: "Jornada do Dia", icon: MapPin },
       { to: "/ritual", label: "Rituais", icon: Moon },
@@ -60,8 +50,6 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/social", label: "Social", icon: Users },
       { to: "/desafios", label: "Desafios", icon: Swords },
-      { to: "/painel", label: "Painel do Orientador", icon: ClipboardCheck },
-      { to: "/area/orientador", label: "Falar com a IA", icon: BookOpen },
     ],
   },
   {
@@ -69,7 +57,6 @@ const UPPER_MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/perfil", label: "Perfil", icon: User },
       { to: "/loja", label: "Forja de Brasas", icon: ShoppingBag },
-      { to: "/planos", label: "Planos Brasas+", icon: Crown },
       { to: "/studio", label: "Studio (admin)", icon: Wand2 },
     ],
   },
@@ -169,10 +156,10 @@ export function BottomNav() {
       <ul className="relative flex items-stretch justify-around px-2 pt-2">
         <li className="relative flex-1">
           <NavSlot
-            to="/mapa"
-            label="MAPA"
+            to="/home"
+            label="INÍCIO"
             Icon={Map}
-            active={pathname.startsWith("/mapa") || pathname.startsWith("/area")}
+            active={pathname.startsWith("/home") || pathname.startsWith("/mapa") || pathname.startsWith("/area")}
           />
         </li>
         <li className="relative flex-1">
