@@ -6,7 +6,7 @@ import type { Database } from './types';
 import { mockSupabase } from './mock-client';
 
 const USE_MOCKS =
-  (import.meta as any)?.env?.VITE_USE_MOCKS === 'true' ||
+  import.meta.env.VITE_USE_MOCKS === 'true' ||
   (typeof process !== 'undefined' && process.env?.VITE_USE_MOCKS === 'true');
 
 function isNewSupabaseApiKey(value: string): boolean {
