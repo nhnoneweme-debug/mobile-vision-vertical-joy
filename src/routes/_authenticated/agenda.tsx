@@ -453,7 +453,7 @@ function AgendaPage() {
                             "absolute left-0.5 right-0.5 overflow-hidden rounded-md px-1 py-0.5 text-left active:scale-[0.98] " +
                             (m.done_today ? "bg-ember/40 text-charcoal-900" : "bg-ember/85 text-charcoal-900")
                           }
-                          style={{ top: timeToOffset(m.scheduled_time), height: blockHeight(m.scheduled_time, m.end_time) }}
+                          style={{ top: timeToOffset(m.scheduled_time), height: blockHeight(m.scheduled_time, m.end_time ?? null) }}
                         >
                           <span className="block font-display text-[8px] leading-tight">
                             {hhmm(m.scheduled_time)}

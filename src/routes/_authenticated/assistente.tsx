@@ -16,6 +16,9 @@ type Msg =
   | { id: number; role: "user"; text: string }
   | { id: number; role: "proposal"; text: string; proposal: Proposal; status: "pending" | "done" | "cancel" };
 
+// Omit que distribui sobre a união (Omit normal colapsaria os variantes).
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 const EXAMPLES = [
   "criar hábito beber 2L de água todo dia",
   "compromisso treino segunda e quarta às 18h",
@@ -49,7 +52,7 @@ function AssistantPage() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
 
-  function push(m: Omit<Msg, "id">) {
+  function push(m: DistributiveOmit<Msg, "id">) {
     setMsgs((prev) => [...prev, { ...(m as Msg), id: nid() }]);
   }
 
