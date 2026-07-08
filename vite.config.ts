@@ -16,6 +16,16 @@ const USE_MOCKS =
 const IS_WINDOWS = process.platform === "win32";
 const SKIP_MCP = USE_MOCKS || IS_WINDOWS;
 
+const PUBLIC_SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  "https://bqqxvhvztzpvrjfbkcnr.supabase.co";
+
+const PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImJxcXh2aHZ6dHpwdnJqZmJrY25yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNTY2NTQsImV4cCI6MjA5NzgzMjY1NH0.adojIpquZwyvRsAV7hth9ddLNmqjG8pZNL1SEWmlJ1w";
+
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
@@ -24,6 +34,10 @@ export default defineConfig({
   // repassa ao wrapper. Sem a var, o build padrão da Lovable/Cloudflare permanece intacto.
   nitro: process.env.NITRO_PRESET ? { preset: process.env.NITRO_PRESET } : undefined,
   vite: {
+    define: {
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(PUBLIC_SUPABASE_URL),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(PUBLIC_SUPABASE_PUBLISHABLE_KEY),
+    },
     plugins: [
       ...(SKIP_MCP ? [] : [mcpPlugin()]),
       VitePWA({
