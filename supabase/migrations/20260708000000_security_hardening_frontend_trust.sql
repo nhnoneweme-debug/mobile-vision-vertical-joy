@@ -14,14 +14,11 @@ DROP POLICY IF EXISTS "Authenticated can read public profile fields" ON public.p
 DROP POLICY IF EXISTS "Public profile fields readable via view" ON public.profiles;
 -- A policy "Users can view their own profile" (USING auth.uid() = id) permanece.
 
--- View pública só com colunas não sensíveis (para social / ranking / painel).
--- Roda com direitos do owner (bypassa RLS da tabela base) e só devolve estas colunas.
-CREATE OR REPLACE VIEW public.public_profiles AS
-  SELECT id, display_name, behavioral_class, xp, level
-  FROM public.profiles;
-
-REVOKE ALL ON public.public_profiles FROM anon, authenticated;
-GRANT SELECT ON public.public_profiles TO authenticated;
+-- NOTA: NÃO recriamos a view public_profiles aqui. Ela já existe em produção
+-- (migration 20260703) com um conjunto de colunas MAIOR (friend_code, streak,
+-- level_track, ...) que a UI consome. Recriar com menos colunas quebraria telas
+-- (social/ranking). A proteção de PII do F1 (remover SELECT USING(true) da tabela
+-- base) já está aplicada em produção — estes DROPs acima são idempotentes/no-op.
 
 -- =====================================================================
 -- F2a — profiles: impedir que o cliente altere colunas de economia.
