@@ -144,9 +144,11 @@ export async function listMyGroups(userId: string): Promise<GroupRow[]> {
   const ids = (mems ?? []).map((m) => m.group_id);
   if (ids.length === 0) return [];
 
+  // invite_code is column-restricted; select it separately so PostgREST doesn't
+  // prune the whole row. Owners fetch it via the get_group_invite_code RPC.
   const { data: groups, error: e2 } = await supabase
     .from("groups")
-    .select("*")
+    .select("id, name, description, owner_id, created_at")
     .in("id", ids);
   if (e2) throw e2;
 
@@ -158,11 +160,20 @@ export async function listMyGroups(userId: string): Promise<GroupRow[]> {
   const countMap = new Map<string, number>();
   (counts ?? []).forEach((c) => countMap.set(c.group_id, (countMap.get(c.group_id) ?? 0) + 1));
 
+  const ownedIds = (groups ?? []).filter((g) => g.owner_id === userId).map((g) => g.id);
+  const codeMap = new Map<string, string>();
+  await Promise.all(
+    ownedIds.map(async (gid) => {
+      const { data } = await supabase.rpc("get_group_invite_code", { _group: gid });
+      if (typeof data === "string") codeMap.set(gid, data);
+    }),
+  );
+
   return (groups ?? []).map((g) => ({
     id: g.id,
     name: g.name,
     description: g.description,
-    invite_code: g.invite_code,
+    invite_code: codeMap.get(g.id) ?? "",
     owner_id: g.owner_id,
     created_at: g.created_at,
     member_count: countMap.get(g.id) ?? 1,
@@ -187,25 +198,17 @@ export async function createGroup(
   if (error) throw error;
 }
 
-export async function joinGroupByCode(userId: string, code: string) {
+export async function joinGroupByCode(_userId: string, code: string) {
   const cleaned = code.trim().toUpperCase();
   if (!cleaned) throw new Error("Informe um código.");
-  const { data: group, error: e1 } = await supabase
-    .from("groups")
-    .select("id")
-    .eq("invite_code", cleaned)
-    .maybeSingle();
-  if (e1) throw e1;
-  if (!group) throw new Error("Guilda não encontrada.");
-
-  const { error } = await supabase
-    .from("group_members")
-    .insert({ group_id: group.id, user_id: userId, role: "member" });
+  const { data, error } = await supabase.rpc("join_group_by_invite", { _code: cleaned });
   if (error) {
+    const msg = String(error.message || "");
+    if (msg.includes("invalid_invite")) throw new Error("Guilda não encontrada.");
     if (error.code === "23505") throw new Error("Você já pertence a esta guilda.");
     throw error;
   }
-  return group.id;
+  return data as string;
 }
 
 export async function leaveGroup(groupId: string, userId: string) {
