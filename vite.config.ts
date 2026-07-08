@@ -7,11 +7,14 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Dev-only: no modo mock (offline), pulamos o mcpPlugin. Ele tem um bug de
-// separador de caminho no Windows (compara C:/ com C:\...) e não é necessário
-// para desenvolver a UI localmente. Em produção/Lovable o plugin segue ativo.
+// O mcpPlugin tem um bug de separador de caminho no Windows (compara C:/ com C:\...).
+// Pulamos ele no modo mock (offline) E em qualquer build/dev rodando no Windows.
+// Como o build de produção do Lovable roda em LINUX, o plugin segue ativo lá —
+// esta exceção afeta apenas a máquina local Windows.
 const USE_MOCKS =
   process.argv.includes("mock") || process.env.VITE_USE_MOCKS === "true";
+const IS_WINDOWS = process.platform === "win32";
+const SKIP_MCP = USE_MOCKS || IS_WINDOWS;
 
 export default defineConfig({
   tanstackStart: {
@@ -22,7 +25,7 @@ export default defineConfig({
   nitro: process.env.NITRO_PRESET ? { preset: process.env.NITRO_PRESET } : undefined,
   vite: {
     plugins: [
-      ...(USE_MOCKS ? [] : [mcpPlugin()]),
+      ...(SKIP_MCP ? [] : [mcpPlugin()]),
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: null,

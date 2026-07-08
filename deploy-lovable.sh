@@ -61,14 +61,17 @@ else
   echo "✔ Commit criado em $SOURCE_BRANCH."
 fi
 
-# --- Build opcional (não sobe nada se falhar) -----------------------------
+# --- Checagem de tipos (Windows-safe; não sobe nada se falhar) ------------
+# No Windows o `vite build` esbarra no plugin do Lovable (bug de caminho). O
+# build de produção real roda no Lovable/Linux; aqui validamos os TIPOS com tsc,
+# que pega erros de código de verdade sem depender do Vite.
 if [ "$DO_BUILD" = "1" ]; then
-  echo "▶ Build (npm run build)… use --skip-build para pular."
-  if ! npm run build; then
-    echo "❌ Build falhou. NADA foi enviado. Corrija e rode de novo (ou --skip-build)."
+  echo "▶ Checagem de tipos (npx tsc --noEmit)… use --skip-build para pular."
+  if ! npx tsc --noEmit; then
+    echo "❌ Erros de TypeScript. NADA foi enviado. Corrija e rode de novo (ou --skip-build)."
     exit 1
   fi
-  echo "✔ Build OK."
+  echo "✔ Tipos OK."
 fi
 
 # --- Push da develop ------------------------------------------------------
