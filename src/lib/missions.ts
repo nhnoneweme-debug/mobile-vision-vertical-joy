@@ -9,7 +9,8 @@ export type UserMission = {
   notes: string | null;
   area_slug: string | null;
   mission_type: MissionType;
-  scheduled_time: string | null; // "HH:MM:SS"
+  scheduled_time: string | null; // "HH:MM:SS" (início)
+  end_time?: string | null; // "HH:MM" (fim, opcional)
   weekday_mask: number; // bitmask, Sun=1,Mon=2,...,Sat=64. 127 = all week
   remind_before_min: number;
   xp_reward: number;
@@ -31,6 +32,7 @@ export type MissionInput = {
   area_slug?: string | null;
   mission_type?: MissionType;
   scheduled_time?: string | null;
+  end_time?: string | null;
   weekday_mask?: number;
   remind_before_min?: number;
   xp_reward?: number;
@@ -119,6 +121,7 @@ export async function createMission(userId: string, input: MissionInput): Promis
     area_slug: input.area_slug ?? null,
     mission_type: input.mission_type ?? "daily",
     scheduled_time: input.scheduled_time || null,
+    end_time: input.end_time || null,
     weekday_mask: input.weekday_mask ?? 127,
     remind_before_min: input.remind_before_min ?? 0,
     xp_reward: input.xp_reward ?? 15,

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 
 export type SuggestedRitual = {
   title: string;
@@ -31,7 +31,7 @@ export const suggestQuartoRituals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
+    if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) throw new Error("Missing AI key");
 
     const [{ data: profile }, { data: sleep }, { data: inclusionRow }] = await Promise.all([
       context.supabase
@@ -57,8 +57,7 @@ export const suggestQuartoRituals = createServerFn({ method: "POST" })
       | { pronouns?: string; ia_tone?: string; no_go_topics?: string }
       | undefined;
 
-    const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-    const model = gateway("google/gemini-3-flash-preview");
+    const model = createChatModelWithFallback(LOVABLE_API_KEY);
 
     const sys = [
       "Você sugere rituais noturnos personalizados (higiene do sono, ambiente, mente).",

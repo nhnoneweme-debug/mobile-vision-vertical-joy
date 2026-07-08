@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 
 export type Meal = {
   time: string; // "HH:MM"
@@ -62,10 +62,9 @@ export const parseDietPlan = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
+    if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) throw new Error("Missing AI key");
 
-    const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-    const model = gateway("google/gemini-3-flash-preview");
+    const model = createChatModelWithFallback(LOVABLE_API_KEY);
 
     const sys = [
       "Você é nutricionista assistente. Receba uma dieta em texto livre (português, pode estar bagunçada) e devolva APENAS JSON válido.",

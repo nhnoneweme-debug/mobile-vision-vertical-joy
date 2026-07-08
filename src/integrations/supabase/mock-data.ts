@@ -65,10 +65,10 @@ export const SEED: Record<string, any[]> = {
   ],
 
   habits: [
-    { id: "hab-1", user_id: MOCK_USER_ID, title: "Beber 2L de água", icon: "droplet", area_slug: "cozinha", target_per_week: 7, active: true, created_at: daysAgo(20), updated_at: iso() },
-    { id: "hab-2", user_id: MOCK_USER_ID, title: "Treinar", icon: "dumbbell", area_slug: "treino", target_per_week: 5, active: true, created_at: daysAgo(20), updated_at: iso() },
-    { id: "hab-3", user_id: MOCK_USER_ID, title: "Meditar 10min", icon: "brain", area_slug: "mental", target_per_week: 5, active: true, created_at: daysAgo(18), updated_at: iso() },
-    { id: "hab-4", user_id: MOCK_USER_ID, title: "Dormir 23h", icon: "moon", area_slug: "quarto", target_per_week: 7, active: true, created_at: daysAgo(15), updated_at: iso() },
+    { id: "hab-1", user_id: MOCK_USER_ID, title: "Beber 2L de água", icon: "droplet", area_slug: "cozinha", frequency: "daily", target: 1, target_per_week: 7, active: true, created_at: daysAgo(20), updated_at: iso() },
+    { id: "hab-2", user_id: MOCK_USER_ID, title: "Treinar", icon: "dumbbell", area_slug: "treino", frequency: "weekly", target: 5, target_per_week: 5, active: true, created_at: daysAgo(20), updated_at: iso() },
+    { id: "hab-3", user_id: MOCK_USER_ID, title: "Meditar 10min", icon: "brain", area_slug: "mental", frequency: "daily", target: 1, target_per_week: 7, active: true, created_at: daysAgo(18), updated_at: iso() },
+    { id: "hab-4", user_id: MOCK_USER_ID, title: "Ler um livro", icon: "book", area_slug: "mental", frequency: "monthly", target: 2, target_per_week: 1, active: true, created_at: daysAgo(15), updated_at: iso() },
   ],
 
   habit_logs: [

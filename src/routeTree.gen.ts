@@ -15,20 +15,19 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as ApiWakeChatRouteImport } from './routes/api/wake-chat'
 import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
+import { Route as ApiConverseRouteImport } from './routes/api/converse'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedWearablesRouteImport } from './routes/_authenticated/wearables'
+import { Route as AuthenticatedTreinoRouteImport } from './routes/_authenticated/treino'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
-import { Route as AuthenticatedSonhosRouteImport } from './routes/_authenticated/sonhos'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated/ritual'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
 import { Route as AuthenticatedPreferenciasNotificacoesRouteImport } from './routes/_authenticated/preferencias-notificacoes'
-import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
+import { Route as AuthenticatedPlanoAlimentarRouteImport } from './routes/_authenticated/plano-alimentar'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
-import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOrientadorChatRouteImport } from './routes/_authenticated/orientador-chat'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedNotificacoesRouteImport } from './routes/_authenticated/notificacoes'
@@ -38,19 +37,17 @@ import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/m
 import { Route as AuthenticatedLojaRouteImport } from './routes/_authenticated/loja'
 import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticated/jornada'
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedDormirRouteImport } from './routes/_authenticated/dormir'
-import { Route as AuthenticatedDespertarRouteImport } from './routes/_authenticated/despertar'
 import { Route as AuthenticatedDesafiosRouteImport } from './routes/_authenticated/desafios'
-import { Route as AuthenticatedCristaisRouteImport } from './routes/_authenticated/cristais'
+import { Route as AuthenticatedConversarRouteImport } from './routes/_authenticated/conversar'
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
-import { Route as AuthenticatedClasseRouteImport } from './routes/_authenticated/classe'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
-import { Route as AuthenticatedAlarmeRouteImport } from './routes/_authenticated/alarme'
+import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authenticated/assistente'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as AuthenticatedPainelAlunoIdRouteImport } from './routes/_authenticated/painel-aluno.$id'
-import { Route as AuthenticatedAreaOrientadorRouteImport } from './routes/_authenticated/area.orientador'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -86,11 +83,6 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWakeChatRoute = ApiWakeChatRouteImport.update({
-  id: '/api/wake-chat',
-  path: '/api/wake-chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiSleepChatRoute = ApiSleepChatRouteImport.update({
   id: '/api/sleep-chat',
   path: '/api/sleep-chat',
@@ -99,6 +91,11 @@ const ApiSleepChatRoute = ApiSleepChatRouteImport.update({
 const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
   id: '/api/ia-capture',
   path: '/api/ia-capture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConverseRoute = ApiConverseRouteImport.update({
+  id: '/api/converse',
+  path: '/api/converse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -111,14 +108,14 @@ const AuthenticatedWearablesRoute = AuthenticatedWearablesRouteImport.update({
   path: '/wearables',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTreinoRoute = AuthenticatedTreinoRouteImport.update({
+  id: '/treino',
+  path: '/treino',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   id: '/studio',
   path: '/studio',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedSonhosRoute = AuthenticatedSonhosRouteImport.update({
-  id: '/sonhos',
-  path: '/sonhos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
@@ -142,19 +139,15 @@ const AuthenticatedPreferenciasNotificacoesRoute =
     path: '/preferencias-notificacoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedPlanosRoute = AuthenticatedPlanosRouteImport.update({
-  id: '/planos',
-  path: '/planos',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedPlanoAlimentarRoute =
+  AuthenticatedPlanoAlimentarRouteImport.update({
+    id: '/plano-alimentar',
+    path: '/plano-alimentar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
-  id: '/painel',
-  path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOrientadorChatRoute =
@@ -204,6 +197,11 @@ const AuthenticatedIaRoute = AuthenticatedIaRouteImport.update({
   path: '/ia',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   id: '/habitos',
   path: '/habitos',
@@ -214,19 +212,14 @@ const AuthenticatedDormirRoute = AuthenticatedDormirRouteImport.update({
   path: '/dormir',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedDespertarRoute = AuthenticatedDespertarRouteImport.update({
-  id: '/despertar',
-  path: '/despertar',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedDesafiosRoute = AuthenticatedDesafiosRouteImport.update({
   id: '/desafios',
   path: '/desafios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedCristaisRoute = AuthenticatedCristaisRouteImport.update({
-  id: '/cristais',
-  path: '/cristais',
+const AuthenticatedConversarRoute = AuthenticatedConversarRouteImport.update({
+  id: '/conversar',
+  path: '/conversar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConquistasRoute = AuthenticatedConquistasRouteImport.update({
@@ -234,19 +227,19 @@ const AuthenticatedConquistasRoute = AuthenticatedConquistasRouteImport.update({
   path: '/conquistas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedClasseRoute = AuthenticatedClasseRouteImport.update({
-  id: '/classe',
-  path: '/classe',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAlarmeRoute = AuthenticatedAlarmeRouteImport.update({
-  id: '/alarme',
-  path: '/alarme',
+const AuthenticatedAssistenteRoute = AuthenticatedAssistenteRouteImport.update({
+  id: '/assistente',
+  path: '/assistente',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -260,18 +253,6 @@ const Char91DotmcpChar93ListToolsRoute =
     id: '/.mcp/list-tools',
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedPainelAlunoIdRoute =
-  AuthenticatedPainelAlunoIdRouteImport.update({
-    id: '/painel-aluno/$id',
-    path: '/painel-aluno/$id',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAreaOrientadorRoute =
-  AuthenticatedAreaOrientadorRouteImport.update({
-    id: '/area/orientador',
-    path: '/area/orientador',
-    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   id: '/area/$slug',
@@ -309,15 +290,15 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/alarme': typeof AuthenticatedAlarmeRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
-  '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
-  '/cristais': typeof AuthenticatedCristaisRoute
+  '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
-  '/despertar': typeof AuthenticatedDespertarRoute
   '/dormir': typeof AuthenticatedDormirRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/ia': typeof AuthenticatedIaRoute
   '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
@@ -327,26 +308,23 @@ export interface FileRoutesByFullPath {
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orientador-chat': typeof AuthenticatedOrientadorChatRoute
-  '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
-  '/planos': typeof AuthenticatedPlanosRoute
+  '/plano-alimentar': typeof AuthenticatedPlanoAlimentarRoute
   '/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
-  '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/treino': typeof AuthenticatedTreinoRoute
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
-  '/api/wake-chat': typeof ApiWakeChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
-  '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
-  '/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -357,15 +335,15 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/alarme': typeof AuthenticatedAlarmeRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
-  '/classe': typeof AuthenticatedClasseRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
-  '/cristais': typeof AuthenticatedCristaisRoute
+  '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
-  '/despertar': typeof AuthenticatedDespertarRoute
   '/dormir': typeof AuthenticatedDormirRoute
   '/habitos': typeof AuthenticatedHabitosRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/ia': typeof AuthenticatedIaRoute
   '/jornada': typeof AuthenticatedJornadaRoute
   '/loja': typeof AuthenticatedLojaRoute
@@ -375,26 +353,23 @@ export interface FileRoutesByTo {
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orientador-chat': typeof AuthenticatedOrientadorChatRoute
-  '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
-  '/planos': typeof AuthenticatedPlanosRoute
+  '/plano-alimentar': typeof AuthenticatedPlanoAlimentarRoute
   '/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/progresso': typeof AuthenticatedProgressoRoute
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
-  '/sonhos': typeof AuthenticatedSonhosRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/treino': typeof AuthenticatedTreinoRoute
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
-  '/api/wake-chat': typeof ApiWakeChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
-  '/area/orientador': typeof AuthenticatedAreaOrientadorRoute
-  '/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -407,15 +382,15 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/_authenticated/alarme': typeof AuthenticatedAlarmeRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
-  '/_authenticated/classe': typeof AuthenticatedClasseRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
-  '/_authenticated/cristais': typeof AuthenticatedCristaisRoute
+  '/_authenticated/conversar': typeof AuthenticatedConversarRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
-  '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
   '/_authenticated/dormir': typeof AuthenticatedDormirRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
   '/_authenticated/jornada': typeof AuthenticatedJornadaRoute
   '/_authenticated/loja': typeof AuthenticatedLojaRoute
@@ -425,26 +400,23 @@ export interface FileRoutesById {
   '/_authenticated/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/orientador-chat': typeof AuthenticatedOrientadorChatRoute
-  '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
-  '/_authenticated/planos': typeof AuthenticatedPlanosRoute
+  '/_authenticated/plano-alimentar': typeof AuthenticatedPlanoAlimentarRoute
   '/_authenticated/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
-  '/_authenticated/sonhos': typeof AuthenticatedSonhosRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/treino': typeof AuthenticatedTreinoRoute
   '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
-  '/api/wake-chat': typeof ApiWakeChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
-  '/_authenticated/area/orientador': typeof AuthenticatedAreaOrientadorRoute
-  '/_authenticated/painel-aluno/$id': typeof AuthenticatedPainelAlunoIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -457,15 +429,15 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/alarme'
+    | '/agenda'
+    | '/assistente'
     | '/calendario'
-    | '/classe'
     | '/conquistas'
-    | '/cristais'
+    | '/conversar'
     | '/desafios'
-    | '/despertar'
     | '/dormir'
     | '/habitos'
+    | '/home'
     | '/ia'
     | '/jornada'
     | '/loja'
@@ -475,26 +447,23 @@ export interface FileRouteTypes {
     | '/notificacoes'
     | '/onboarding'
     | '/orientador-chat'
-    | '/painel'
     | '/perfil'
-    | '/planos'
+    | '/plano-alimentar'
     | '/preferencias-notificacoes'
     | '/progresso'
     | '/ritual'
     | '/social'
-    | '/sonhos'
     | '/studio'
+    | '/treino'
     | '/wearables'
     | '/api/chat'
+    | '/api/converse'
     | '/api/ia-capture'
     | '/api/sleep-chat'
-    | '/api/wake-chat'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
-    | '/area/orientador'
-    | '/painel-aluno/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
@@ -505,15 +474,15 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/alarme'
+    | '/agenda'
+    | '/assistente'
     | '/calendario'
-    | '/classe'
     | '/conquistas'
-    | '/cristais'
+    | '/conversar'
     | '/desafios'
-    | '/despertar'
     | '/dormir'
     | '/habitos'
+    | '/home'
     | '/ia'
     | '/jornada'
     | '/loja'
@@ -523,26 +492,23 @@ export interface FileRouteTypes {
     | '/notificacoes'
     | '/onboarding'
     | '/orientador-chat'
-    | '/painel'
     | '/perfil'
-    | '/planos'
+    | '/plano-alimentar'
     | '/preferencias-notificacoes'
     | '/progresso'
     | '/ritual'
     | '/social'
-    | '/sonhos'
     | '/studio'
+    | '/treino'
     | '/wearables'
     | '/api/chat'
+    | '/api/converse'
     | '/api/ia-capture'
     | '/api/sleep-chat'
-    | '/api/wake-chat'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
-    | '/area/orientador'
-    | '/painel-aluno/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   id:
@@ -554,15 +520,15 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/_authenticated/alarme'
+    | '/_authenticated/agenda'
+    | '/_authenticated/assistente'
     | '/_authenticated/calendario'
-    | '/_authenticated/classe'
     | '/_authenticated/conquistas'
-    | '/_authenticated/cristais'
+    | '/_authenticated/conversar'
     | '/_authenticated/desafios'
-    | '/_authenticated/despertar'
     | '/_authenticated/dormir'
     | '/_authenticated/habitos'
+    | '/_authenticated/home'
     | '/_authenticated/ia'
     | '/_authenticated/jornada'
     | '/_authenticated/loja'
@@ -572,26 +538,23 @@ export interface FileRouteTypes {
     | '/_authenticated/notificacoes'
     | '/_authenticated/onboarding'
     | '/_authenticated/orientador-chat'
-    | '/_authenticated/painel'
     | '/_authenticated/perfil'
-    | '/_authenticated/planos'
+    | '/_authenticated/plano-alimentar'
     | '/_authenticated/preferencias-notificacoes'
     | '/_authenticated/progresso'
     | '/_authenticated/ritual'
     | '/_authenticated/social'
-    | '/_authenticated/sonhos'
     | '/_authenticated/studio'
+    | '/_authenticated/treino'
     | '/_authenticated/wearables'
     | '/api/chat'
+    | '/api/converse'
     | '/api/ia-capture'
     | '/api/sleep-chat'
-    | '/api/wake-chat'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/area/$slug'
-    | '/_authenticated/area/orientador'
-    | '/_authenticated/painel-aluno/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
@@ -605,9 +568,9 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiConverseRoute: typeof ApiConverseRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
   ApiSleepChatRoute: typeof ApiSleepChatRoute
-  ApiWakeChatRoute: typeof ApiWakeChatRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -659,13 +622,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/wake-chat': {
-      id: '/api/wake-chat'
-      path: '/api/wake-chat'
-      fullPath: '/api/wake-chat'
-      preLoaderRoute: typeof ApiWakeChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/sleep-chat': {
       id: '/api/sleep-chat'
       path: '/api/sleep-chat'
@@ -678,6 +634,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ia-capture'
       fullPath: '/api/ia-capture'
       preLoaderRoute: typeof ApiIaCaptureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/converse': {
+      id: '/api/converse'
+      path: '/api/converse'
+      fullPath: '/api/converse'
+      preLoaderRoute: typeof ApiConverseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -694,18 +657,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWearablesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/treino': {
+      id: '/_authenticated/treino'
+      path: '/treino'
+      fullPath: '/treino'
+      preLoaderRoute: typeof AuthenticatedTreinoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/studio': {
       id: '/_authenticated/studio'
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/sonhos': {
-      id: '/_authenticated/sonhos'
-      path: '/sonhos'
-      fullPath: '/sonhos'
-      preLoaderRoute: typeof AuthenticatedSonhosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/social': {
@@ -736,11 +699,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPreferenciasNotificacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/planos': {
-      id: '/_authenticated/planos'
-      path: '/planos'
-      fullPath: '/planos'
-      preLoaderRoute: typeof AuthenticatedPlanosRouteImport
+    '/_authenticated/plano-alimentar': {
+      id: '/_authenticated/plano-alimentar'
+      path: '/plano-alimentar'
+      fullPath: '/plano-alimentar'
+      preLoaderRoute: typeof AuthenticatedPlanoAlimentarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/perfil': {
@@ -748,13 +711,6 @@ declare module '@tanstack/react-router' {
       path: '/perfil'
       fullPath: '/perfil'
       preLoaderRoute: typeof AuthenticatedPerfilRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/painel': {
-      id: '/_authenticated/painel'
-      path: '/painel'
-      fullPath: '/painel'
-      preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/orientador-chat': {
@@ -820,6 +776,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/habitos': {
       id: '/_authenticated/habitos'
       path: '/habitos'
@@ -834,13 +797,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDormirRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/despertar': {
-      id: '/_authenticated/despertar'
-      path: '/despertar'
-      fullPath: '/despertar'
-      preLoaderRoute: typeof AuthenticatedDespertarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/desafios': {
       id: '/_authenticated/desafios'
       path: '/desafios'
@@ -848,11 +804,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDesafiosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/cristais': {
-      id: '/_authenticated/cristais'
-      path: '/cristais'
-      fullPath: '/cristais'
-      preLoaderRoute: typeof AuthenticatedCristaisRouteImport
+    '/_authenticated/conversar': {
+      id: '/_authenticated/conversar'
+      path: '/conversar'
+      fullPath: '/conversar'
+      preLoaderRoute: typeof AuthenticatedConversarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/conquistas': {
@@ -862,13 +818,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConquistasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/classe': {
-      id: '/_authenticated/classe'
-      path: '/classe'
-      fullPath: '/classe'
-      preLoaderRoute: typeof AuthenticatedClasseRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/calendario': {
       id: '/_authenticated/calendario'
       path: '/calendario'
@@ -876,11 +825,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/alarme': {
-      id: '/_authenticated/alarme'
-      path: '/alarme'
-      fullPath: '/alarme'
-      preLoaderRoute: typeof AuthenticatedAlarmeRouteImport
+    '/_authenticated/assistente': {
+      id: '/_authenticated/assistente'
+      path: '/assistente'
+      fullPath: '/assistente'
+      preLoaderRoute: typeof AuthenticatedAssistenteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/.well-known/oauth-protected-resource': {
@@ -896,20 +852,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/.mcp/list-tools'
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/painel-aluno/$id': {
-      id: '/_authenticated/painel-aluno/$id'
-      path: '/painel-aluno/$id'
-      fullPath: '/painel-aluno/$id'
-      preLoaderRoute: typeof AuthenticatedPainelAlunoIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/area/orientador': {
-      id: '/_authenticated/area/orientador'
-      path: '/area/orientador'
-      fullPath: '/area/orientador'
-      preLoaderRoute: typeof AuthenticatedAreaOrientadorRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/area/$slug': {
       id: '/_authenticated/area/$slug'
@@ -950,15 +892,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAlarmeRoute: typeof AuthenticatedAlarmeRoute
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
-  AuthenticatedClasseRoute: typeof AuthenticatedClasseRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
-  AuthenticatedCristaisRoute: typeof AuthenticatedCristaisRoute
+  AuthenticatedConversarRoute: typeof AuthenticatedConversarRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
-  AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
   AuthenticatedDormirRoute: typeof AuthenticatedDormirRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
   AuthenticatedJornadaRoute: typeof AuthenticatedJornadaRoute
   AuthenticatedLojaRoute: typeof AuthenticatedLojaRoute
@@ -968,31 +910,28 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNotificacoesRoute: typeof AuthenticatedNotificacoesRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedOrientadorChatRoute: typeof AuthenticatedOrientadorChatRoute
-  AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
-  AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
+  AuthenticatedPlanoAlimentarRoute: typeof AuthenticatedPlanoAlimentarRoute
   AuthenticatedPreferenciasNotificacoesRoute: typeof AuthenticatedPreferenciasNotificacoesRoute
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
-  AuthenticatedSonhosRoute: typeof AuthenticatedSonhosRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedTreinoRoute: typeof AuthenticatedTreinoRoute
   AuthenticatedWearablesRoute: typeof AuthenticatedWearablesRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
-  AuthenticatedAreaOrientadorRoute: typeof AuthenticatedAreaOrientadorRoute
-  AuthenticatedPainelAlunoIdRoute: typeof AuthenticatedPainelAlunoIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAlarmeRoute: AuthenticatedAlarmeRoute,
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
-  AuthenticatedClasseRoute: AuthenticatedClasseRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
-  AuthenticatedCristaisRoute: AuthenticatedCristaisRoute,
+  AuthenticatedConversarRoute: AuthenticatedConversarRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
-  AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
   AuthenticatedDormirRoute: AuthenticatedDormirRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
   AuthenticatedJornadaRoute: AuthenticatedJornadaRoute,
   AuthenticatedLojaRoute: AuthenticatedLojaRoute,
@@ -1002,20 +941,17 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNotificacoesRoute: AuthenticatedNotificacoesRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedOrientadorChatRoute: AuthenticatedOrientadorChatRoute,
-  AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
-  AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
+  AuthenticatedPlanoAlimentarRoute: AuthenticatedPlanoAlimentarRoute,
   AuthenticatedPreferenciasNotificacoesRoute:
     AuthenticatedPreferenciasNotificacoesRoute,
   AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
-  AuthenticatedSonhosRoute: AuthenticatedSonhosRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedTreinoRoute: AuthenticatedTreinoRoute,
   AuthenticatedWearablesRoute: AuthenticatedWearablesRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
-  AuthenticatedAreaOrientadorRoute: AuthenticatedAreaOrientadorRoute,
-  AuthenticatedPainelAlunoIdRoute: AuthenticatedPainelAlunoIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -1031,9 +967,9 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiConverseRoute: ApiConverseRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
   ApiSleepChatRoute: ApiSleepChatRoute,
-  ApiWakeChatRoute: ApiWakeChatRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

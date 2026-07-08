@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
-import { BottomNav } from "./BottomNav";
+import { AiOrb } from "./AiOrb";
+import { BackButton } from "./BackButton";
 import { NotificationsBell } from "./NotificationsBell";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
@@ -41,6 +42,7 @@ export function MobileShell({
 
   return (
     <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-col bg-background">
+      {!hideNav && <BackButton />}
       {!hideNav && <NotificationsBell />}
       <main
         className="flex-1 pb-28"
@@ -48,7 +50,7 @@ export function MobileShell({
       >
         {children}
       </main>
-      {!hideNav && <BottomNav />}
+      {!hideNav && <AiOrb />}
     </div>
   );
 }

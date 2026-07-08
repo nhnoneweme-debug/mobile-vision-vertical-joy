@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/onboarding" });
     }
     if (completed && onOnboarding) {
-      throw redirect({ to: "/mapa" });
+      throw redirect({ to: "/home" });
     }
 
     return { user: data.user };

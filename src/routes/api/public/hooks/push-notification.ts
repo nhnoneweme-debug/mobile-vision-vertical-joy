@@ -5,9 +5,10 @@ export const Route = createFileRoute('/api/public/hooks/push-notification')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = request.headers.get('apikey') ?? request.headers.get('x-api-key')
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY
-        if (!apiKey || !expected || apiKey !== expected) {
+        // Segredo de cron server-only. NÃO usar a chave publishable (é pública).
+        const secret = request.headers.get('x-hooks-secret')
+        const expected = process.env.HOOKS_SECRET
+        if (!expected || !secret || secret !== expected) {
           return new Response(JSON.stringify({ error: 'unauthorized' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },

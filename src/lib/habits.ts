@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { BehavioralClass } from "./behavior";
 
+export type HabitFrequency = "daily" | "weekly" | "monthly";
+
 export type HabitRow = {
   id: string;
   user_id: string;
@@ -8,6 +10,8 @@ export type HabitRow = {
   icon: string;
   area_slug: string;
   target_per_week: number;
+  frequency?: HabitFrequency | null; // novo — pode faltar em hábitos antigos
+  target?: number | null; // meta por período (dia/semana/mês)
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -17,20 +21,71 @@ export type HabitWithMeta = HabitRow & {
   done_today: boolean;
   log_id: string | null;
   streak: number;
-  week_done: number;
+  week_done: number; // compat
+  // Novo — orientado a período:
+  freq: HabitFrequency;
+  period_done: number;
+  period_target: number;
+  resets_in: string; // rótulo curto: "reinicia à meia-noite", "reinicia seg", etc.
 };
 
-function todayISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+export const FREQUENCY_META: Record<HabitFrequency, { label: string; short: string }> = {
+  daily: { label: "Diário", short: "DIA" },
+  weekly: { label: "Semanal", short: "SEM" },
+  monthly: { label: "Mensal", short: "MÊS" },
+};
 
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+function fmt(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function todayISO(): string {
+  return fmt(new Date());
+}
 function weekStartISO(): string {
   const d = new Date();
   const day = d.getDay(); // 0=Sun
   const diff = day === 0 ? -6 : 1 - day; // Monday as start
   d.setDate(d.getDate() + diff);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return fmt(d);
+}
+function monthStartISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
+}
+
+/** Frequência efetiva de um hábito (default: weekly, para compat com antigos). */
+export function habitFreq(h: { frequency?: HabitFrequency | null }): HabitFrequency {
+  return h.frequency ?? "weekly";
+}
+/** Meta por período (default: por semana = target_per_week; diário = 1). */
+export function habitTarget(h: {
+  frequency?: HabitFrequency | null;
+  target?: number | null;
+  target_per_week?: number;
+}): number {
+  const f = habitFreq(h);
+  if (h.target && h.target > 0) return h.target;
+  if (f === "daily") return 1;
+  if (f === "monthly") return Math.max(1, h.target_per_week ?? 1);
+  return Math.max(1, h.target_per_week ?? 7);
+}
+function periodStartISO(f: HabitFrequency): string {
+  return f === "daily" ? todayISO() : f === "weekly" ? weekStartISO() : monthStartISO();
+}
+/** Rótulo "reinicia em…" conforme a frequência. */
+export function resetsInLabel(f: HabitFrequency): string {
+  const now = new Date();
+  if (f === "daily") return "reinicia à meia-noite";
+  if (f === "weekly") {
+    const daysToMon = (8 - (now.getDay() || 7)) % 7 || 7; // dias até próxima segunda
+    return daysToMon === 1 ? "reinicia amanhã" : `reinicia em ${daysToMon}d`;
+  }
+  const first = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const days = Math.ceil((first.getTime() - now.getTime()) / 864e5);
+  return `reinicia em ${days}d`;
 }
 
 export async function listHabits(userId: string): Promise<HabitWithMeta[]> {
@@ -44,28 +99,35 @@ export async function listHabits(userId: string): Promise<HabitWithMeta[]> {
   if (!habits || habits.length === 0) return [];
 
   const today = todayISO();
-  const wstart = weekStartISO();
+  const monthStart = monthStartISO(); // janela mais ampla (cobre dia/semana/mês)
   const ids = habits.map((h) => h.id);
 
   const { data: logs } = await supabase
     .from("habit_logs")
     .select("id, habit_id, log_date")
     .in("habit_id", ids)
-    .gte("log_date", wstart);
+    .gte("log_date", monthStart);
 
   const streaks = await Promise.all(
     ids.map((id) => supabase.rpc("habit_streak", { _habit_id: id })),
   );
 
   return habits.map((h, idx) => {
+    const freq = habitFreq(h as HabitRow);
+    const pStart = periodStartISO(freq);
     const hlogs = (logs ?? []).filter((l) => l.habit_id === h.id);
+    const periodLogs = hlogs.filter((l) => (l.log_date ?? "") >= pStart);
     const todayLog = hlogs.find((l) => l.log_date === today);
     return {
       ...(h as HabitRow),
       done_today: Boolean(todayLog),
       log_id: todayLog?.id ?? null,
       streak: (streaks[idx]?.data as number | null) ?? 0,
-      week_done: hlogs.length,
+      week_done: hlogs.filter((l) => (l.log_date ?? "") >= weekStartISO()).length,
+      freq,
+      period_done: periodLogs.length,
+      period_target: habitTarget(h as HabitRow),
+      resets_in: resetsInLabel(freq),
     };
   });
 }
@@ -89,10 +151,78 @@ export async function toggleHabit(habit: HabitWithMeta, userId: string): Promise
   );
 }
 
+/**
+ * Registra +1 conclusão do hábito no PERÍODO atual (dia/semana/mês conforme a
+ * frequência), respeitando o teto (period_target). Retorna false se já atingiu
+ * o máximo. Grava o log numa data dentro do período (espalha para não colidir).
+ */
+export async function incrementHabit(
+  userId: string,
+  habit: HabitWithMeta,
+): Promise<boolean> {
+  const target = Math.max(1, habit.period_target || habitTarget(habit));
+  if (habit.period_done >= target) return false;
+
+  const freq = habit.freq ?? habitFreq(habit);
+  const start = new Date(`${periodStartISO(freq)}T00:00:00`);
+  if (freq === "weekly") start.setDate(start.getDate() + Math.min(6, habit.period_done));
+  else if (freq === "monthly") start.setDate(start.getDate() + Math.min(27, habit.period_done));
+  // daily: mesmo dia (mock conta múltiplos logs no dia)
+  const log_date = fmt(start);
+
+  const { error } = await supabase.from("habit_logs").insert({
+    habit_id: habit.id,
+    user_id: userId,
+    log_date,
+    status: "completed",
+  });
+  if (error) throw error;
+  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
+  return true;
+}
+
+/**
+ * Desfaz +1 conclusão do hábito no PERÍODO atual (corrige marcação por engano).
+ * Remove o log mais recente do período. Retorna false se não houver nada a desfazer.
+ */
+export async function decrementHabit(
+  userId: string,
+  habit: HabitWithMeta,
+): Promise<boolean> {
+  const freq = habit.freq ?? habitFreq(habit);
+  const pStart = periodStartISO(freq);
+  const { data: logs, error } = await supabase
+    .from("habit_logs")
+    .select("id, log_date")
+    .eq("habit_id", habit.id)
+    .eq("user_id", userId)
+    .gte("log_date", pStart)
+    .order("log_date", { ascending: false });
+  if (error) throw error;
+  if (!logs || logs.length === 0) return false;
+
+  const { error: delErr } = await supabase
+    .from("habit_logs")
+    .delete()
+    .eq("id", (logs[0] as { id: string }).id);
+  if (delErr) throw delErr;
+  return true;
+}
+
 export async function createHabit(
   userId: string,
-  input: { title: string; icon?: string; area_slug?: string; target_per_week?: number },
+  input: {
+    title: string;
+    icon?: string;
+    area_slug?: string;
+    target_per_week?: number;
+    frequency?: HabitFrequency;
+    target?: number;
+  },
 ): Promise<HabitRow> {
+  const frequency = input.frequency ?? "weekly";
+  const target =
+    input.target ?? (frequency === "daily" ? 1 : frequency === "monthly" ? 1 : input.target_per_week ?? 7);
   const { data, error } = await supabase
     .from("habits")
     .insert({
@@ -100,7 +230,9 @@ export async function createHabit(
       title: input.title.trim().slice(0, 60),
       icon: input.icon ?? "flame",
       area_slug: input.area_slug ?? "corpo",
-      target_per_week: input.target_per_week ?? 7,
+      frequency,
+      target,
+      target_per_week: frequency === "weekly" ? target : input.target_per_week ?? 7,
     })
     .select("*")
     .single();

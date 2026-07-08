@@ -42,9 +42,9 @@ export const Route = createFileRoute("/auth")({
       const next = safeNext(search.next);
       if (next) {
         window.location.href = next;
-        throw redirect({ to: "/mapa" });
+        throw redirect({ to: "/home" });
       }
-      throw redirect({ to: "/mapa" });
+      throw redirect({ to: "/home" });
     }
   },
   component: AuthPage,
@@ -175,7 +175,7 @@ function AuthPage() {
         if (nextPath) {
           window.location.href = nextPath;
         } else {
-          navigate({ to: "/mapa", replace: true });
+          navigate({ to: "/home", replace: true });
         }
       }
     } catch (err) {

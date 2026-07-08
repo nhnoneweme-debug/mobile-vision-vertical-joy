@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/api/sleep-chat")({
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
         const token = auth.slice(7);
 
         const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-        if (!LOVABLE_API_KEY) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) return new Response("Missing AI key", { status: 500 });
 
         const supabase = createClient<Database>(
           process.env.SUPABASE_URL!,
@@ -66,8 +66,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
           sleep ? `Sleep log de hoje: bed=${sleep.bed_at ?? "—"} quality=${sleep.quality ?? "—"}` : "Ainda sem sleep log hoje.",
         ].join("\n");
 
-        const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-        const model = gateway("google/gemini-3-flash-preview");
+        const model = createChatModelWithFallback(LOVABLE_API_KEY);
 
         const tools = {
           saveNightRitual: tool({

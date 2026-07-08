@@ -2,104 +2,162 @@
 // MOCK SUPABASE CLIENT — imita a superfície do @supabase/supabase-js usando
 // dados em memória (mock-data.ts). Ativado por VITE_USE_MOCKS=true via client.ts.
 // Objetivo: rodar o app OFFLINE, sem backend e sem login real.
-// Nunca lança erro: toda query resolve { data, error: null }.
+//
+// Suporta filtros (.eq/.neq/.in/.gte/.lte/.is/.ilike/...), ordenação e limite,
+// e PERSISTE inserts/updates/deletes em memória durante a sessão — então criar
+// um hábito/compromisso reflete de verdade nas outras telas.
 // ---------------------------------------------------------------------------
 import { SEED, RPC_RESULTS, MOCK_USER, MOCK_SESSION } from "./mock-data";
 
 type Ok<T> = { data: T; error: null; count: number | null; status: number; statusText: string };
 const ok = <T,>(data: T, count: number | null = null): Ok<T> => ({
-  data,
-  error: null,
-  count,
-  status: 200,
-  statusText: "OK",
+  data, error: null, count, status: 200, statusText: "OK",
 });
+const clone = <T,>(v: T): T =>
+  typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v));
 
-const clone = <T,>(v: T): T => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
+let idSeq = 0;
+function genId(table: string) {
+  idSeq += 1;
+  return `mock-${table}-${Date.now().toString(36)}-${idSeq}`;
+}
 
-// Builder encadeável e "thenable". Ignora filtros (todos os dados já são do mock user)
-// e sempre resolve com o seed da tabela.
+type Filter = { op: string; col: string; val: any };
+
 class MockQuery<T = any> implements PromiseLike<Ok<T>> {
-  private rows: any[];
-  private singleMode: "none" | "maybe" | "single" = "none";
-  private pending: any[] | null = null; // linhas de insert/update/upsert p/ ecoar no .select()
+  private table: string;
+  private store: any[];
+  private filters: Filter[] = [];
+  private orderSpec: { col: string; asc: boolean } | null = null;
+  private limitN: number | null = null;
+  private singleMode: "none" | "maybe" | "one" = "none";
+  private mode: "select" | "insert" | "update" | "delete" = "select";
+  private writeValues: any = null;
+  private inserted: any[] | null = null;
 
   constructor(table: string) {
-    this.rows = clone(SEED[table] ?? []);
+    this.table = table;
+    if (!SEED[table]) SEED[table] = [];
+    this.store = SEED[table];
   }
 
-  // ---- filtros / modificadores: no-ops encadeáveis ----
-  private self() {
+  private f(op: string, col: string, val: any) {
+    this.filters.push({ op, col, val });
     return this;
   }
-  select(_cols?: string, _opts?: any) {
-    if (this.pending) this.rows = this.pending;
-    return this;
-  }
+
+  select() { return this; }
   insert(values: any) {
-    this.pending = Array.isArray(values) ? clone(values) : [clone(values)];
-    this.rows = this.pending;
+    this.mode = "insert";
+    const rows = (Array.isArray(values) ? values : [values]).map((r) => {
+      const row = clone(r);
+      if (row.id == null) row.id = genId(this.table);
+      if (row.created_at == null) row.created_at = new Date().toISOString();
+      if (row.updated_at == null) row.updated_at = new Date().toISOString();
+      // Emula defaults do Postgres para colunas comuns (senão os filtros
+      // .eq("active", true) barram linhas recém-criadas).
+      if (row.active === undefined) row.active = true;
+      return row;
+    });
+    this.store.push(...rows);
+    this.inserted = rows;
     return this;
   }
-  upsert(values: any) {
-    return this.insert(values);
-  }
-  update(values: any) {
-    this.rows = this.rows.map((r) => ({ ...r, ...clone(values) }));
-    this.pending = this.rows;
-    return this;
-  }
-  delete() {
-    this.pending = [];
-    this.rows = [];
-    return this;
-  }
-  eq() { return this.self(); }
-  neq() { return this.self(); }
-  gt() { return this.self(); }
-  gte() { return this.self(); }
-  lt() { return this.self(); }
-  lte() { return this.self(); }
-  like() { return this.self(); }
-  ilike() { return this.self(); }
-  is() { return this.self(); }
-  in() { return this.self(); }
-  contains() { return this.self(); }
-  containedBy() { return this.self(); }
-  range() { return this.self(); }
-  overlaps() { return this.self(); }
-  match() { return this.self(); }
-  filter() { return this.self(); }
-  not() { return this.self(); }
-  or() { return this.self(); }
-  order() { return this.self(); }
-  limit(n?: number) {
-    if (typeof n === "number") this.rows = this.rows.slice(0, n);
-    return this;
-  }
-  textSearch() { return this.self(); }
-  returns() { return this.self(); }
-  throwOnError() { return this.self(); }
-  abortSignal() { return this.self(); }
+  upsert(values: any) { return this.insert(values); }
+  update(values: any) { this.mode = "update"; this.writeValues = clone(values); return this; }
+  delete() { this.mode = "delete"; return this; }
 
-  single() {
-    this.singleMode = "single";
+  eq(col: string, val: any) { return this.f("eq", col, val); }
+  neq(col: string, val: any) { return this.f("neq", col, val); }
+  gt(col: string, val: any) { return this.f("gt", col, val); }
+  gte(col: string, val: any) { return this.f("gte", col, val); }
+  lt(col: string, val: any) { return this.f("lt", col, val); }
+  lte(col: string, val: any) { return this.f("lte", col, val); }
+  is(col: string, val: any) { return this.f("is", col, val); }
+  in(col: string, val: any[]) { return this.f("in", col, val); }
+  like(col: string, val: string) { return this.f("like", col, val); }
+  ilike(col: string, val: string) { return this.f("ilike", col, val); }
+  contains(col: string, val: any) { return this.f("contains", col, val); }
+  match(obj: Record<string, any>) { Object.entries(obj).forEach(([c, v]) => this.f("eq", c, v)); return this; }
+  filter() { return this; }
+  not() { return this; }
+  or() { return this; }
+  overlaps() { return this; }
+  order(col: string, opts?: { ascending?: boolean }) {
+    this.orderSpec = { col, asc: opts?.ascending !== false };
     return this;
   }
-  maybeSingle() {
-    this.singleMode = "maybe";
-    return this;
+  limit(n: number) { this.limitN = n; return this; }
+  range() { return this; }
+  returns() { return this; }
+  throwOnError() { return this; }
+  abortSignal() { return this; }
+  maybeSingle() { this.singleMode = "maybe"; return this; }
+  single() { this.singleMode = "one"; return this; }
+  csv() { return Promise.resolve(ok("")); }
+
+  private matches(row: any): boolean {
+    for (const f of this.filters) {
+      const v = row[f.col];
+      switch (f.op) {
+        case "eq": if (v !== f.val) return false; break;
+        case "neq": if (v === f.val) return false; break;
+        case "gt": if (!(v > f.val)) return false; break;
+        case "gte": if (!(v >= f.val)) return false; break;
+        case "lt": if (!(v < f.val)) return false; break;
+        case "lte": if (!(v <= f.val)) return false; break;
+        case "is": if ((v ?? null) !== (f.val ?? null)) return false; break;
+        case "in": if (!Array.isArray(f.val) || !f.val.includes(v)) return false; break;
+        case "like":
+        case "ilike": {
+          const pat = String(f.val).replace(/%/g, "").toLowerCase();
+          if (!String(v ?? "").toLowerCase().includes(pat)) return false;
+          break;
+        }
+        case "contains":
+          if (Array.isArray(v) && Array.isArray(f.val)) {
+            if (!f.val.every((x: any) => v.includes(x))) return false;
+          }
+          break;
+        default: break;
+      }
+    }
+    return true;
   }
-  csv() {
-    return Promise.resolve(ok(""));
+
+  private run(): any[] {
+    if (this.mode === "insert") return this.inserted ?? [];
+    const matched = this.store.filter((r) => this.matches(r));
+    if (this.mode === "update") {
+      matched.forEach((r) => Object.assign(r, this.writeValues, { updated_at: new Date().toISOString() }));
+      return matched;
+    }
+    if (this.mode === "delete") {
+      for (const r of matched) {
+        const i = this.store.indexOf(r);
+        if (i >= 0) this.store.splice(i, 1);
+      }
+      return matched;
+    }
+    let rows = matched;
+    if (this.orderSpec) {
+      const { col, asc } = this.orderSpec;
+      rows = [...rows].sort((a, b) => {
+        const av = a[col], bv = b[col];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return (av < bv ? -1 : av > bv ? 1 : 0) * (asc ? 1 : -1);
+      });
+    }
+    if (this.limitN != null) rows = rows.slice(0, this.limitN);
+    return rows;
   }
 
   private resolve(): Ok<any> {
-    if (this.singleMode !== "none") {
-      const row = this.rows[0] ?? null;
-      return ok(row, this.rows.length);
-    }
-    return ok(this.rows, this.rows.length);
+    const rows = clone(this.run());
+    if (this.singleMode !== "none") return ok(rows[0] ?? null, rows.length);
+    return ok(rows, rows.length);
   }
 
   then<R1 = Ok<T>, R2 = never>(
@@ -120,10 +178,7 @@ class MockQuery<T = any> implements PromiseLike<Ok<T>> {
 function makeChannel() {
   const ch: any = {
     on: () => ch,
-    subscribe: (cb?: (status: string) => void) => {
-      cb?.("SUBSCRIBED");
-      return ch;
-    },
+    subscribe: (cb?: (status: string) => void) => { cb?.("SUBSCRIBED"); return ch; },
     unsubscribe: async () => "ok",
     send: async () => "ok",
     track: async () => "ok",
@@ -154,7 +209,6 @@ const auth: any = {
   refreshSession: async () => ok({ user: MOCK_USER, session: MOCK_SESSION }),
   exchangeCodeForSession: async () => ok({ user: MOCK_USER, session: MOCK_SESSION }),
   resetPasswordForEmail: async () => ok({}),
-  // Namespace OAuth beta usado pela tela de consentimento MCP.
   oauth: {
     getAuthorizationDetails: async () => ok({ client: { name: "Cliente MCP (mock)" }, redirect_url: "/" }),
     approveAuthorization: async () => ok({ redirect_url: "/" }),

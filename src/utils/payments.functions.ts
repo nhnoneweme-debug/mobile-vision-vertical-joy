@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   type StripeEnv,
   createStripeClient,
@@ -41,12 +42,11 @@ async function resolveOrCreateCustomer(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth]) // exige login; identidade vem do token
   .inputValidator(
     (data: {
       priceId: string;
       quantity?: number;
-      customerEmail?: string;
-      userId?: string;
       returnUrl: string;
       environment: StripeEnv;
     }) => {
@@ -54,21 +54,22 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       return data;
     },
   )
-  .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+  .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
     try {
+      // Identidade SEMPRE do token verificado — nunca do cliente.
+      const userId = context.userId as string;
+      const customerEmail = (context.claims as { email?: string } | undefined)?.email;
+
       const stripe = createStripeClient(data.environment);
       const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
       if (!prices.data.length) throw new Error("Price not found");
       const stripePrice = prices.data[0];
       const isRecurring = stripePrice.type === "recurring";
 
-      const customerId =
-        data.customerEmail || data.userId
-          ? await resolveOrCreateCustomer(stripe, {
-              email: data.customerEmail,
-              userId: data.userId,
-            })
-          : undefined;
+      const customerId = await resolveOrCreateCustomer(stripe, {
+        email: customerEmail,
+        userId,
+      });
 
       let productDescription: string | undefined;
       if (!isRecurring) {
@@ -90,11 +91,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         ...(!isRecurring && {
           payment_intent_data: { description: productDescription },
         }),
-        ...(data.userId && {
-          metadata: { userId: data.userId },
-          ...(isRecurring && {
-            subscription_data: { metadata: { userId: data.userId } },
-          }),
+        metadata: { userId },
+        ...(isRecurring && {
+          subscription_data: { metadata: { userId } },
         }),
       });
 
