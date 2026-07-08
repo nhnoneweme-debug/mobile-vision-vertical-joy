@@ -220,15 +220,6 @@ export async function leaveGroup(groupId: string, userId: string) {
   if (error) throw error;
 }
 
-export async function leaveGroup(groupId: string, userId: string) {
-  const { error } = await supabase
-    .from("group_members")
-    .delete()
-    .eq("group_id", groupId)
-    .eq("user_id", userId);
-  if (error) throw error;
-}
-
 export async function listGroupMembers(groupId: string) {
   const { data, error } = await supabase
     .from("group_members")
