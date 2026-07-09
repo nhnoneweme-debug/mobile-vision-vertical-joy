@@ -261,6 +261,30 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       belief_confrontations: {
         Row: {
           belief: string
@@ -678,6 +702,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_posts: {
+        Row: {
+          author_name: string
+          content: string
+          created_at: string
+          group_id: string
+          id: string
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          author_name?: string
+          content: string
+          created_at?: string
+          group_id: string
+          id?: string
+          kind?: string
+          user_id: string
+        }
+        Update: {
+          author_name?: string
+          content?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_posts_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
@@ -2069,6 +2131,27 @@ export type Database = {
           },
         ]
       }
+      user_health_intake: {
+        Row: {
+          created_at: string
+          data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_inventory: {
         Row: {
           acquired_at: string
@@ -2480,6 +2563,124 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_plans: {
+        Row: {
+          created_at: string
+          days: Json
+          id: string
+          name: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days?: Json
+          id?: string
+          name?: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days?: Json
+          id?: string
+          name?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workout_progress: {
+        Row: {
+          day_key: string
+          done: boolean
+          exercise_key: string
+          id: string
+          plan_id: string
+          progress_date: string
+          series: number
+          updated_at: string
+          user_id: string
+          weights: Json
+        }
+        Insert: {
+          day_key: string
+          done?: boolean
+          exercise_key: string
+          id?: string
+          plan_id: string
+          progress_date?: string
+          series?: number
+          updated_at?: string
+          user_id: string
+          weights?: Json
+        }
+        Update: {
+          day_key?: string
+          done?: boolean
+          exercise_key?: string
+          id?: string
+          plan_id?: string
+          progress_date?: string
+          series?: number
+          updated_at?: string
+          user_id?: string
+          weights?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_progress_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_sessions: {
+        Row: {
+          created_at: string
+          duration_sec: number
+          exercises_done: number
+          exercises_total: number
+          id: string
+          plan_id: string | null
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_sec?: number
+          exercises_done?: number
+          exercises_total?: number
+          id?: string
+          plan_id?: string | null
+          session_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_sec?: number
+          exercises_done?: number
+          exercises_total?: number
+          id?: string
+          plan_id?: string | null
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xp_events: {
         Row: {
           amount: number
@@ -2575,6 +2776,14 @@ export type Database = {
       generate_nudges_all_users: { Args: never; Returns: Json }
       generate_nudges_for: { Args: { _user_id: string }; Returns: number }
       get_group_invite_code: { Args: { _group: string }; Returns: string }
+      group_weekly_ranking: {
+        Args: { _group_id: string }
+        Returns: {
+          display_name: string
+          sessions: number
+          user_id: string
+        }[]
+      }
       habit_streak: { Args: { _habit_id: string }; Returns: number }
       has_active_perk: {
         Args: { _perk_code: string; _user: string }
