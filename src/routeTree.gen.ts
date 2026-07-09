@@ -19,6 +19,7 @@ import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiConverseRouteImport } from './routes/api/converse'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as AuthenticatedWearablesRouteImport } from './routes/_authenticated/wearables'
 import { Route as AuthenticatedTreinoRouteImport } from './routes/_authenticated/treino'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
@@ -101,6 +102,11 @@ const ApiConverseRoute = ApiConverseRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssistantRoute = ApiAssistantRouteImport.update({
+  id: '/api/assistant',
+  path: '/api/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedWearablesRoute = AuthenticatedWearablesRouteImport.update({
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/treino': typeof AuthenticatedTreinoRoute
   '/wearables': typeof AuthenticatedWearablesRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/chat': typeof ApiChatRoute
   '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
@@ -362,6 +369,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/treino': typeof AuthenticatedTreinoRoute
   '/wearables': typeof AuthenticatedWearablesRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/chat': typeof ApiChatRoute
   '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
@@ -409,6 +417,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/treino': typeof AuthenticatedTreinoRoute
   '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/chat': typeof ApiChatRoute
   '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
@@ -456,6 +465,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/treino'
     | '/wearables'
+    | '/api/assistant'
     | '/api/chat'
     | '/api/converse'
     | '/api/ia-capture'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/treino'
     | '/wearables'
+    | '/api/assistant'
     | '/api/chat'
     | '/api/converse'
     | '/api/ia-capture'
@@ -547,6 +558,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/_authenticated/treino'
     | '/_authenticated/wearables'
+    | '/api/assistant'
     | '/api/chat'
     | '/api/converse'
     | '/api/ia-capture'
@@ -567,6 +579,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ApiAssistantRoute: typeof ApiAssistantRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiConverseRoute: typeof ApiConverseRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
@@ -648,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assistant': {
+      id: '/api/assistant'
+      path: '/api/assistant'
+      fullPath: '/api/assistant'
+      preLoaderRoute: typeof ApiAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/wearables': {
@@ -966,6 +986,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ApiAssistantRoute: ApiAssistantRoute,
   ApiChatRoute: ApiChatRoute,
   ApiConverseRoute: ApiConverseRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,

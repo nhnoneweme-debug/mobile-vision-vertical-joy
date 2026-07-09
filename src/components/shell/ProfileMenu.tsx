@@ -35,6 +35,7 @@ const MENU: { section: string; items: NavItem[] }[] = [
   {
     section: "Convívio",
     items: [
+      { to: "/circulo", label: "Círculo", icon: Users },
       { to: "/social", label: "Social", icon: Users },
       { to: "/desafios", label: "Desafios", icon: Swords },
       { to: "/conversar", label: "Conversar (IA)", icon: MessageCircle },

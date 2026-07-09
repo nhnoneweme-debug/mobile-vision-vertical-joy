@@ -115,6 +115,70 @@ export const getDietPlan = createServerFn({ method: "GET" })
     return (meta.diet_plan as DietPlan | undefined) ?? null;
   });
 
+// Salva uma dieta ESTRUTURADA (vinda de uma proposta confirmada pelo usuário).
+// Retorna o plano anterior para permitir "desfazer".
+export const saveDietPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        name: z.string().max(60).optional(),
+        hydration_ml: z.number().int().min(0).max(10000).nullable().optional(),
+        meals: z
+          .array(
+            z.object({
+              time: z.string().max(10).optional(),
+              name: z.string().min(1).max(60),
+              items: z.array(z.string().min(1).max(120)).max(20),
+            }),
+          )
+          .max(12),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ previous: DietPlan | null }> => {
+    const { data: existing } = await context.supabase
+      .from("area_progress")
+      .select("meta")
+      .eq("user_id", context.userId)
+      .eq("area_slug", "cozinha")
+      .maybeSingle();
+    const previous =
+      (((existing?.meta ?? {}) as Record<string, unknown>).diet_plan as DietPlan | undefined) ?? null;
+    const plan: DietPlan = {
+      updated_at: new Date().toISOString(),
+      source_text: data.name ?? "Montado pela IA",
+      meals: data.meals.map((m) => ({ time: m.time ?? "12:00", name: m.name, items: m.items })),
+      hydration_ml: data.hydration_ml ?? null,
+      warnings: [],
+    };
+    await saveDietToArea(context.supabase, context.userId, plan);
+    return { previous };
+  });
+
+// Restaura um plano de dieta anterior (para "desfazer"). plan=null limpa.
+export const restoreDietPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ plan: z.any().nullable() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    if (data.plan) {
+      await saveDietToArea(context.supabase, context.userId, data.plan as DietPlan);
+    } else {
+      const { data: existing } = await context.supabase
+        .from("area_progress")
+        .select("id, meta")
+        .eq("user_id", context.userId)
+        .eq("area_slug", "cozinha")
+        .maybeSingle();
+      if (existing) {
+        const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
+        delete meta.diet_plan;
+        await context.supabase.from("area_progress").update({ meta: meta as never }).eq("id", existing.id);
+      }
+    }
+    return { ok: true };
+  });
+
 export const clearDietPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
