@@ -44,6 +44,7 @@ import { Route as AuthenticatedDormirRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedDesafiosRouteImport } from './routes/_authenticated/desafios'
 import { Route as AuthenticatedConversarRouteImport } from './routes/_authenticated/conversar'
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
+import { Route as AuthenticatedCirculoRouteImport } from './routes/_authenticated/circulo'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authenticated/assistente'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
@@ -233,6 +234,11 @@ const AuthenticatedConquistasRoute = AuthenticatedConquistasRouteImport.update({
   path: '/conquistas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCirculoRoute = AuthenticatedCirculoRouteImport.update({
+  id: '/circulo',
+  path: '/circulo',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
@@ -299,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
+  '/circulo': typeof AuthenticatedCirculoRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
@@ -345,6 +352,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
+  '/circulo': typeof AuthenticatedCirculoRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
+  '/_authenticated/circulo': typeof AuthenticatedCirculoRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/conversar': typeof AuthenticatedConversarRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
@@ -441,6 +450,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/assistente'
     | '/calendario'
+    | '/circulo'
     | '/conquistas'
     | '/conversar'
     | '/desafios'
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/assistente'
     | '/calendario'
+    | '/circulo'
     | '/conquistas'
     | '/conversar'
     | '/desafios'
@@ -534,6 +545,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agenda'
     | '/_authenticated/assistente'
     | '/_authenticated/calendario'
+    | '/_authenticated/circulo'
     | '/_authenticated/conquistas'
     | '/_authenticated/conversar'
     | '/_authenticated/desafios'
@@ -838,6 +850,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConquistasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/circulo': {
+      id: '/_authenticated/circulo'
+      path: '/circulo'
+      fullPath: '/circulo'
+      preLoaderRoute: typeof AuthenticatedCirculoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/calendario': {
       id: '/_authenticated/calendario'
       path: '/calendario'
@@ -915,6 +934,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
+  AuthenticatedCirculoRoute: typeof AuthenticatedCirculoRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedConversarRoute: typeof AuthenticatedConversarRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
@@ -946,6 +966,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
+  AuthenticatedCirculoRoute: AuthenticatedCirculoRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedConversarRoute: AuthenticatedConversarRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
