@@ -71,7 +71,8 @@ function AssistantPage() {
   }, [fnHistory]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, thinking]);
 
-  function push(m: Omit<Msg, "id">) {
+  type MsgInput = Msg extends infer T ? (T extends { id: number } ? Omit<T, "id"> : never) : never;
+  function push(m: MsgInput) {
     setMsgs((prev) => [...prev, { ...(m as Msg), id: nid() }]);
   }
   function patchProposal(id: number, patch: Partial<ProposalMsg>) {
