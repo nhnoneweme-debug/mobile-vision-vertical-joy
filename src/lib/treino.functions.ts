@@ -113,6 +113,42 @@ export const parseTrainingPlan = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
 
+    // Ponte: materializa o plano da IA como um workout_plans real (source 'ai'),
+    // pra aparecer/editar na tela /treino. Resiliente: se a tabela ainda não foi
+    // migrada, ignora sem quebrar o fluxo existente.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = context.supabase as any;
+      const days = parsed.sessions.map((s) => ({
+        id: globalThis.crypto.randomUUID(),
+        dia: s.day,
+        foco: s.focus,
+        exercicios: s.exercises.map((e) => ({
+          id: globalThis.crypto.randomUUID(),
+          nome: e.name,
+          series: e.sets,
+          reps: e.reps,
+          nota: e.notes,
+        })),
+      }));
+      const name = `Treino IA · ${parsed.split}`.slice(0, 60);
+      const { data: existingAi } = await db
+        .from("workout_plans")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("source", "ai")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existingAi?.id) {
+        await db.from("workout_plans").update({ name, days }).eq("id", existingAi.id).eq("user_id", context.userId);
+      } else {
+        await db.from("workout_plans").insert({ user_id: context.userId, name, days, source: "ai" });
+      }
+    } catch {
+      // tabela workout_plans ainda não migrada — ok, segue só com o meta.
+    }
+
     return plan;
   });
 
