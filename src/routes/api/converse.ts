@@ -1,17 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { generateText } from "ai";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
 
 type InMsg = { role: "user" | "assistant"; text: string };
 type Body = { messages?: InMsg[] };
 
 const PERSONA = [
+  CRISIS_CLAUSE,
+  "",
   "Você é a Inteligência Digital do Personal IA — um mentor caloroso, direto e humano.",
   "Fala em português do Brasil, com naturalidade e empatia. Nada de respostas robóticas.",
   "Converse de verdade: acolha, faça uma pergunta quando fizer sentido, seja breve (até ~5 linhas).",
   "Você ajuda a pessoa a criar hábitos e compromissos, organizar treino/dieta e manter a rotina.",
   "Se a pessoa quiser criar algo concreto, oriente-a a dizer no formato: 'criar hábito X' ou 'compromisso treino segunda e quarta às 18h' — que o app monta e pede confirmação.",
   "Não invente dados que você não tem. Não dê diagnóstico médico. Seja gentil.",
+  "",
+  DATA_HEADER,
+  "(sem dados adicionais nesta rota)",
 ].join("\n");
 
 async function replyFrom(messages: InMsg[]): Promise<Response> {
@@ -24,11 +37,15 @@ async function replyFrom(messages: InMsg[]): Promise<Response> {
   const model = createChatModelWithFallback();
   const modelMessages = messages
     .filter((m) => m.text?.trim())
-    .map((m) => ({ role: m.role, content: m.text }));
+    .map((m) => ({
+      role: m.role,
+      content: m.role === "user" ? truncateUserText(m.text) : m.text,
+    }));
   const { text } = await generateText({
     model,
     system: PERSONA,
     messages: modelMessages,
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
   });
   return Response.json({ text: text.trim() });
 }
@@ -42,6 +59,8 @@ export const Route = createFileRoute("/api/converse")({
 
         // Dev (dev:mock): sem auth, direto no modelo.
         if (process.env.VITE_USE_MOCKS === "true") {
+          const rl = checkRateLimit("dev:mock");
+          if (!rl.ok) return rateLimitResponse(rl.message);
           return replyFrom(messages);
         }
 
@@ -57,6 +76,10 @@ export const Route = createFileRoute("/api/converse")({
         );
         const { data: claims, error } = await supabase.auth.getClaims(token);
         if (error || !claims?.claims?.sub) return new Response("Unauthorized", { status: 401 });
+
+        const userId = claims.claims.sub as string;
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
 
         return replyFrom(messages);
       },
