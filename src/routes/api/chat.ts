@@ -50,6 +50,8 @@ export const Route = createFileRoute("/api/chat")({
           const devBody = (await request.json()) as Body;
           const devIncoming = devBody.messages ?? [];
           const devSys = [
+            CRISIS_CLAUSE,
+            "",
             "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
             "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
             "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
@@ -60,7 +62,8 @@ export const Route = createFileRoute("/api/chat")({
           const devResult = streamText({
             model: devModel,
             system: devSys,
-            messages: await convertToModelMessages(devIncoming),
+            messages: await convertToModelMessages(devIncoming.map(truncateUserMessage)),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
           return devResult.toUIMessageStreamResponse({ originalMessages: devIncoming });
         }
