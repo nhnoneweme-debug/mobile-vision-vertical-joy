@@ -46,7 +46,11 @@ export const Route = createFileRoute("/api/sleep-chat")({
         if (cErr || !claims?.claims?.sub) return new Response("Unauthorized", { status: 401 });
         const userId = claims.claims.sub as string;
 
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         const { messages } = (await request.json()) as { messages: UIMessage[] };
+        const safeMessages = messages.map(truncateUserMessage);
         const today = new Date().toISOString().slice(0, 10);
 
         const [{ data: profile }, { data: blocks }, { data: sleep }] = await Promise.all([
