@@ -252,12 +252,13 @@ export const Route = createFileRoute("/api/sleep-chat")({
         const result = streamText({
           model,
           system: sys,
-          messages: await convertToModelMessages(messages),
+          messages: await convertToModelMessages(safeMessages),
           tools,
-          stopWhen: stepCountIs(50),
+          stopWhen: stepCountIs(10),
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
         });
 
-        return result.toUIMessageStreamResponse({ originalMessages: messages });
+        return result.toUIMessageStreamResponse({ originalMessages: safeMessages });
       },
     },
   },
