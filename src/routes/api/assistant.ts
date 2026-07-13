@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/assistant")({
               `Dieta salva: ${hasDiet ? "sim" : "não"}`,
             ].join("\n");
           } catch {
-            contextBlock = "## Contexto\n(não consegui carregar os dados prévios)";
+            contextBlock = `${DATA_HEADER}\n(não consegui carregar os dados prévios)`;
           }
         }
 
