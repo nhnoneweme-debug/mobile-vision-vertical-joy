@@ -44,10 +44,17 @@ export const Route = createFileRoute("/api/ia-capture")({
         if (cerr || !claims?.claims?.sub) return new Response("Unauthorized", { status: 401 });
         const userId = claims.claims.sub as string;
 
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         const body = (await request.json()) as Body;
-        const messages = (body.messages ?? []).filter(
+        const rawMessages = (body.messages ?? []).filter(
           (m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
         );
+        const messages = rawMessages.map((m) => ({
+          ...m,
+          content: m.role === "user" ? truncateUserText(m.content) : m.content,
+        }));
 
         // Ensure / create session.
         let sessionId = body.session_id ?? null;
