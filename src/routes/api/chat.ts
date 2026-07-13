@@ -138,7 +138,7 @@ export const Route = createFileRoute("/api/chat")({
             .from("oracle_messages")
             .select("role,content")
             .eq("user_id", userId)
-            .order("created_at", { ascending: true })
+            .order("created_at", { ascending: false })
             .limit(40),
           supabase
             .from("area_progress")
