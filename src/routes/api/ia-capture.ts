@@ -192,7 +192,8 @@ export const Route = createFileRoute("/api/ia-capture")({
             system: sys,
             messages: messages.map((m) => ({ role: m.role, content: m.content })),
             tools: { propose_writes: propose },
-            stopWhen: stepCountIs(50),
+            stopWhen: stepCountIs(10),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
 
           const text = result.text || (proposals.length ? "Propostas geradas. Confirme abaixo." : "Pronto.");
