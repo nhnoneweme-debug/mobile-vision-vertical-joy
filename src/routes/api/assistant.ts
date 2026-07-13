@@ -2,6 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
 
 type InMsg = { role: "user" | "assistant"; text: string };
 type Body = { messages?: InMsg[] };
@@ -14,6 +22,8 @@ export type Proposal =
   | { id: string; kind: "dieta"; data: { nome?: string; hidratacao_ml?: number; refeicoes: Array<{ horario?: string; nome: string; itens: string[] }> } };
 
 const PERSONA = [
+  CRISIS_CLAUSE,
+  "",
   "Você é a Inteligência Digital do Personal IA — um mentor caloroso, humano e direto, em português do Brasil.",
   "Converse naturalmente, SEM roteiro fixo. Entenda o pedido e só aja quando o usuário pedir algo concreto.",
   "",
@@ -59,8 +69,12 @@ export const Route = createFileRoute("/api/assistant")({
           userId = claims.claims.sub as string;
         }
 
+        const rlKey = userId ?? "dev:mock";
+        const rl = checkRateLimit(rlKey);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         // Contexto: o que já sabemos (pra não perguntar de novo).
-        let contextBlock = "## Contexto\n(ambiente de desenvolvimento — sem dados prévios)";
+        let contextBlock = `${DATA_HEADER}\n(ambiente de desenvolvimento — sem dados prévios)`;
         if (supabase && userId) {
           try {
             const [{ data: profile }, { data: intake }, { data: habits }, { data: missions }, { data: plans }, { data: area }] =
@@ -75,7 +89,8 @@ export const Route = createFileRoute("/api/assistant")({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const hasDiet = !!((area?.meta ?? {}) as any).diet_plan;
             contextBlock = [
-              "## O que já sabemos do usuário (NÃO pergunte de novo o que já estiver aqui)",
+              DATA_HEADER,
+              "(NÃO pergunte de novo o que já estiver aqui)",
               `Perfil: ${JSON.stringify(profile ?? {})}`,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               `Anamnese salva: ${JSON.stringify((intake as any)?.data ?? {})}`,
@@ -88,7 +103,7 @@ export const Route = createFileRoute("/api/assistant")({
               `Dieta salva: ${hasDiet ? "sim" : "não"}`,
             ].join("\n");
           } catch {
-            contextBlock = "## Contexto\n(não consegui carregar os dados prévios)";
+            contextBlock = `${DATA_HEADER}\n(não consegui carregar os dados prévios)`;
           }
         }
 
@@ -166,7 +181,10 @@ export const Route = createFileRoute("/api/assistant")({
         const system = `${PERSONA}\n\n${contextBlock}`;
         const modelMessages = incoming
           .filter((m) => m.text?.trim())
-          .map((m) => ({ role: m.role, content: m.text }));
+          .map((m) => ({
+            role: m.role,
+            content: m.role === "user" ? truncateUserText(m.text) : m.text,
+          }));
 
         let text = "";
         try {
@@ -176,6 +194,7 @@ export const Route = createFileRoute("/api/assistant")({
             messages: modelMessages,
             tools,
             stopWhen: stepCountIs(6),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
           text = res.text?.trim() ?? "";
         } catch {

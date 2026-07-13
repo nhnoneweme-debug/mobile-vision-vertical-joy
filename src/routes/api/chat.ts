@@ -3,6 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
 
 type Body = { messages?: UIMessage[] };
 
@@ -11,6 +19,16 @@ function uiMessageToText(m: UIMessage): string {
     .map((p) => (p.type === "text" ? p.text : ""))
     .join("")
     .trim();
+}
+
+function truncateUserMessage(m: UIMessage): UIMessage {
+  if (m.role !== "user") return m;
+  return {
+    ...m,
+    parts: m.parts.map((p) =>
+      p.type === "text" ? { ...p, text: truncateUserText(p.text) } : p,
+    ),
+  };
 }
 
 export const Route = createFileRoute("/api/chat")({
@@ -32,6 +50,8 @@ export const Route = createFileRoute("/api/chat")({
           const devBody = (await request.json()) as Body;
           const devIncoming = devBody.messages ?? [];
           const devSys = [
+            CRISIS_CLAUSE,
+            "",
             "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
             "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
             "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
@@ -42,7 +62,8 @@ export const Route = createFileRoute("/api/chat")({
           const devResult = streamText({
             model: devModel,
             system: devSys,
-            messages: await convertToModelMessages(devIncoming),
+            messages: await convertToModelMessages(devIncoming.map(truncateUserMessage)),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
           return devResult.toUIMessageStreamResponse({ originalMessages: devIncoming });
         }
@@ -71,9 +92,13 @@ export const Route = createFileRoute("/api/chat")({
         }
         const userId = claims.claims.sub as string;
 
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         const body = (await request.json()) as Body;
         const incoming = body.messages ?? [];
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
+        const lastUserTrunc = lastUser ? truncateUserMessage(lastUser) : undefined;
 
         // Load profile + signals for context.
         const today = new Date().toISOString().slice(0, 10);
@@ -113,7 +138,7 @@ export const Route = createFileRoute("/api/chat")({
             .from("oracle_messages")
             .select("role,content")
             .eq("user_id", userId)
-            .order("created_at", { ascending: true })
+            .order("created_at", { ascending: false })
             .limit(40),
           supabase
             .from("area_progress")
@@ -182,9 +207,9 @@ export const Route = createFileRoute("/api/chat")({
           (recentMissionLogs ?? []).filter((l) => l.done).map((l) => l.mission_id),
         );
 
-        // Persist the user message right away.
-        if (lastUser) {
-          const text = uiMessageToText(lastUser);
+        // Persist the user message right away (já truncada).
+        if (lastUserTrunc) {
+          const text = uiMessageToText(lastUserTrunc);
           if (text) {
             await supabase.from("oracle_messages").insert({
               user_id: userId,
@@ -195,6 +220,8 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const sys = [
+          CRISIS_CLAUSE,
+          "",
           "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
           "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
           "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
@@ -202,7 +229,7 @@ export const Route = createFileRoute("/api/chat")({
           "Sugira sempre próximo passo concreto (missão, hábito, ajuste no treino/dieta).",
           "Respostas curtas (até ~6 linhas), markdown leve permitido. Sem listas gigantes.",
           "",
-          "## Contexto do jogador",
+          DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"}`,
           `Classe: ${profile?.behavioral_class ?? "executor"}`,
           `Objetivo: ${profile?.goal ?? "—"} | Nível interno: ${profile?.level ?? "—"}`,
@@ -267,15 +294,17 @@ export const Route = createFileRoute("/api/chat")({
         ].filter(Boolean).join("\n");
 
 
-        // Build conversation: persisted history + the new incoming user turn.
-        const historyMessages: UIMessage[] = (history ?? []).map((h, i) => ({
+        // Build conversation: persisted history (mais recentes → mais antigas, invertido)
+        // + o novo turno do usuário (já truncado).
+        const historyOrdered = (history ?? []).slice().reverse();
+        const historyMessages: UIMessage[] = historyOrdered.map((h, i) => ({
           id: `h-${i}`,
           role: h.role as "user" | "assistant",
           parts: [{ type: "text", text: h.content as string }],
         }));
         const merged: UIMessage[] = [
           ...historyMessages,
-          ...(lastUser ? [lastUser] : []),
+          ...(lastUserTrunc ? [lastUserTrunc] : []),
         ];
 
         const model = createChatModelWithFallback(LOVABLE_API_KEY);
@@ -283,6 +312,7 @@ export const Route = createFileRoute("/api/chat")({
           model,
           system: sys,
           messages: await convertToModelMessages(merged),
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
         });
 
         return result.toUIMessageStreamResponse({

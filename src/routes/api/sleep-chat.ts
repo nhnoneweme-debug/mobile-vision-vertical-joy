@@ -4,6 +4,24 @@ import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage }
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
+
+function truncateUserMessage(m: UIMessage): UIMessage {
+  if (m.role !== "user") return m;
+  return {
+    ...m,
+    parts: m.parts.map((p) =>
+      p.type === "text" ? { ...p, text: truncateUserText(p.text) } : p,
+    ),
+  };
+}
 
 export const Route = createFileRoute("/api/sleep-chat")({
   server: {
@@ -28,7 +46,11 @@ export const Route = createFileRoute("/api/sleep-chat")({
         if (cErr || !claims?.claims?.sub) return new Response("Unauthorized", { status: 401 });
         const userId = claims.claims.sub as string;
 
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         const { messages } = (await request.json()) as { messages: UIMessage[] };
+        const safeMessages = messages.map(truncateUserMessage);
         const today = new Date().toISOString().slice(0, 10);
 
         const [{ data: profile }, { data: blocks }, { data: sleep }] = await Promise.all([
@@ -52,6 +74,8 @@ export const Route = createFileRoute("/api/sleep-chat")({
         ]);
 
         const sys = [
+          CRISIS_CLAUSE,
+          "",
           "Você é a Companheira do Sono — voz quente, calma, presente.",
           "Conduza o ritual da noite: escute como foi o dia, faça perguntas curtas pra extrair fatos,",
           "e organize os dados no banco usando as ferramentas. O usuário faz o DUMP, você organiza.",
@@ -61,6 +85,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
           "Sempre que detectar algo registrável (hábito completado, missão futura, meta, ideia), chame a tool correspondente — sem pedir confirmação pra cada item, só resuma no fim.",
           "Respostas curtas (1-3 linhas), pt-BR, markdown leve, tom mentor próximo.",
           "",
+          DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"} | Classe: ${profile?.behavioral_class ?? "—"} | Streak: ${profile?.streak ?? 0}`,
           `Blocos do dia hoje: ${(blocks ?? []).map((b) => `${b.kind}${b.completed ? "✓" : "·"}`).join(", ") || "nenhum"}`,
           sleep ? `Sleep log de hoje: bed=${sleep.bed_at ?? "—"} quality=${sleep.quality ?? "—"}` : "Ainda sem sleep log hoje.",
@@ -149,18 +174,20 @@ export const Route = createFileRoute("/api/sleep-chat")({
               "Registra que um hábito foi completado hoje. Se o hábito não existir, cria automaticamente.",
             inputSchema: z.object({ habit_title: z.string().min(1) }),
             execute: async ({ habit_title }) => {
+              const normalized = habit_title.trim().toLowerCase();
+              if (!normalized) return { ok: false, error: "titulo_vazio" };
               let { data: h } = await supabase
                 .from("habits")
                 .select("id")
                 .eq("user_id", userId)
-                .ilike("title", habit_title)
+                .ilike("title", normalized)
                 .maybeSingle();
               if (!h) {
                 const { data: created, error } = await supabase
                   .from("habits")
                   .insert({
                     user_id: userId,
-                    title: habit_title,
+                    title: normalized,
                     target_per_week: 3,
                     active: true,
                     area_slug: "geral",
@@ -225,12 +252,13 @@ export const Route = createFileRoute("/api/sleep-chat")({
         const result = streamText({
           model,
           system: sys,
-          messages: await convertToModelMessages(messages),
+          messages: await convertToModelMessages(safeMessages),
           tools,
-          stopWhen: stepCountIs(50),
+          stopWhen: stepCountIs(10),
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
         });
 
-        return result.toUIMessageStreamResponse({ originalMessages: messages });
+        return result.toUIMessageStreamResponse({ originalMessages: safeMessages });
       },
     },
   },

@@ -11,6 +11,14 @@ import {
   type Proposal,
 } from "@/lib/ia-capture";
 import { AUTO_APPLY_ACTIONS, applyAction } from "@/lib/ia-capture-apply";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 type Body = { session_id?: string | null; messages: ChatMsg[] };
@@ -36,10 +44,17 @@ export const Route = createFileRoute("/api/ia-capture")({
         if (cerr || !claims?.claims?.sub) return new Response("Unauthorized", { status: 401 });
         const userId = claims.claims.sub as string;
 
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         const body = (await request.json()) as Body;
-        const messages = (body.messages ?? []).filter(
+        const rawMessages = (body.messages ?? []).filter(
           (m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
         );
+        const messages = rawMessages.map((m) => ({
+          ...m,
+          content: m.role === "user" ? truncateUserText(m.content) : m.content,
+        }));
 
         // Ensure / create session.
         let sessionId = body.session_id ?? null;
@@ -138,6 +153,8 @@ export const Route = createFileRoute("/api/ia-capture")({
         });
 
         const sys = [
+          CRISIS_CLAUSE,
+          "",
           "Você é a IA-Coletora do Personal IA — uma mentora que ESCUTA dumps do jogador (texto, áudio ou vídeo transcritos) e ORGANIZA os dados nas estruturas do jogo.",
           "Português do Brasil, tom firme e breve. NÃO peça que o jogador preencha formulários — você extrai e propõe as escritas.",
           "Use a ferramenta `propose_writes` SEMPRE que identificar algo que deva virar registro. Cada chamada cria uma PROPOSTA pendente que o jogador confirma ou rejeita.",
@@ -158,7 +175,7 @@ export const Route = createFileRoute("/api/ia-capture")({
           "Apenas profile.update e goal.create exigem confirmação do usuário.",
           "Quando salvar algo automaticamente, diga o que foi salvo de forma curta (1 linha por item).",
           "",
-          "## Contexto do jogador",
+          DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"} · Classe: ${profile?.behavioral_class ?? "—"} · Trilha: ${profile?.level_track ?? "—"}`,
           `Objetivo: ${profile?.goal ?? "—"} · XP: ${profile?.xp ?? 0} · Streak: ${profile?.streak ?? 0}`,
           `Tempo/dia: ${profile?.time_per_day_min ?? "—"}min · Dias/sem: ${profile?.days_per_week ?? "—"}`,
@@ -175,7 +192,8 @@ export const Route = createFileRoute("/api/ia-capture")({
             system: sys,
             messages: messages.map((m) => ({ role: m.role, content: m.content })),
             tools: { propose_writes: propose },
-            stopWhen: stepCountIs(50),
+            stopWhen: stepCountIs(10),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
 
           const text = result.text || (proposals.length ? "Propostas geradas. Confirme abaixo." : "Pronto.");
