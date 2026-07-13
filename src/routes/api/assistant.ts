@@ -2,6 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
 
 type InMsg = { role: "user" | "assistant"; text: string };
 type Body = { messages?: InMsg[] };
