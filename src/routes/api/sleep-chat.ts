@@ -4,6 +4,24 @@ import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage }
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
+
+function truncateUserMessage(m: UIMessage): UIMessage {
+  if (m.role !== "user") return m;
+  return {
+    ...m,
+    parts: m.parts.map((p) =>
+      p.type === "text" ? { ...p, text: truncateUserText(p.text) } : p,
+    ),
+  };
+}
 
 export const Route = createFileRoute("/api/sleep-chat")({
   server: {
