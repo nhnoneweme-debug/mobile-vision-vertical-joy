@@ -207,9 +207,9 @@ export const Route = createFileRoute("/api/chat")({
           (recentMissionLogs ?? []).filter((l) => l.done).map((l) => l.mission_id),
         );
 
-        // Persist the user message right away.
-        if (lastUser) {
-          const text = uiMessageToText(lastUser);
+        // Persist the user message right away (já truncada).
+        if (lastUserTrunc) {
+          const text = uiMessageToText(lastUserTrunc);
           if (text) {
             await supabase.from("oracle_messages").insert({
               user_id: userId,
@@ -220,6 +220,8 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const sys = [
+          CRISIS_CLAUSE,
+          "",
           "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
           "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
           "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
@@ -227,7 +229,7 @@ export const Route = createFileRoute("/api/chat")({
           "Sugira sempre próximo passo concreto (missão, hábito, ajuste no treino/dieta).",
           "Respostas curtas (até ~6 linhas), markdown leve permitido. Sem listas gigantes.",
           "",
-          "## Contexto do jogador",
+          DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"}`,
           `Classe: ${profile?.behavioral_class ?? "executor"}`,
           `Objetivo: ${profile?.goal ?? "—"} | Nível interno: ${profile?.level ?? "—"}`,
