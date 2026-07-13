@@ -69,6 +69,10 @@ export const Route = createFileRoute("/api/assistant")({
           userId = claims.claims.sub as string;
         }
 
+        const rlKey = userId ?? "dev:mock";
+        const rl = checkRateLimit(rlKey);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         // Contexto: o que já sabemos (pra não perguntar de novo).
         let contextBlock = "## Contexto\n(ambiente de desenvolvimento — sem dados prévios)";
         if (supabase && userId) {
