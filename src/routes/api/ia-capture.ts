@@ -11,6 +11,14 @@ import {
   type Proposal,
 } from "@/lib/ia-capture";
 import { AUTO_APPLY_ACTIONS, applyAction } from "@/lib/ia-capture-apply";
+import {
+  CRISIS_CLAUSE,
+  DATA_HEADER,
+  MAX_OUTPUT_TOKENS,
+  checkRateLimit,
+  rateLimitResponse,
+  truncateUserText,
+} from "@/lib/ai-guardrails.server";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 type Body = { session_id?: string | null; messages: ChatMsg[] };
