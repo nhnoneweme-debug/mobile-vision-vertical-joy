@@ -74,7 +74,7 @@ export const Route = createFileRoute("/api/assistant")({
         if (!rl.ok) return rateLimitResponse(rl.message);
 
         // Contexto: o que já sabemos (pra não perguntar de novo).
-        let contextBlock = "## Contexto\n(ambiente de desenvolvimento — sem dados prévios)";
+        let contextBlock = `${DATA_HEADER}\n(ambiente de desenvolvimento — sem dados prévios)`;
         if (supabase && userId) {
           try {
             const [{ data: profile }, { data: intake }, { data: habits }, { data: missions }, { data: plans }, { data: area }] =
