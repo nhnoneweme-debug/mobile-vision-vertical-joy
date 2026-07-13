@@ -89,7 +89,8 @@ export const Route = createFileRoute("/api/assistant")({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const hasDiet = !!((area?.meta ?? {}) as any).diet_plan;
             contextBlock = [
-              "## O que já sabemos do usuário (NÃO pergunte de novo o que já estiver aqui)",
+              DATA_HEADER,
+              "(NÃO pergunte de novo o que já estiver aqui)",
               `Perfil: ${JSON.stringify(profile ?? {})}`,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               `Anamnese salva: ${JSON.stringify((intake as any)?.data ?? {})}`,
