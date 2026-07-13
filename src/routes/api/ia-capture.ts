@@ -175,7 +175,7 @@ export const Route = createFileRoute("/api/ia-capture")({
           "Apenas profile.update e goal.create exigem confirmação do usuário.",
           "Quando salvar algo automaticamente, diga o que foi salvo de forma curta (1 linha por item).",
           "",
-          "## Contexto do jogador",
+          DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"} · Classe: ${profile?.behavioral_class ?? "—"} · Trilha: ${profile?.level_track ?? "—"}`,
           `Objetivo: ${profile?.goal ?? "—"} · XP: ${profile?.xp ?? 0} · Streak: ${profile?.streak ?? 0}`,
           `Tempo/dia: ${profile?.time_per_day_min ?? "—"}min · Dias/sem: ${profile?.days_per_week ?? "—"}`,
