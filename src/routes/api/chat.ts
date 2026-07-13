@@ -294,15 +294,17 @@ export const Route = createFileRoute("/api/chat")({
         ].filter(Boolean).join("\n");
 
 
-        // Build conversation: persisted history + the new incoming user turn.
-        const historyMessages: UIMessage[] = (history ?? []).map((h, i) => ({
+        // Build conversation: persisted history (mais recentes → mais antigas, invertido)
+        // + o novo turno do usuário (já truncado).
+        const historyOrdered = (history ?? []).slice().reverse();
+        const historyMessages: UIMessage[] = historyOrdered.map((h, i) => ({
           id: `h-${i}`,
           role: h.role as "user" | "assistant",
           parts: [{ type: "text", text: h.content as string }],
         }));
         const merged: UIMessage[] = [
           ...historyMessages,
-          ...(lastUser ? [lastUser] : []),
+          ...(lastUserTrunc ? [lastUserTrunc] : []),
         ];
 
         const model = createChatModelWithFallback(LOVABLE_API_KEY);
@@ -310,6 +312,7 @@ export const Route = createFileRoute("/api/chat")({
           model,
           system: sys,
           messages: await convertToModelMessages(merged),
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
         });
 
         return result.toUIMessageStreamResponse({
