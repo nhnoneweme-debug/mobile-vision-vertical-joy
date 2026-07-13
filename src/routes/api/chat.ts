@@ -92,9 +92,13 @@ export const Route = createFileRoute("/api/chat")({
         }
         const userId = claims.claims.sub as string;
 
+        const rl = checkRateLimit(userId);
+        if (!rl.ok) return rateLimitResponse(rl.message);
+
         const body = (await request.json()) as Body;
         const incoming = body.messages ?? [];
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
+        const lastUserTrunc = lastUser ? truncateUserMessage(lastUser) : undefined;
 
         // Load profile + signals for context.
         const today = new Date().toISOString().slice(0, 10);
