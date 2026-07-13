@@ -74,6 +74,8 @@ export const Route = createFileRoute("/api/sleep-chat")({
         ]);
 
         const sys = [
+          CRISIS_CLAUSE,
+          "",
           "Você é a Companheira do Sono — voz quente, calma, presente.",
           "Conduza o ritual da noite: escute como foi o dia, faça perguntas curtas pra extrair fatos,",
           "e organize os dados no banco usando as ferramentas. O usuário faz o DUMP, você organiza.",
@@ -83,6 +85,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
           "Sempre que detectar algo registrável (hábito completado, missão futura, meta, ideia), chame a tool correspondente — sem pedir confirmação pra cada item, só resuma no fim.",
           "Respostas curtas (1-3 linhas), pt-BR, markdown leve, tom mentor próximo.",
           "",
+          DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"} | Classe: ${profile?.behavioral_class ?? "—"} | Streak: ${profile?.streak ?? 0}`,
           `Blocos do dia hoje: ${(blocks ?? []).map((b) => `${b.kind}${b.completed ? "✓" : "·"}`).join(", ") || "nenhum"}`,
           sleep ? `Sleep log de hoje: bed=${sleep.bed_at ?? "—"} quality=${sleep.quality ?? "—"}` : "Ainda sem sleep log hoje.",
