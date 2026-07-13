@@ -174,18 +174,20 @@ export const Route = createFileRoute("/api/sleep-chat")({
               "Registra que um hábito foi completado hoje. Se o hábito não existir, cria automaticamente.",
             inputSchema: z.object({ habit_title: z.string().min(1) }),
             execute: async ({ habit_title }) => {
+              const normalized = habit_title.trim().toLowerCase();
+              if (!normalized) return { ok: false, error: "titulo_vazio" };
               let { data: h } = await supabase
                 .from("habits")
                 .select("id")
                 .eq("user_id", userId)
-                .ilike("title", habit_title)
+                .ilike("title", normalized)
                 .maybeSingle();
               if (!h) {
                 const { data: created, error } = await supabase
                   .from("habits")
                   .insert({
                     user_id: userId,
-                    title: habit_title,
+                    title: normalized,
                     target_per_week: 3,
                     active: true,
                     area_slug: "geral",
