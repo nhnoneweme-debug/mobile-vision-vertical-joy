@@ -181,7 +181,10 @@ export const Route = createFileRoute("/api/assistant")({
         const system = `${PERSONA}\n\n${contextBlock}`;
         const modelMessages = incoming
           .filter((m) => m.text?.trim())
-          .map((m) => ({ role: m.role, content: m.text }));
+          .map((m) => ({
+            role: m.role,
+            content: m.role === "user" ? truncateUserText(m.text) : m.text,
+          }));
 
         let text = "";
         try {
@@ -191,6 +194,7 @@ export const Route = createFileRoute("/api/assistant")({
             messages: modelMessages,
             tools,
             stopWhen: stepCountIs(6),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
           text = res.text?.trim() ?? "";
         } catch {
