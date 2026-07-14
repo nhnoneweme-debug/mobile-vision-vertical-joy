@@ -2903,39 +2903,7 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          behavioral_class: string | null
-          display_name: string | null
-          friend_code: string | null
-          id: string | null
-          level: string | null
-          level_track: string | null
-          streak: number | null
-          xp: number | null
-        }
-        Insert: {
-          behavioral_class?: string | null
-          display_name?: string | null
-          friend_code?: string | null
-          id?: string | null
-          level?: string | null
-          level_track?: string | null
-          streak?: number | null
-          xp?: number | null
-        }
-        Update: {
-          behavioral_class?: string | null
-          display_name?: string | null
-          friend_code?: string | null
-          id?: string | null
-          level?: string | null
-          level_track?: string | null
-          streak?: number | null
-          xp?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       calendar_activity: {
@@ -3021,6 +2989,13 @@ export type Database = {
       join_group_by_invite: { Args: { _code: string }; Returns: string }
       orientador_student_snapshot: { Args: { _student: string }; Returns: Json }
       player_level: { Args: { _xp: number }; Returns: number }
+      public_profiles_lookup: {
+        Args: { _ids: string[] }
+        Returns: {
+          display_name: string
+          id: string
+        }[]
+      }
       purchase_shop_item: { Args: { _item_id: string }; Returns: Json }
       recalc_challenge_progress: {
         Args: { _challenge: string; _user: string }
