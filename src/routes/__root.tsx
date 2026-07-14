@@ -147,8 +147,17 @@ function RootComponent() {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
         return;
       }
-      router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      // A tela /auth já navega explicitamente após login/cadastro/SSO (para
+      // /onboarding, /home ou `next`). Invalidar o router aqui também dispara
+      // uma segunda navegação concorrente (via beforeLoad de /auth e /) que
+      // corre em paralelo com esse navigate() explícito — a corrida derrubava
+      // a página logo após o cadastro ("Uncaught undefined" no /onboarding).
+      // Fora de /auth (ex.: sessão sincronizada de outra aba) seguimos invalidando.
+      if (event === "SIGNED_IN" && router.state.location.pathname.startsWith("/auth")) {
+        return;
+      }
+      router.invalidate();
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
