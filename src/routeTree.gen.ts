@@ -55,6 +55,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
 import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
+import { Route as AuthenticatedTreinoHistoricoSessionIdRouteImport } from './routes/_authenticated/treino.historico.$sessionId'
 import { Route as AuthenticatedCirculoDesafioIdRouteImport } from './routes/_authenticated/circulo.desafio.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -295,6 +296,12 @@ const ApiPublicHooksGenerateNudgesRoute =
     path: '/api/public/hooks/generate-nudges',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedTreinoHistoricoSessionIdRoute =
+  AuthenticatedTreinoHistoricoSessionIdRouteImport.update({
+    id: '/historico/$sessionId',
+    path: '/historico/$sessionId',
+    getParentRoute: () => AuthenticatedTreinoRoute,
+  } as any)
 const AuthenticatedCirculoDesafioIdRoute =
   AuthenticatedCirculoDesafioIdRouteImport.update({
     id: '/desafio/$id',
@@ -335,7 +342,7 @@ export interface FileRoutesByFullPath {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/studio': typeof AuthenticatedStudioRoute
-  '/treino': typeof AuthenticatedTreinoRoute
+  '/treino': typeof AuthenticatedTreinoRouteWithChildren
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/chat': typeof ApiChatRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
+  '/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -383,7 +391,7 @@ export interface FileRoutesByTo {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/studio': typeof AuthenticatedStudioRoute
-  '/treino': typeof AuthenticatedTreinoRoute
+  '/treino': typeof AuthenticatedTreinoRouteWithChildren
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/chat': typeof ApiChatRoute
@@ -395,6 +403,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
+  '/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -433,7 +442,7 @@ export interface FileRoutesById {
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
-  '/_authenticated/treino': typeof AuthenticatedTreinoRoute
+  '/_authenticated/treino': typeof AuthenticatedTreinoRouteWithChildren
   '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/chat': typeof ApiChatRoute
@@ -445,6 +454,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
   '/_authenticated/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
+  '/_authenticated/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -495,6 +505,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
     | '/circulo/desafio/$id'
+    | '/treino/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
@@ -543,6 +554,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
     | '/circulo/desafio/$id'
+    | '/treino/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   id:
@@ -592,6 +604,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/area/$slug'
     | '/_authenticated/circulo/desafio/$id'
+    | '/_authenticated/treino/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
@@ -940,6 +953,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksGenerateNudgesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/treino/historico/$sessionId': {
+      id: '/_authenticated/treino/historico/$sessionId'
+      path: '/historico/$sessionId'
+      fullPath: '/treino/historico/$sessionId'
+      preLoaderRoute: typeof AuthenticatedTreinoHistoricoSessionIdRouteImport
+      parentRoute: typeof AuthenticatedTreinoRoute
+    }
     '/_authenticated/circulo/desafio/$id': {
       id: '/_authenticated/circulo/desafio/$id'
       path: '/desafio/$id'
@@ -960,6 +980,18 @@ const AuthenticatedCirculoRouteChildren: AuthenticatedCirculoRouteChildren = {
 
 const AuthenticatedCirculoRouteWithChildren =
   AuthenticatedCirculoRoute._addFileChildren(AuthenticatedCirculoRouteChildren)
+
+interface AuthenticatedTreinoRouteChildren {
+  AuthenticatedTreinoHistoricoSessionIdRoute: typeof AuthenticatedTreinoHistoricoSessionIdRoute
+}
+
+const AuthenticatedTreinoRouteChildren: AuthenticatedTreinoRouteChildren = {
+  AuthenticatedTreinoHistoricoSessionIdRoute:
+    AuthenticatedTreinoHistoricoSessionIdRoute,
+}
+
+const AuthenticatedTreinoRouteWithChildren =
+  AuthenticatedTreinoRoute._addFileChildren(AuthenticatedTreinoRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
@@ -988,7 +1020,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
-  AuthenticatedTreinoRoute: typeof AuthenticatedTreinoRoute
+  AuthenticatedTreinoRoute: typeof AuthenticatedTreinoRouteWithChildren
   AuthenticatedWearablesRoute: typeof AuthenticatedWearablesRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
 }
@@ -1021,7 +1053,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
-  AuthenticatedTreinoRoute: AuthenticatedTreinoRoute,
+  AuthenticatedTreinoRoute: AuthenticatedTreinoRouteWithChildren,
   AuthenticatedWearablesRoute: AuthenticatedWearablesRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
 }

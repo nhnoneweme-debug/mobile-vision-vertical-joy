@@ -12,6 +12,7 @@ import {
   type WorkoutPlan, type WorkoutDay, type WorkoutSession,
 } from "@/lib/workouts.functions";
 import { PostWorkoutCheckinSheet } from "@/components/circulo/PostWorkoutCheckinSheet";
+import { HistoryList } from "@/components/treino/HistoryList";
 
 export const Route = createFileRoute("/_authenticated/treino")({
   head: () => ({ meta: [{ title: "Treino — Personal IA" }] }),
@@ -391,22 +392,13 @@ function TreinoPage() {
                     </section>
                   )}
 
-                  {sessions.length > 0 && (
-                    <section className="px-4 pt-6">
-                      <header className="mb-2 flex items-center gap-3">
-                        <h2 className="font-display text-sm tracking-[0.3em] text-foreground">HISTÓRICO</h2>
-                        <span className="h-px flex-1 bg-border" />
-                      </header>
-                      <div className="space-y-1.5">
-                        {sessions.map((s) => (
-                          <div key={s.id} className="flex items-center justify-between rounded-xl border border-border bg-charcoal-900 px-3 py-2 text-sm">
-                            <span className="text-muted-foreground">{s.session_date}</span>
-                            <span className="text-foreground">{s.exercises_done}/{s.exercises_total} · {fmtDur(s.duration_sec)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                  <section className="px-4 pt-6">
+                    <header className="mb-3 flex items-center gap-3">
+                      <h2 className="font-display text-sm tracking-[0.3em] text-foreground">HISTÓRICO</h2>
+                      <span className="h-px flex-1 bg-border" />
+                    </header>
+                    <HistoryList />
+                  </section>
                 </>
               )}
             </>
