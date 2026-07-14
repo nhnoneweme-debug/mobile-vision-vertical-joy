@@ -462,6 +462,12 @@ function TreinoPage() {
         </div>
       )}
 
+      <PostWorkoutCheckinSheet
+        open={checkinSession !== null}
+        workoutSessionId={checkinSession}
+        onClose={() => setCheckinSession(null)}
+      />
+
       <div className="h-24" />
     </MobileShell>
   );
