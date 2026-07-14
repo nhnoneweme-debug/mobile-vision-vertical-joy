@@ -12,6 +12,7 @@ import {
   type WorkoutPlan, type WorkoutDay, type WorkoutSession,
 } from "@/lib/workouts.functions";
 import { PostWorkoutCheckinSheet } from "@/components/circulo/PostWorkoutCheckinSheet";
+import { HistoryList } from "@/components/treino/HistoryList";
 
 export const Route = createFileRoute("/_authenticated/treino")({
   head: () => ({ meta: [{ title: "Treino — Personal IA" }] }),
