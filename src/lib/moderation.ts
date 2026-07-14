@@ -54,10 +54,11 @@ export async function listMyBlocks(): Promise<
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.blocked_id);
   const { data: profs } = await supabase
-    .from("public_profiles")
-    .select("id, display_name")
-    .in("id", ids);
-  const map = new Map((profs ?? []).map((p) => [p.id, p.display_name]));
+    .rpc("public_profiles_lookup", { _ids: ids });
+  const map = new Map(
+    ((profs ?? []) as { id: string; display_name: string | null }[]).map((p) => [p.id, p.display_name]),
+  );
+
   return rows.map((r) => ({
     blocked_id: r.blocked_id,
     display_name: map.get(r.blocked_id) ?? null,
