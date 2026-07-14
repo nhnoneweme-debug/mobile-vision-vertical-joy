@@ -675,6 +675,45 @@ export type Database = {
         }
         Relationships: []
       }
+      food_log_entries: {
+        Row: {
+          barcode: string | null
+          created_at: string
+          id: string
+          kcal: number
+          log_date: string
+          logged_at: string
+          name: string
+          quantity_text: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          barcode?: string | null
+          created_at?: string
+          id?: string
+          kcal: number
+          log_date?: string
+          logged_at?: string
+          name: string
+          quantity_text?: string | null
+          source?: string
+          user_id: string
+        }
+        Update: {
+          barcode?: string | null
+          created_at?: string
+          id?: string
+          kcal?: number
+          log_date?: string
+          logged_at?: string
+          name?: string
+          quantity_text?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_id: string
