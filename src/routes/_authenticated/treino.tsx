@@ -60,6 +60,7 @@ function TreinoPage() {
   const [weightModal, setWeightModal] = useState<{ exId: string; exName: string; target: number } | null>(null);
   const [weightInput, setWeightInput] = useState("");
   const [finishOpen, setFinishOpen] = useState(false);
+  const [checkinSession, setCheckinSession] = useState<string | null>(null);
 
   const activePlan = plans?.find((p) => p.id === activeId) ?? null;
   const activeDay: WorkoutDay | null = activePlan?.days[dayIdx] ?? null;
