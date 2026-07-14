@@ -19,6 +19,16 @@ export const AI_CHAT_MODEL =
 export const AI_FALLBACK_MODEL =
   process.env.AI_FALLBACK_MODEL ?? (HAS_OPENAI ? "gpt-4o-mini" : "openai/gpt-5-mini");
 
+// Modelos da família gpt-5.x/o-series (inclusive via Lovable AI Gateway) rejeitam o
+// parâmetro legado `max_tokens` ("Unsupported parameter... Use 'max_completion_tokens'
+// instead"). O @ai-sdk/openai-compatible sempre manda `max_tokens`, então remapeamos
+// aqui antes do envio.
+function remapMaxTokens(args: Record<string, unknown>): Record<string, unknown> {
+  if (!args || !("max_tokens" in args)) return args;
+  const { max_tokens, ...rest } = args;
+  return max_tokens == null ? rest : { ...rest, max_completion_tokens: max_tokens };
+}
+
 export function createLovableAiGatewayProvider(lovableApiKey: string) {
   return createOpenAICompatible({
     name: "lovable",
@@ -27,6 +37,7 @@ export function createLovableAiGatewayProvider(lovableApiKey: string) {
       "Lovable-API-Key": lovableApiKey,
       "X-Lovable-AIG-SDK": "vercel-ai-sdk",
     },
+    transformRequestBody: remapMaxTokens,
   });
 }
 
@@ -35,6 +46,7 @@ export function createOpenAIDirectProvider(apiKey: string) {
     name: "openai",
     baseURL: "https://api.openai.com/v1",
     apiKey,
+    transformRequestBody: remapMaxTokens,
   });
 }
 
