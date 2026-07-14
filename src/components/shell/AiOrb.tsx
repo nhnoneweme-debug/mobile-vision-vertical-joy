@@ -5,7 +5,8 @@ import { Sparkles } from "lucide-react";
 // Substitui a barra de navegação inferior.
 export function AiOrb() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  if (pathname.startsWith("/assistente")) return null;
+  if (pathname.startsWith("/assistente") || pathname.startsWith("/conversar")) return null;
+
 
   return (
     <Link
