@@ -212,9 +212,10 @@ function TreinoPage() {
     setFinishOpen(false);
     setActive(false); setRunning(false); setStartedAt(null); setAccum(0);
     try {
-      await fnCreateSession({ data: { planId: activePlan.id, durationSec, exercisesDone: done, exercisesTotal: total } });
+      const s = await fnCreateSession({ data: { planId: activePlan.id, durationSec, exercisesDone: done, exercisesTotal: total } });
       setSessions(await fnSessions({ data: { planId: activePlan.id } }));
       toast.success("Sessão registrada.");
+      setCheckinSession((s as { id?: string })?.id ?? null);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao registrar sessão."); }
   }
 
