@@ -911,6 +911,139 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_date: string
+          note: string | null
+          plan_item_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_date: string
+          note?: string | null
+          plan_item_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          note?: string | null
+          plan_item_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_logs_plan_item_id_fkey"
+            columns: ["plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plan_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_items: {
+        Row: {
+          carbs_g: number | null
+          day_of_week: number | null
+          description: string | null
+          fat_g: number | null
+          id: string
+          kcal: number | null
+          meal_slot: string
+          name: string
+          plan_id: string
+          position: number
+          protein_g: number | null
+        }
+        Insert: {
+          carbs_g?: number | null
+          day_of_week?: number | null
+          description?: string | null
+          fat_g?: number | null
+          id?: string
+          kcal?: number | null
+          meal_slot: string
+          name: string
+          plan_id: string
+          position?: number
+          protein_g?: number | null
+        }
+        Update: {
+          carbs_g?: number | null
+          day_of_week?: number | null
+          description?: string | null
+          fat_g?: number | null
+          id?: string
+          kcal?: number | null
+          meal_slot?: string
+          name?: string
+          plan_id?: string
+          position?: number
+          protein_g?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plans: {
+        Row: {
+          carbs_g: number | null
+          created_at: string
+          fat_g: number | null
+          goal: string | null
+          id: string
+          kcal_target: number | null
+          protein_g: number | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          goal?: string | null
+          id?: string
+          kcal_target?: number | null
+          protein_g?: number | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          goal?: string | null
+          id?: string
+          kcal_target?: number | null
+          protein_g?: number | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mental_journal: {
         Row: {
           created_at: string
