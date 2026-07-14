@@ -15,7 +15,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as ApiTestVisionRouteImport } from './routes/api/test-vision'
 import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiConverseRouteImport } from './routes/api/converse'
@@ -86,11 +85,6 @@ const IndexRoute = IndexRouteImport.update({
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTestVisionRoute = ApiTestVisionRouteImport.update({
-  id: '/api/test-vision',
-  path: '/api/test-vision',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSleepChatRoute = ApiSleepChatRouteImport.update({
@@ -355,7 +349,6 @@ export interface FileRoutesByFullPath {
   '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
-  '/api/test-vision': typeof ApiTestVisionRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -405,7 +398,6 @@ export interface FileRoutesByTo {
   '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
-  '/api/test-vision': typeof ApiTestVisionRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -457,7 +449,6 @@ export interface FileRoutesById {
   '/api/converse': typeof ApiConverseRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
-  '/api/test-vision': typeof ApiTestVisionRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -509,7 +500,6 @@ export interface FileRouteTypes {
     | '/api/converse'
     | '/api/ia-capture'
     | '/api/sleep-chat'
-    | '/api/test-vision'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -559,7 +549,6 @@ export interface FileRouteTypes {
     | '/api/converse'
     | '/api/ia-capture'
     | '/api/sleep-chat'
-    | '/api/test-vision'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -610,7 +599,6 @@ export interface FileRouteTypes {
     | '/api/converse'
     | '/api/ia-capture'
     | '/api/sleep-chat'
-    | '/api/test-vision'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -634,7 +622,6 @@ export interface RootRouteChildren {
   ApiConverseRoute: typeof ApiConverseRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
   ApiSleepChatRoute: typeof ApiSleepChatRoute
-  ApiTestVisionRoute: typeof ApiTestVisionRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -684,13 +671,6 @@ declare module '@tanstack/react-router' {
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/test-vision': {
-      id: '/api/test-vision'
-      path: '/api/test-vision'
-      fullPath: '/api/test-vision'
-      preLoaderRoute: typeof ApiTestVisionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sleep-chat': {
@@ -1095,7 +1075,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiConverseRoute: ApiConverseRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
   ApiSleepChatRoute: ApiSleepChatRoute,
-  ApiTestVisionRoute: ApiTestVisionRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
