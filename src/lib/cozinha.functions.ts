@@ -57,9 +57,7 @@ async function saveDietToArea(
 
 export const parseDietPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ raw_text: z.string().min(5).max(4000) }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ raw_text: z.string().min(5).max(4000) }).parse(d))
   .handler(async ({ data, context }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) throw new Error("Missing AI key");
@@ -98,6 +96,72 @@ export const parseDietPlan = createServerFn({ method: "POST" })
       warnings: parsed.warnings ?? [],
     };
 
+    await saveDietToArea(context.supabase, context.userId, plan);
+    return plan;
+  });
+
+// Gera uma dieta do zero com a IA, a partir do perfil/objetivo do onboarding
+// (sem precisar o usuário colar texto). Mesmo formato/validação do parseDietPlan.
+export const generateDietFromProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+    if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) throw new Error("Missing AI key");
+
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("display_name,goal,age,weight_kg,height_cm,gender,days_per_week,time_per_day_min")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    if (!profile?.goal) {
+      throw new Error("Complete seu objetivo no onboarding antes de gerar a dieta com a IA.");
+    }
+
+    const model = createChatModelWithFallback(LOVABLE_API_KEY);
+    const sys = [
+      "Você é nutricionista assistente. Monte um plano alimentar de UM dia (a rotina se repete diariamente),",
+      "adequado ao perfil informado, e devolva APENAS JSON válido.",
+      "Formato exato:",
+      '{ "meals":[{"time":"HH:MM","name":"...","items":["..."],"notes":"opcional"}], "hydration_ml": 2500, "warnings":["..."] }',
+      "Regras: 4 a 6 refeições, ordenadas por horário HH:MM 24h entre 06:00–22:00; items curtos e realistas.",
+      "Sem prosa, sem markdown, apenas o JSON.",
+    ].join("\n");
+    const userPrompt = [
+      `Nome: ${profile.display_name ?? "—"}`,
+      `Objetivo: ${profile.goal}`,
+      profile.age ? `Idade: ${profile.age}` : "",
+      profile.gender ? `Gênero: ${profile.gender}` : "",
+      profile.weight_kg ? `Peso: ${profile.weight_kg}kg` : "",
+      profile.height_cm ? `Altura: ${profile.height_cm}cm` : "",
+      profile.days_per_week ? `Dias de treino/semana: ${profile.days_per_week}` : "",
+      profile.time_per_day_min ? `Tempo disponível/dia: ${profile.time_per_day_min}min` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const res = await generateText({
+      model,
+      system: sys,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+
+    let parsed: z.infer<typeof DietJsonSchema>;
+    try {
+      const cleaned = res.text.trim().replace(/^```json\s*|\s*```$/g, "");
+      parsed = DietJsonSchema.parse(JSON.parse(cleaned));
+    } catch (e) {
+      throw new Error("A IA não devolveu um plano válido. Tente novamente.");
+    }
+    parsed.meals.sort((a, b) => a.time.localeCompare(b.time));
+
+    const plan: DietPlan = {
+      updated_at: new Date().toISOString(),
+      source_text: `Gerado pela IA a partir do perfil (objetivo: ${profile.goal})`,
+      meals: parsed.meals,
+      hydration_ml: parsed.hydration_ml ?? null,
+      warnings: parsed.warnings ?? [],
+    };
     await saveDietToArea(context.supabase, context.userId, plan);
     return plan;
   });
@@ -144,7 +208,8 @@ export const saveDietPlan = createServerFn({ method: "POST" })
       .eq("area_slug", "cozinha")
       .maybeSingle();
     const previous =
-      (((existing?.meta ?? {}) as Record<string, unknown>).diet_plan as DietPlan | undefined) ?? null;
+      (((existing?.meta ?? {}) as Record<string, unknown>).diet_plan as DietPlan | undefined) ??
+      null;
     const plan: DietPlan = {
       updated_at: new Date().toISOString(),
       source_text: data.name ?? "Montado pela IA",
@@ -173,7 +238,10 @@ export const restoreDietPlan = createServerFn({ method: "POST" })
       if (existing) {
         const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
         delete meta.diet_plan;
-        await context.supabase.from("area_progress").update({ meta: meta as never }).eq("id", existing.id);
+        await context.supabase
+          .from("area_progress")
+          .update({ meta: meta as never })
+          .eq("id", existing.id);
       }
     }
     return { ok: true };
@@ -191,6 +259,9 @@ export const clearDietPlan = createServerFn({ method: "POST" })
     if (!existing) return { ok: true };
     const meta = { ...((existing.meta ?? {}) as Record<string, unknown>) };
     delete meta.diet_plan;
-    await context.supabase.from("area_progress").update({ meta: meta as never }).eq("id", existing.id);
+    await context.supabase
+      .from("area_progress")
+      .update({ meta: meta as never })
+      .eq("id", existing.id);
     return { ok: true };
   });
