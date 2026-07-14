@@ -229,8 +229,10 @@ export async function listSilentViewers(postId: string) {
   if (silent.length === 0) return [];
   const ids = silent.map((v) => v.viewer_id);
   const { data: profs } = await supabase
-    .from("public_profiles").select("id, display_name")
-    .in("id", ids);
-  const map = new Map((profs ?? []).map((p) => [p.id, p]));
+    .rpc("public_profiles_lookup", { _ids: ids });
+  const map = new Map(
+    ((profs ?? []) as { id: string; display_name: string | null }[]).map((p) => [p.id, { display_name: p.display_name }]),
+  );
+
   return silent.map((v) => ({ ...v, profile: map.get(v.viewer_id) ?? null }));
 }
