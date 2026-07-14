@@ -190,9 +190,11 @@ export async function listComments(postId: string) {
   if (!data || data.length === 0) return [];
   const ids = Array.from(new Set(data.map((c) => c.user_id)));
   const { data: profs } = await supabase
-    .from("public_profiles").select("id, display_name")
-    .in("id", ids);
-  const map = new Map((profs ?? []).map((p) => [p.id, p]));
+    .rpc("public_profiles_lookup", { _ids: ids });
+  const map = new Map(
+    ((profs ?? []) as { id: string; display_name: string | null }[]).map((p) => [p.id, { display_name: p.display_name }]),
+  );
+
   return data.map((c) => ({ ...c, author: map.get(c.user_id) ?? null }));
 }
 
