@@ -1,49 +1,110 @@
+# Círculo → Desafios estilo GymRats
 
-## Relatório de validação (somente leitura — nada foi alterado)
+Reutiliza `groups`, `group_members`, `group_posts`, `challenges`, `challenge_progress`, `workout_sessions` e `group_weekly_ranking`. Nada é duplicado.
 
-### 1) Rotas removidas — referências restantes
+## 1. Migration `challenge_checkins` + regras
 
-Rotas checadas: `alarme`, `despertar`, `sonhos`, `cristais`, `classe`, `painel`, `painel-aluno.$id`, `area.orientador`, `planos`, `api/wake-chat`.
+Tabela nova:
 
-- **Nenhum `<Link to=...>`, `navigate(...)`, `redirect(...)` ou `import` aponta para essas rotas.** Rotas confirmadas ausentes em `src/routes/_authenticated/` e `src/routes/api/`.
-- **Único resíduo:** `src/lib/mentor-tips.ts` mantém entradas de dicas para os paths `/painel`, `/classe`, `/despertar`, `/sonhos` (chaves de objeto usadas para tooltips por rota). Não quebra build nem navegação — vira código morto até serem removidas.
-- `src/routes/_authenticated/jornada.tsx` menciona a palavra "despertar" só em texto/copy (prompt do gerador de blocos). Não é link.
+```sql
+CREATE TABLE public.challenge_checkins (
+  id uuid PK,
+  challenge_id uuid → challenges(id) ON DELETE CASCADE,
+  user_id uuid → auth.users(id) ON DELETE CASCADE,
+  checkin_date date NOT NULL,
+  workout_session_id uuid → workout_sessions(id) ON DELETE SET NULL,
+  note text, photo_url text,
+  points int NOT NULL DEFAULT 1,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (challenge_id, user_id, checkin_date)
+);
+```
 
-**Conclusão:** sem imports/links quebrados. Cleanup opcional em `mentor-tips.ts`.
+GRANT + RLS:
+- SELECT: membros do grupo do desafio (`is_group_member(challenges.group_id, auth.uid())`).
+- INSERT/DELETE: `user_id = auth.uid()` **e** membro do grupo do desafio.
+- UPDATE: bloqueado (imutabilidade / anti-cheat).
 
-### 2) Migration `20260708000000_security_hardening_frontend_trust.sql`
+Trigger `validate_challenge_checkin` (BEFORE INSERT):
+- Busca `starts_at`, `ends_at`, `group_id` do desafio.
+- Verifica `checkin_date BETWEEN starts_at::date AND ends_at::date`.
+- Verifica que o usuário é membro do grupo.
+- Se `workout_session_id` informado, valida ownership.
 
-- Arquivo presente e consistente:
-  - Cria trigger `trg_protect_profile_economy` (BEFORE UPDATE em `profiles`) que zera alterações de `xp/brasas/level/streak` vindas de `authenticated`/`anon` (SECURITY DEFINER preserva funções internas).
-  - `REVOKE INSERT/UPDATE/DELETE ON public.user_crystals FROM authenticated` + drop da policy `user_crystals_modify_own`.
-  - Recria view `public_profiles` (id, display_name, behavioral_class, xp, level) — **atenção: essa lista é MAIS ENXUTA que a `public_profiles` atual em produção** (que hoje inclui friend_code, streak, level_track, etc., conforme migration 20260703). Rodar isso vai **remover colunas** que outras telas podem estar lendo. Verificar consumidores de `public_profiles` antes de aplicar.
-  - Drops de policies `Authenticated can read public profile fields` e `Public profile fields readable via view` são no-op (já não existem).
+Trigger `recalc_challenge_progress` (AFTER INSERT/DELETE em `challenge_checkins`):
+- Lê `metric` do `challenges`:
+  - `checkins`: `COUNT(*)` de check-ins do usuário no desafio.
+  - `treinos`: `COUNT(*)` onde `workout_session_id IS NOT NULL`.
+  - `minutos`: `SUM(ws.duration_sec)/60` das sessões vinculadas.
+- Faz `UPSERT` em `challenge_progress (challenge_id, user_id, value)`.
 
-- **Status no banco: NÃO aplicada.**
-  - `pg_trigger` não contém `trg_protect_profile_economy`.
-  - Policies atuais de `profiles`: só `Users can insert/update/view their own profile` + `orientador reads linked student profiles`.
-  - `user_crystals`: só `user_crystals_select_own`, sem grants de escrita para `authenticated` (já revogados — provavelmente estado anterior; o REVOKE do arquivo será no-op).
-  - View `public_profiles` existe (da migration anterior, com o schema mais amplo).
+Trigger `auto_group_post_on_checkin` (AFTER INSERT):
+- Conta o n-ésimo dia do usuário no desafio.
+- Insere em `group_posts` (`group_id` do desafio, autor = user) mensagem "{nome} treinou hoje 💪 — {n}º dia" + `photo_url` se houver. Falha silenciosa.
 
-### 3) IA — `/api/chat` e `/api/converse`
+Função RPC:
+- `challenge_leaderboard(_challenge uuid)`: retorna user_id, display_name, avatar_url, value, position — só para membros.
+- `challenge_calendar(_challenge uuid, _month date)`: retorna user_id, checkin_date para membros (bolinhas do calendário).
+- `finalize_challenge(_challenge uuid)`: se `ends_at < now()` e não finalizado, marca vencedor (top do progress), grava `xp_events` (+100 XP para o vencedor, +25 para participantes) e conquista via `check_achievements`. Idempotente via coluna `winner_user_id` a adicionar em `challenges`.
 
-- Ambos usam `createChatModelWithFallback` de `src/lib/ai-gateway.server.ts`, que **prefere `OPENAI_API_KEY`** (OpenAI direto) e cai para `LOVABLE_API_KEY` (Lovable Gateway) se OpenAI ausente.
-- **`OPENAI_API_KEY` NÃO está configurado nos secrets do projeto.** Os secrets presentes incluem `LOVABLE_API_KEY`.
-- Consequência: os endpoints **funcionam via Lovable AI Gateway** (modelo `openai/gpt-5.5` + fallback `openai/gpt-5-mini`), não via OpenAI direto. Sem quebra.
-- Guardas de auth OK (`Bearer` + `supabase.auth.getClaims`). `converse` também tem modo dev:mock condicional a `VITE_USE_MOCKS`.
+Nova coluna: `challenges.winner_user_id uuid` + `finalized_at timestamptz`.
 
-### 4) Fluxos com Supabase/RLS
+## 2. Storage
 
-RLS conferido em `pg_policies`:
+Bucket privado `challenge-photos`. RLS em `storage.objects`:
+- SELECT: membros do grupo do desafio (path `<challenge_id>/<user_id>/<file>`).
+- INSERT/DELETE: dono (`user_id = auth.uid()` derivado do path).
 
-- **login**: gerenciado por `_authenticated/route.tsx` (client-only, `supabase.auth.getUser`) + gate de onboarding. OK.
-- **habits (criar)**: `INSERT with_check (auth.uid() = user_id)` ✅ + SELECT/UPDATE/DELETE próprios ✅.
-- **user_missions (criar compromisso)**: `INSERT with_check (auth.uid() = user_id)` ✅ + SELECT/UPDATE/DELETE próprios ✅.
-- **user_mission_logs (marcar feito)**: `INSERT with_check (auth.uid() = user_id)` ✅ + SELECT/UPDATE/DELETE próprios ✅. Trigger `award_user_mission_xp` continua rodando (SECURITY DEFINER, não afetado por RLS).
+## 3. Auto-check-in ao concluir treino
 
-**Nenhum fluxo listado quebra.** Observação: se a migration §2 for aplicada como está, updates de `profiles` (ex.: preferências de perfil que também tocam colunas de economia num mesmo payload por engano) terão os campos de economia silenciosamente ignorados — comportamento esperado, mas vale auditar chamadas de `profiles.update({...})` no cliente antes de aplicar.
+`src/lib/circles.ts` (existente) + novo `src/lib/challenges.ts`:
+- `getActiveChallengesForUser()`: challenges ativos dos grupos do usuário sem check-in hoje.
+- `checkinToChallenge({ challengeId, workoutSessionId?, note?, photoFile? })`: upload da foto → insert em `challenge_checkins` (unique cobre dedupe).
+- Hook em `src/lib/treino.functions.ts` / lugar que insere `workout_sessions`: após insert, retornar os desafios elegíveis; UI decide oferecer.
 
-### Ações sugeridas (fora deste turno)
-- Remover entradas de rotas mortas em `src/lib/mentor-tips.ts`.
-- Antes de aplicar a migration 20260708: alinhar a lista de colunas da view `public_profiles` com o que a UI já consome (ver migration 20260703).
-- Se quiser OpenAI direto, adicionar `OPENAI_API_KEY` em Project Settings → Secrets; caso contrário, Lovable Gateway já cobre.
+Componente `PostWorkoutCheckinSheet` aparece após concluir treino, listando desafios elegíveis com toggle e um "Confirmar check-ins".
+
+## 4. UI `/circulo`
+
+Rota `src/routes/_authenticated/circulo.tsx` reformulada com Tabs:
+
+- **Feed**: `group_posts` dos grupos do usuário (já existe pipeline em `src/lib/circles.ts`). Card destacado quando é auto-post de check-in.
+- **Desafios**: seções colapsáveis Ativos / Próximos / Encerrados. Cada card mostra grupo, título, métrica, dias restantes, seu progresso, top 3. Botão "Criar desafio" abre `ChallengeForm` (Sheet).
+- **Ranking**: seletor de grupo + `group_weekly_ranking` existente.
+
+Detalhe do desafio (`/circulo/desafio/$id` → `src/routes/_authenticated/circulo.desafio.$id.tsx`):
+- Header com título/métrica/prazo.
+- Ranking ao vivo (`challenge_leaderboard`).
+- Calendário mensal com bolinhas coloridas por membro (`challenge_calendar`).
+- Botão "Check-in de hoje" (desabilitado se já feito). Sheet com nota, foto opcional, vincular treino de hoje se existir.
+- Se encerrado: banner "Vencedor: X 🏆".
+
+Todos os fetches com skeletons e empty states (nenhum grupo / nenhum desafio / desafio sem check-ins ainda).
+
+## 5. Cron opcional
+
+`pg_cron` diário 00:05 chamando `finalize_challenges_all()` (loop de `finalize_challenge` para todos vencidos e não finalizados). Fora do escopo mínimo, mas incluído se sobrar espaço; senão finalize dispara sob demanda no detalhe.
+
+## Arquivos
+
+Novos:
+- migration `challenge_checkins` + triggers + rpcs + colunas em challenges.
+- `src/lib/challenges.ts` (client).
+- `src/components/circulo/ChallengeCard.tsx`
+- `src/components/circulo/ChallengeForm.tsx`
+- `src/components/circulo/ChallengeCheckinSheet.tsx`
+- `src/components/circulo/ChallengeCalendar.tsx`
+- `src/components/circulo/ChallengeLeaderboard.tsx`
+- `src/components/circulo/PostWorkoutCheckinSheet.tsx`
+- `src/routes/_authenticated/circulo.desafio.$id.tsx`
+
+Editados:
+- `src/routes/_authenticated/circulo.tsx` (3 abas)
+- ponto onde `workout_sessions` é inserido (dispara sheet de check-in)
+- storage bucket via tool
+
+## Escopo fora
+- Comentários/reações no post automático (usa infra existente do feed).
+- Notificações push do check-in — próximo passo.
+
+Confirma para eu executar?
