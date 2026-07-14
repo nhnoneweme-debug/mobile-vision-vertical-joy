@@ -67,11 +67,16 @@ export function habitTarget(h: {
   target_per_week?: number;
 }): number {
   const f = habitFreq(h);
-  if (h.target && h.target > 0) return h.target;
-  if (f === "daily") return 1;
-  if (f === "monthly") return Math.max(1, h.target_per_week ?? 1);
-  return Math.max(1, h.target_per_week ?? 7);
+  if (f === "daily") return Math.max(1, h.target ?? 1);
+  if (f === "weekly") {
+    // Para semanais, target_per_week é a fonte da verdade (hábitos antigos
+    // tiveram `target` back-fillado com 1 pela migration); usamos o maior.
+    return Math.max(1, h.target_per_week ?? 0, h.target ?? 0, 1);
+  }
+  // monthly
+  return Math.max(1, h.target ?? 0, h.target_per_week ?? 0, 1);
 }
+
 function periodStartISO(f: HabitFrequency): string {
   return f === "daily" ? todayISO() : f === "weekly" ? weekStartISO() : monthStartISO();
 }
