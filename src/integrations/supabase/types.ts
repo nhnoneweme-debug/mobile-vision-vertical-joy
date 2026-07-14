@@ -345,6 +345,57 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_checkins: {
+        Row: {
+          challenge_id: string
+          checkin_date: string
+          created_at: string
+          id: string
+          note: string | null
+          photo_url: string | null
+          points: number
+          user_id: string
+          workout_session_id: string | null
+        }
+        Insert: {
+          challenge_id: string
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          photo_url?: string | null
+          points?: number
+          user_id: string
+          workout_session_id?: string | null
+        }
+        Update: {
+          challenge_id?: string
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          photo_url?: string | null
+          points?: number
+          user_id?: string
+          workout_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_checkins_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_checkins_workout_session_id_fkey"
+            columns: ["workout_session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_progress: {
         Row: {
           challenge_id: string
@@ -383,6 +434,7 @@ export type Database = {
           created_by: string
           description: string | null
           ends_at: string
+          finalized_at: string | null
           group_id: string
           id: string
           metric: string
@@ -390,12 +442,14 @@ export type Database = {
           target: number
           title: string
           updated_at: string
+          winner_user_id: string | null
         }
         Insert: {
           created_at?: string
           created_by: string
           description?: string | null
           ends_at: string
+          finalized_at?: string | null
           group_id: string
           id?: string
           metric: string
@@ -403,12 +457,14 @@ export type Database = {
           target: number
           title: string
           updated_at?: string
+          winner_user_id?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string
           description?: string | null
           ends_at?: string
+          finalized_at?: string | null
           group_id?: string
           id?: string
           metric?: string
@@ -416,6 +472,7 @@ export type Database = {
           target?: number
           title?: string
           updated_at?: string
+          winner_user_id?: string | null
         }
         Relationships: [
           {
@@ -2893,6 +2950,24 @@ export type Database = {
         Args: { _post_id: string; _viewer: string }
         Returns: boolean
       }
+      challenge_calendar: {
+        Args: { _challenge: string; _month: string }
+        Returns: {
+          checkin_date: string
+          display_name: string
+          user_id: string
+        }[]
+      }
+      challenge_leaderboard: {
+        Args: { _challenge: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          rank: number
+          user_id: string
+          value: number
+        }[]
+      }
       check_achievements: { Args: never; Returns: Json }
       check_perk_unlocks: { Args: never; Returns: number }
       compute_personal_ia_score: { Args: { _user_id: string }; Returns: Json }
@@ -2904,6 +2979,7 @@ export type Database = {
         Args: { _challenge: string; _user: string }
         Returns: Json
       }
+      finalize_challenge: { Args: { _challenge: string }; Returns: Json }
       generate_friend_code: { Args: never; Returns: string }
       generate_my_nudges: { Args: never; Returns: number }
       generate_nudges_all_users: { Args: never; Returns: Json }
@@ -2946,6 +3022,10 @@ export type Database = {
       orientador_student_snapshot: { Args: { _student: string }; Returns: Json }
       player_level: { Args: { _xp: number }; Returns: number }
       purchase_shop_item: { Args: { _item_id: string }; Returns: Json }
+      recalc_challenge_progress: {
+        Args: { _challenge: string; _user: string }
+        Returns: undefined
+      }
       redeem_orientador_invite: { Args: { _code: string }; Returns: boolean }
       save_weekly_score_snapshot: { Args: never; Returns: number }
     }

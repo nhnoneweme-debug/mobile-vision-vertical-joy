@@ -55,6 +55,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
 import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
+import { Route as AuthenticatedCirculoDesafioIdRouteImport } from './routes/_authenticated/circulo.desafio.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -294,6 +295,12 @@ const ApiPublicHooksGenerateNudgesRoute =
     path: '/api/public/hooks/generate-nudges',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedCirculoDesafioIdRoute =
+  AuthenticatedCirculoDesafioIdRouteImport.update({
+    id: '/desafio/$id',
+    path: '/desafio/$id',
+    getParentRoute: () => AuthenticatedCirculoRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -305,7 +312,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
-  '/circulo': typeof AuthenticatedCirculoRoute
+  '/circulo': typeof AuthenticatedCirculoRouteWithChildren
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -352,7 +360,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
-  '/circulo': typeof AuthenticatedCirculoRoute
+  '/circulo': typeof AuthenticatedCirculoRouteWithChildren
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
@@ -386,6 +394,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -401,7 +410,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
-  '/_authenticated/circulo': typeof AuthenticatedCirculoRoute
+  '/_authenticated/circulo': typeof AuthenticatedCirculoRouteWithChildren
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/conversar': typeof AuthenticatedConversarRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
@@ -435,6 +444,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/_authenticated/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
+    | '/circulo/desafio/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
+    | '/circulo/desafio/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   id:
@@ -579,6 +591,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/area/$slug'
+    | '/_authenticated/circulo/desafio/$id'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
@@ -927,14 +940,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksGenerateNudgesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/circulo/desafio/$id': {
+      id: '/_authenticated/circulo/desafio/$id'
+      path: '/desafio/$id'
+      fullPath: '/circulo/desafio/$id'
+      preLoaderRoute: typeof AuthenticatedCirculoDesafioIdRouteImport
+      parentRoute: typeof AuthenticatedCirculoRoute
+    }
   }
 }
+
+interface AuthenticatedCirculoRouteChildren {
+  AuthenticatedCirculoDesafioIdRoute: typeof AuthenticatedCirculoDesafioIdRoute
+}
+
+const AuthenticatedCirculoRouteChildren: AuthenticatedCirculoRouteChildren = {
+  AuthenticatedCirculoDesafioIdRoute: AuthenticatedCirculoDesafioIdRoute,
+}
+
+const AuthenticatedCirculoRouteWithChildren =
+  AuthenticatedCirculoRoute._addFileChildren(AuthenticatedCirculoRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
-  AuthenticatedCirculoRoute: typeof AuthenticatedCirculoRoute
+  AuthenticatedCirculoRoute: typeof AuthenticatedCirculoRouteWithChildren
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedConversarRoute: typeof AuthenticatedConversarRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
@@ -966,7 +997,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
-  AuthenticatedCirculoRoute: AuthenticatedCirculoRoute,
+  AuthenticatedCirculoRoute: AuthenticatedCirculoRouteWithChildren,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedConversarRoute: AuthenticatedConversarRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,

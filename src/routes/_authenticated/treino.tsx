@@ -11,6 +11,7 @@ import {
   listWorkoutSessions, createWorkoutSession, getTodayProgress, logSerie, undoSerie,
   type WorkoutPlan, type WorkoutDay, type WorkoutSession,
 } from "@/lib/workouts.functions";
+import { PostWorkoutCheckinSheet } from "@/components/circulo/PostWorkoutCheckinSheet";
 
 export const Route = createFileRoute("/_authenticated/treino")({
   head: () => ({ meta: [{ title: "Treino — Personal IA" }] }),
@@ -59,6 +60,7 @@ function TreinoPage() {
   const [weightModal, setWeightModal] = useState<{ exId: string; exName: string; target: number } | null>(null);
   const [weightInput, setWeightInput] = useState("");
   const [finishOpen, setFinishOpen] = useState(false);
+  const [checkinSession, setCheckinSession] = useState<string | null>(null);
 
   const activePlan = plans?.find((p) => p.id === activeId) ?? null;
   const activeDay: WorkoutDay | null = activePlan?.days[dayIdx] ?? null;
@@ -210,9 +212,10 @@ function TreinoPage() {
     setFinishOpen(false);
     setActive(false); setRunning(false); setStartedAt(null); setAccum(0);
     try {
-      await fnCreateSession({ data: { planId: activePlan.id, durationSec, exercisesDone: done, exercisesTotal: total } });
+      const s = await fnCreateSession({ data: { planId: activePlan.id, durationSec, exercisesDone: done, exercisesTotal: total } });
       setSessions(await fnSessions({ data: { planId: activePlan.id } }));
       toast.success("Sessão registrada.");
+      setCheckinSession((s as { id?: string })?.id ?? null);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao registrar sessão."); }
   }
 
@@ -458,6 +461,12 @@ function TreinoPage() {
           </div>
         </div>
       )}
+
+      <PostWorkoutCheckinSheet
+        open={checkinSession !== null}
+        workoutSessionId={checkinSession}
+        onClose={() => setCheckinSession(null)}
+      />
 
       <div className="h-24" />
     </MobileShell>
