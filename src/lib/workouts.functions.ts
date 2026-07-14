@@ -148,19 +148,17 @@ export const deleteWorkoutPlan = createServerFn({ method: "POST" })
 
 export const listWorkoutSessions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ planId: z.string().uuid().optional() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ planId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ data, context }): Promise<WorkoutSession[]> => {
     const db = context.supabase as Db;
     let q = db
       .from("workout_sessions")
-      .select("id, plan_id, session_date, duration_sec, exercises_done, exercises_total, created_at")
+      .select(
+        "id, plan_id, session_date, duration_sec, exercises_done, exercises_total, created_at",
+      )
       .eq("user_id", context.userId);
     if (data.planId) q = q.eq("plan_id", data.planId);
-    const { data: rows, error } = await q
-      .order("created_at", { ascending: false })
-      .limit(50);
+    const { data: rows, error } = await q.order("created_at", { ascending: false }).limit(50);
     if (error) throw new Error(error.message);
     return (rows ?? []) as WorkoutSession[];
   });
@@ -188,7 +186,9 @@ export const createWorkoutSession = createServerFn({ method: "POST" })
         exercises_done: data.exercisesDone,
         exercises_total: data.exercisesTotal,
       })
-      .select("id, plan_id, session_date, duration_sec, exercises_done, exercises_total, created_at")
+      .select(
+        "id, plan_id, session_date, duration_sec, exercises_done, exercises_total, created_at",
+      )
       .single();
     if (error) throw new Error(error.message);
     return row as WorkoutSession;
@@ -227,79 +227,89 @@ export const logSerie = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<{ series: number; done: boolean; weights: number[] }> => {
-    const db = context.supabase as Db;
-    const { data: cur } = await db
-      .from("workout_progress")
-      .select("series, weights")
-      .eq("user_id", context.userId)
-      .eq("plan_id", data.planId)
-      .eq("day_key", data.dayKey)
-      .eq("exercise_key", data.exerciseKey)
-      .eq("progress_date", today())
-      .maybeSingle();
-    const prevSeries = Number(cur?.series ?? 0);
-    const prevWeights: number[] = Array.isArray(cur?.weights) ? cur.weights : [];
-    if (prevSeries >= data.target) {
-      return { series: prevSeries, done: true, weights: prevWeights };
-    }
-    const series = prevSeries + 1;
-    const weights = [...prevWeights, data.weight ?? 0];
-    const done = series >= data.target;
-    const { error } = await db.from("workout_progress").upsert(
-      {
-        user_id: context.userId,
-        plan_id: data.planId,
-        day_key: data.dayKey,
-        exercise_key: data.exerciseKey,
-        series,
-        weights,
-        done,
-        progress_date: today(),
-      },
-      { onConflict: "user_id,plan_id,day_key,exercise_key" },
-    );
-    if (error) throw new Error(error.message);
-    return { series, done, weights };
-  });
+  .handler(
+    async ({ data, context }): Promise<{ series: number; done: boolean; weights: number[] }> => {
+      const db = context.supabase as Db;
+      const { data: cur } = await db
+        .from("workout_progress")
+        .select("series, weights")
+        .eq("user_id", context.userId)
+        .eq("plan_id", data.planId)
+        .eq("day_key", data.dayKey)
+        .eq("exercise_key", data.exerciseKey)
+        .eq("progress_date", today())
+        .maybeSingle();
+      const prevSeries = Number(cur?.series ?? 0);
+      const prevWeights: number[] = Array.isArray(cur?.weights) ? cur.weights : [];
+      if (prevSeries >= data.target) {
+        return { series: prevSeries, done: true, weights: prevWeights };
+      }
+      const series = prevSeries + 1;
+      const weights = [...prevWeights, data.weight ?? 0];
+      const done = series >= data.target;
+      const { error } = await db.from("workout_progress").upsert(
+        {
+          user_id: context.userId,
+          plan_id: data.planId,
+          day_key: data.dayKey,
+          exercise_key: data.exerciseKey,
+          series,
+          weights,
+          done,
+          progress_date: today(),
+        },
+        { onConflict: "user_id,plan_id,day_key,exercise_key" },
+      );
+      if (error) throw new Error(error.message);
+      return { series, done, weights };
+    },
+  );
 
 // Desfaz a última série feita (remove o peso). done volta a false.
 export const undoSerie = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ planId: z.string().uuid(), dayKey: z.string().min(1).max(64), exerciseKey: z.string().min(1).max(64) }).parse(d),
+    z
+      .object({
+        planId: z.string().uuid(),
+        dayKey: z.string().min(1).max(64),
+        exerciseKey: z.string().min(1).max(64),
+      })
+      .parse(d),
   )
-  .handler(async ({ data, context }): Promise<{ series: number; done: boolean; weights: number[] }> => {
-    const db = context.supabase as Db;
-    const { data: cur } = await db
-      .from("workout_progress")
-      .select("series, weights")
-      .eq("user_id", context.userId)
-      .eq("plan_id", data.planId)
-      .eq("day_key", data.dayKey)
-      .eq("exercise_key", data.exerciseKey)
-      .eq("progress_date", today())
-      .maybeSingle();
-    const prevSeries = Number(cur?.series ?? 0);
-    const prevWeights: number[] = Array.isArray(cur?.weights) ? cur.weights : [];
-    const series = Math.max(0, prevSeries - 1);
-    const weights = prevWeights.slice(0, series);
-    const { error } = await db.from("workout_progress").upsert(
-      {
-        user_id: context.userId,
-        plan_id: data.planId,
-        day_key: data.dayKey,
-        exercise_key: data.exerciseKey,
-        series,
-        weights,
-        done: false,
-        progress_date: today(),
-      },
-      { onConflict: "user_id,plan_id,day_key,exercise_key" },
-    );
-    if (error) throw new Error(error.message);
-    return { series, done: false, weights };
-  });
+  .handler(
+    async ({ data, context }): Promise<{ series: number; done: boolean; weights: number[] }> => {
+      const db = context.supabase as Db;
+      const { data: cur } = await db
+        .from("workout_progress")
+        .select("series, weights")
+        .eq("user_id", context.userId)
+        .eq("plan_id", data.planId)
+        .eq("day_key", data.dayKey)
+        .eq("exercise_key", data.exerciseKey)
+        .eq("progress_date", today())
+        .maybeSingle();
+      const prevSeries = Number(cur?.series ?? 0);
+      const prevWeights: number[] = Array.isArray(cur?.weights) ? cur.weights : [];
+      const series = Math.max(0, prevSeries - 1);
+      const weights = prevWeights.slice(0, series);
+      const { error } = await db.from("workout_progress").upsert(
+        {
+          user_id: context.userId,
+          plan_id: data.planId,
+          day_key: data.dayKey,
+          exercise_key: data.exerciseKey,
+          series,
+          weights,
+          done: false,
+          progress_date: today(),
+        },
+        { onConflict: "user_id,plan_id,day_key,exercise_key" },
+      );
+      if (error) throw new Error(error.message);
+      return { series, done: false, weights };
+    },
+  );
 
 export const setProgress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -367,7 +377,9 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
 
     const { data: sessions, error: e1 } = await db
       .from("workout_sessions")
-      .select("id, plan_id, session_date, duration_sec, exercises_done, exercises_total, created_at")
+      .select(
+        "id, plan_id, session_date, duration_sec, exercises_done, exercises_total, created_at",
+      )
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -402,7 +414,9 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
       .eq("user_id", context.userId);
     const prMap = new Map<string, { max: number; firstDate: string }>();
     for (const r of (histProg ?? []) as Row[]) {
-      const w: number[] = Array.isArray(r.weights) ? r.weights.map((x: unknown) => Number(x) || 0) : [];
+      const w: number[] = Array.isArray(r.weights)
+        ? r.weights.map((x: unknown) => Number(x) || 0)
+        : [];
       const m = w.length ? Math.max(...w) : 0;
       if (m <= 0) continue;
       const key = `${r.plan_id}::${r.exercise_key}`;
@@ -434,7 +448,7 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
         }
       });
       const dayDef = plan?.days.find((d) => d.id === dayKey) ?? null;
-      const dayName = dayDef?.dia ?? (dayKey ?? "Treino");
+      const dayName = dayDef?.dia ?? dayKey ?? "Treino";
       const nameByEx = new Map<string, string>();
       dayDef?.exercicios.forEach((e) => nameByEx.set(e.id, e.nome));
 

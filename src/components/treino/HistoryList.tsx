@@ -83,7 +83,10 @@ export function SessionCard({
           </div>
         </div>
         <ChevronDown
-          className={"h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 " + (open ? "rotate-180" : "")}
+          className={
+            "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 " +
+            (open ? "rotate-180" : "")
+          }
           strokeWidth={2.4}
         />
       </button>
@@ -133,10 +136,7 @@ export function SessionCard({
                       {ex.series > 0
                         ? `${ex.series} ${ex.series === 1 ? "série" : "séries"}${
                             ex.weights.length
-                              ? ": " +
-                                ex.weights
-                                  .map((w) => (w > 0 ? `${w}kg` : "—"))
-                                  .join(" · ")
+                              ? ": " + ex.weights.map((w) => (w > 0 ? `${w}kg` : "—")).join(" · ")
                               : ""
                           }`
                         : "Sem séries registradas."}
@@ -191,7 +191,10 @@ export function HistoryList() {
     return (
       <div className="space-y-2">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-16 animate-pulse rounded-2xl border border-border bg-charcoal-900/60" />
+          <div
+            key={i}
+            className="h-16 animate-pulse rounded-2xl border border-border bg-charcoal-900/60"
+          />
         ))}
       </div>
     );
