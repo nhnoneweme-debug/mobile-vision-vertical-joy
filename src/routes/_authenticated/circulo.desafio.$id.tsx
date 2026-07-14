@@ -25,13 +25,17 @@ export const Route = createFileRoute("/_authenticated/circulo/desafio/$id")({
     <MobileShell>
       <div className="px-4 pt-8 text-center text-sm text-muted-foreground">
         Não consegui carregar o desafio.
-        <button className="ml-2 text-ember underline" onClick={reset}>tentar de novo</button>
+        <button className="ml-2 text-ember underline" onClick={reset}>
+          tentar de novo
+        </button>
       </div>
     </MobileShell>
   ),
   notFoundComponent: () => (
     <MobileShell>
-      <div className="px-4 pt-8 text-center text-sm text-muted-foreground">Desafio não encontrado.</div>
+      <div className="px-4 pt-8 text-center text-sm text-muted-foreground">
+        Desafio não encontrado.
+      </div>
     </MobileShell>
   ),
 });
@@ -56,7 +60,11 @@ function DesafioDetailPage() {
       if (!c) throw new Error("not_found");
       setChallenge(c);
       if (statusOf(c) === "ended" && !c.finalized_at) {
-        try { await finalizeIfEnded(c.id); } catch { /* noop */ }
+        try {
+          await finalizeIfEnded(c.id);
+        } catch {
+          /* noop */
+        }
       }
       const [b, cal, today] = await Promise.all([
         leaderboard(id),
@@ -71,8 +79,12 @@ function DesafioDetailPage() {
     }
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { void myCheckins; }, []); // reserva de import
+  useEffect(() => {
+    load();
+  }, [load]);
+  useEffect(() => {
+    void myCheckins;
+  }, []); // reserva de import
 
   const status = challenge ? statusOf(challenge) : "active";
   const canCheckin = status === "active" && !didToday;
@@ -123,7 +135,10 @@ function DesafioDetailPage() {
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        <button onClick={() => navigate({ to: "/circulo" })} className="grid h-9 w-9 place-items-center rounded-lg border border-border">
+        <button
+          onClick={() => navigate({ to: "/circulo" })}
+          className="grid h-9 w-9 place-items-center rounded-lg border border-border"
+        >
           <ArrowLeft className="h-4 w-4 text-muted-foreground" />
         </button>
         <div className="min-w-0 flex-1">
@@ -256,9 +271,7 @@ function DesafioDetailPage() {
                     <span className="font-display text-xs">
                       {new Date(d.date + "T00:00:00").getDate()}
                     </span>
-                    {d.users.length > 0 && (
-                      <span className="text-[9px]">{d.users.length}●</span>
-                    )}
+                    {d.users.length > 0 && <span className="text-[9px]">{d.users.length}●</span>}
                   </div>
                 ))}
               </div>
@@ -314,9 +327,7 @@ function DesafioDetailPage() {
             >
               <Camera className="h-4 w-4" />
               {photo ? photo.name : "Foto do treino (opcional)"}
-              {photo && (
-                <Check className="ml-auto h-4 w-4 text-ember" />
-              )}
+              {photo && <Check className="ml-auto h-4 w-4 text-ember" />}
             </button>
             <input
               ref={fileRef}

@@ -81,7 +81,9 @@ export async function listMyChallenges(): Promise<Challenge[]> {
   if (gids.length === 0) return [];
   const { data, error } = await db
     .from("challenges")
-    .select("id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at,groups(name)")
+    .select(
+      "id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at,groups(name)",
+    )
     .in("group_id", gids)
     .order("starts_at", { ascending: false });
   if (error) throw error;
@@ -92,7 +94,9 @@ export async function listMyChallenges(): Promise<Challenge[]> {
 export async function listGroupChallenges(groupId: string): Promise<Challenge[]> {
   const { data, error } = await db
     .from("challenges")
-    .select("id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at")
+    .select(
+      "id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at",
+    )
     .eq("group_id", groupId)
     .order("starts_at", { ascending: false });
   if (error) throw error;
@@ -102,7 +106,9 @@ export async function listGroupChallenges(groupId: string): Promise<Challenge[]>
 export async function getChallenge(id: string): Promise<Challenge | null> {
   const { data, error } = await db
     .from("challenges")
-    .select("id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at,groups(name)")
+    .select(
+      "id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at,groups(name)",
+    )
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -134,7 +140,9 @@ export async function createChallenge(input: {
       starts_at: input.starts_at,
       ends_at: input.ends_at,
     })
-    .select("id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at")
+    .select(
+      "id,group_id,created_by,title,description,metric,target,starts_at,ends_at,winner_user_id,finalized_at,created_at",
+    )
     .single();
   if (error) throw error;
   return data as Challenge;
@@ -146,7 +154,9 @@ export async function myCheckins(challengeId: string): Promise<ChallengeCheckin[
   if (!uid) return [];
   const { data, error } = await db
     .from("challenge_checkins")
-    .select("id,challenge_id,user_id,checkin_date,workout_session_id,note,photo_url,points,created_at")
+    .select(
+      "id,challenge_id,user_id,checkin_date,workout_session_id,note,photo_url,points,created_at",
+    )
     .eq("challenge_id", challengeId)
     .eq("user_id", uid)
     .order("checkin_date", { ascending: false });
@@ -225,7 +235,9 @@ export async function checkinToChallenge(input: {
       note: input.note?.trim() || null,
       photo_url,
     })
-    .select("id,challenge_id,user_id,checkin_date,workout_session_id,note,photo_url,points,created_at")
+    .select(
+      "id,challenge_id,user_id,checkin_date,workout_session_id,note,photo_url,points,created_at",
+    )
     .single();
   if (error) {
     const msg = String(error.message ?? "");
@@ -247,10 +259,7 @@ export async function leaderboard(challengeId: string): Promise<LeaderboardRow[]
   return (data ?? []) as LeaderboardRow[];
 }
 
-export async function calendarFor(
-  challengeId: string,
-  month = new Date(),
-): Promise<CalendarRow[]> {
+export async function calendarFor(challengeId: string, month = new Date()): Promise<CalendarRow[]> {
   const monthISO = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-01`;
   const { data, error } = await db.rpc("challenge_calendar", {
     _challenge: challengeId,
