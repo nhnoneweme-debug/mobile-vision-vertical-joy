@@ -197,7 +197,8 @@ export const Route = createFileRoute("/api/assistant")({
             maxOutputTokens: MAX_OUTPUT_TOKENS,
           });
           text = res.text?.trim() ?? "";
-        } catch {
+        } catch (err) {
+          console.error("[api/assistant] generateText falhou:", err);
           return Response.json({ text: "Tive um problema pra responder agora. Tenta de novo?", proposals: [] });
         }
 
