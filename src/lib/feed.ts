@@ -112,7 +112,7 @@ export async function listFeed(limit = 20): Promise<FeedPost[]> {
   const authorIds = Array.from(new Set(posts.map((p) => p.author_id)));
 
   const [profilesQ, reactionsQ, commentsQ, viewsQ, myReactQ, eventsMap] = await Promise.all([
-    supabase.from("public_profiles").select("id, display_name").in("id", authorIds),
+    supabase.rpc("public_profiles_lookup", { _ids: authorIds }),
     supabase.from("post_reactions").select("post_id").in("post_id", ids),
     supabase.from("post_comments").select("post_id").in("post_id", ids),
     supabase.from("post_views").select("post_id").in("post_id", ids),
@@ -122,8 +122,9 @@ export async function listFeed(limit = 20): Promise<FeedPost[]> {
     getEventsForPosts(ids),
   ]);
   const profilesMap = new Map(
-    (profilesQ.data ?? []).map((p) => [p.id, { display_name: p.display_name }]),
+    ((profilesQ.data ?? []) as { id: string; display_name: string | null }[]).map((p) => [p.id, { display_name: p.display_name }]),
   );
+
   const count = (rows: { post_id: string }[] | null | undefined, id: string) =>
     (rows ?? []).filter((r) => r.post_id === id).length;
   const myReactMap = new Map(((myReactQ as { data?: { post_id: string; kind: string }[] }).data ?? []).map((r) => [r.post_id, r.kind]));
