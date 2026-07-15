@@ -1,6 +1,5 @@
 import { Flame, Coins } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { ProfileMenu } from "@/components/shell/ProfileMenu";
 
 export function HUD({
   displayName,
@@ -28,9 +27,7 @@ export function HUD({
       className="sticky top-0 z-30 border-b border-border bg-charcoal-900/85 px-4 pb-4 pt-5 backdrop-blur-xl"
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-        <ProfileMenu displayName={displayName} />
-
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="truncate font-display text-2xl leading-none tracking-wide text-foreground">
