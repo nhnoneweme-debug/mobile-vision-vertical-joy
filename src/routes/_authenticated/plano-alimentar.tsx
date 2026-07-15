@@ -17,11 +17,14 @@ import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { DietEditor, type DietDraft } from "@/components/area/DietEditor";
+import { BarcodeScanner } from "@/components/plano/BarcodeScanner";
 import {
   clearDietPlan,
   generateDietFromProfile,
   getDietPlan,
   parseDietPlan,
+  saveDietPlan,
   type DietPlan,
 } from "@/lib/cozinha.functions";
 import {
@@ -213,6 +216,7 @@ function PlanoPage() {
   const fnLogText = useServerFn(logFoodFromText);
   const fnConfirmLog = useServerFn(confirmFoodLog);
   const fnDeleteLog = useServerFn(deleteFoodLogEntry);
+  const fnSaveDiet = useServerFn(saveDietPlan);
 
   const [plan, setPlan] = useState<DietPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -228,6 +232,14 @@ function PlanoPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editText, setEditText] = useState("");
 
+  // Editor estruturado (edição direta refeição a refeição)
+  const [structOpen, setStructOpen] = useState(false);
+  const [draft, setDraft] = useState<DietDraft>({
+    meals: [],
+    hydration_ml: null,
+    daily_kcal_target: null,
+  });
+
   const [logOpen, setLogOpen] = useState(false);
   const [logTab, setLogTab] = useState<LogTab>("foto");
   const [logStep, setLogStep] = useState<LogStep>("input");
@@ -235,6 +247,7 @@ function PlanoPage() {
   const [photoHint, setPhotoHint] = useState("");
   const [barcodeValue, setBarcodeValue] = useState("");
   const [barcodeGrams, setBarcodeGrams] = useState("100");
+  const [scanOpen, setScanOpen] = useState(false);
   const [manualText, setManualText] = useState("");
   const [proposal, setProposal] = useState<FoodProposal | null>(null);
 
@@ -323,6 +336,59 @@ function PlanoPage() {
       toast.error(e instanceof Error ? e.message : "Erro ao remover.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  function openStructEditor() {
+    setDraft({
+      meals: (plan?.meals ?? []).map((m) => ({ time: m.time, name: m.name, items: [...m.items] })),
+      hydration_ml: plan?.hydration_ml ?? null,
+      daily_kcal_target: plan?.daily_kcal_target ?? null,
+    });
+    setStructOpen(true);
+  }
+
+  async function handleSaveStruct() {
+    if (draft.meals.length === 0) {
+      toast.error("Adicione ao menos uma refeição.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await fnSaveDiet({
+        data: {
+          name: plan?.source_text,
+          hydration_ml: draft.hydration_ml,
+          daily_kcal_target: draft.daily_kcal_target,
+          meals: draft.meals.map((m) => ({ time: m.time, name: m.name, items: m.items })),
+        },
+      });
+      const p = await fnGet();
+      setPlan(p);
+      setStructOpen(false);
+      toast.success("Plano atualizado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Código de barras lido pela câmera → consulta direta (evita estado obsoleto).
+  async function handleScanned(code: string) {
+    setScanOpen(false);
+    setBarcodeValue(code);
+    setLogTab("barcode");
+    setLogStep("calculating");
+    try {
+      const p = await fnLogBarcode({
+        data: { barcode: code, quantity_grams: Number(barcodeGrams) || 100 },
+      });
+      setProposal(p);
+      setLogStep("confirm");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Produto não encontrado.");
+      setLogStep("input");
     }
   }
 
@@ -572,10 +638,7 @@ function PlanoPage() {
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  setEditText(plan.source_text);
-                  setEditOpen(true);
-                }}
+                onClick={openStructEditor}
                 className="font-display text-[10px] tracking-[0.2em] text-muted-foreground hover:text-foreground"
               >
                 EDITAR
@@ -735,6 +798,36 @@ function PlanoPage() {
         </SheetContent>
       </Sheet>
 
+      {/* Edição direta (estruturada) do plano alimentar */}
+      <Sheet open={structOpen} onOpenChange={setStructOpen}>
+        <SheetContent
+          side="bottom"
+          className="mx-auto flex max-h-[88vh] max-w-[var(--shell-max)] flex-col rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
+              <Utensils className="h-4 w-4 text-ember" /> EDITAR PLANO ALIMENTAR
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pb-2" data-lenis-prevent>
+            <DietEditor value={draft} onChange={setDraft} />
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveStruct}
+            disabled={busy || draft.meals.length === 0}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-ember px-3 py-3 font-display text-[11px] tracking-[0.2em] text-charcoal-900 disabled:opacity-50"
+          >
+            {busy ? "SALVANDO…" : "SALVAR ALTERAÇÕES"}
+          </button>
+        </SheetContent>
+      </Sheet>
+
+      {/* Scanner de código de barras (câmera) */}
+      {scanOpen && (
+        <BarcodeScanner onDetected={handleScanned} onClose={() => setScanOpen(false)} />
+      )}
+
       {/* Registrar alimento — foto / código de barras / manual, cálculo real e confirmação */}
       <Sheet open={logOpen} onOpenChange={setLogOpen}>
         <SheetContent
@@ -796,10 +889,17 @@ function PlanoPage() {
 
               {logTab === "barcode" && (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => setScanOpen(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-ember/40 bg-ember/5 px-3 py-3 font-display text-[11px] tracking-[0.2em] text-ember active:scale-[0.99]"
+                  >
+                    <Camera className="h-4 w-4" /> ESCANEAR COM A CÂMERA
+                  </button>
                   <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
                     <ScanLine className="h-4 w-4 text-ember" />
                     <input
-                      placeholder="Código de barras (EAN)"
+                      placeholder="Ou digite o código (EAN)"
                       inputMode="numeric"
                       value={barcodeValue}
                       onChange={(e) => setBarcodeValue(e.target.value.replace(/\D/g, ""))}

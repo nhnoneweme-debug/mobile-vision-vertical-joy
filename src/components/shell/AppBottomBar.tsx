@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Bell, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread, generateMyNudges } from "@/lib/notifications";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { ProfileMenu } from "./ProfileMenu";
 
 // Barra inferior única do app: Notificações (esq.) · IA em destaque (centro) ·
@@ -58,9 +59,16 @@ export function AppBottomBar() {
   const onIaRoute = pathname.startsWith("/assistente") || pathname.startsWith("/conversar");
   const onNotifRoute = pathname.startsWith("/notificacoes");
 
+  // Some ao rolar pra baixo, reaparece ao rolar pra cima (ou perto do topo).
+  const scrollDir = useScrollDirection();
+  const hidden = scrollDir === "down";
+
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)]"
+      className={
+        "fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)] transition-transform duration-300 ease-out " +
+        (hidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0")
+      }
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="relative mx-3 mb-3 flex items-center justify-between rounded-2xl border border-border bg-charcoal-900/90 px-6 py-2.5 backdrop-blur-xl">

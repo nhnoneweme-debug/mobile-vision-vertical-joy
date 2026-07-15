@@ -95,18 +95,71 @@ function AssistantPage() {
     push({ role: "user", text: t });
     setInput("");
     setThinking(true);
+
+    // Bolha do assistente que cresce token a token (criada no 1º delta).
+    let assistantId: number | null = null;
+    const appendDelta = (delta: string) => {
+      if (assistantId == null) {
+        const idNew = nid();
+        assistantId = idNew;
+        setThinking(false);
+        setMsgs((prev) => [...prev, { id: idNew, role: "assistant", text: delta }]);
+      } else {
+        const idCur = assistantId;
+        setMsgs((prev) =>
+          prev.map((m) =>
+            m.id === idCur && m.role === "assistant" ? { ...m, text: m.text + delta } : m,
+          ),
+        );
+      }
+    };
+
     try {
       const r = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ messages: [...convo, { role: "user", text: t }] }),
       });
-      if (!r.ok) throw new Error(String(r.status));
-      const data = (await r.json()) as { text?: string; proposals?: Proposal[] };
-      if (data.text?.trim()) push({ role: "assistant", text: data.text.trim() });
-      for (const p of data.proposals ?? []) push({ role: "proposal", proposal: p, status: "pending" });
+      if (!r.ok || !r.body) throw new Error(String(r.status));
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let sawError = false;
+
+      // Consome o SSE: eventos separados por linha em branco, cada um "data: {json}".
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload) continue;
+          let evt: { type: string; delta?: string; proposals?: Proposal[] };
+          try {
+            evt = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+          if (evt.type === "text" && evt.delta) {
+            appendDelta(evt.delta);
+          } else if (evt.type === "proposals") {
+            for (const p of evt.proposals ?? []) push({ role: "proposal", proposal: p, status: "pending" });
+          } else if (evt.type === "error") {
+            sawError = true;
+          }
+        }
+      }
+
+      if (sawError && assistantId == null) {
+        appendDelta("Tive um problema pra responder agora. Tenta de novo?");
+      }
     } catch {
-      push({ role: "assistant", text: "Tive um problema pra responder agora. Tenta de novo?" });
+      if (assistantId == null) appendDelta("Tive um problema pra responder agora. Tenta de novo?");
     } finally {
       setThinking(false);
     }

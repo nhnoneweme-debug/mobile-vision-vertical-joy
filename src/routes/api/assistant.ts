@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { generateText, tool, stepCountIs } from "ai";
+import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
 import {
@@ -186,34 +186,66 @@ export const Route = createFileRoute("/api/assistant")({
             content: m.role === "user" ? truncateUserText(m.text) : m.text,
           }));
 
-        let text = "";
-        try {
-          const res = await generateText({
-            model,
-            system,
-            messages: modelMessages,
-            tools,
-            stopWhen: stepCountIs(6),
-            maxOutputTokens: MAX_OUTPUT_TOKENS,
-          });
-          text = res.text?.trim() ?? "";
-        } catch (err) {
-          console.error("[api/assistant] generateText falhou:", err);
-          return Response.json({ text: "Tive um problema pra responder agora. Tenta de novo?", proposals: [] });
-        }
+        // Streaming (SSE): texto em deltas + propostas ao final. As propostas
+        // são geradas pelos execute() das tools enquanto o stream é consumido.
+        const result = streamText({
+          model,
+          system,
+          messages: modelMessages,
+          tools,
+          stopWhen: stepCountIs(6),
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        });
 
-        // Persiste histórico (produção).
-        if (supabase && userId) {
-          try {
-            const lastUser = [...incoming].reverse().find((m) => m.role === "user");
-            const rows: Array<{ user_id: string; role: string; content: string }> = [];
-            if (lastUser?.text?.trim()) rows.push({ user_id: userId, role: "user", content: lastUser.text.trim() });
-            if (text) rows.push({ user_id: userId, role: "assistant", content: text });
-            if (rows.length) await supabase.from("assistant_messages").insert(rows);
-          } catch { /* noop */ }
-        }
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({
+          async start(controller) {
+            const send = (obj: unknown) =>
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
 
-        return Response.json({ text: text || "…", proposals });
+            let full = "";
+            try {
+              for await (const delta of result.textStream) {
+                full += delta;
+                send({ type: "text", delta });
+              }
+            } catch (err) {
+              console.error("[api/assistant] streamText falhou:", err);
+              send({ type: "error" });
+              controller.close();
+              return;
+            }
+
+            // Propostas coletadas pelos tools durante o stream.
+            send({ type: "proposals", proposals });
+
+            // Persiste histórico (produção).
+            if (supabase && userId) {
+              try {
+                const lastUser = [...incoming].reverse().find((m) => m.role === "user");
+                const rows: Array<{ user_id: string; role: string; content: string }> = [];
+                if (lastUser?.text?.trim())
+                  rows.push({ user_id: userId, role: "user", content: lastUser.text.trim() });
+                if (full.trim())
+                  rows.push({ user_id: userId, role: "assistant", content: full.trim() });
+                if (rows.length) await supabase.from("assistant_messages").insert(rows);
+              } catch {
+                /* noop */
+              }
+            }
+
+            send({ type: "done" });
+            controller.close();
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-cache, no-transform",
+            Connection: "keep-alive",
+          },
+        });
       },
     },
   },

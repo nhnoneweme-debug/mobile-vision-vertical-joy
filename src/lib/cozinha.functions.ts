@@ -197,8 +197,9 @@ export const saveDietPlan = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        name: z.string().max(60).optional(),
+        name: z.string().max(200).optional(),
         hydration_ml: z.number().int().min(0).max(10000).nullable().optional(),
+        daily_kcal_target: z.number().int().min(0).max(6000).nullable().optional(),
         meals: z
           .array(
             z.object({
@@ -223,10 +224,13 @@ export const saveDietPlan = createServerFn({ method: "POST" })
       null;
     const plan: DietPlan = {
       updated_at: new Date().toISOString(),
-      source_text: data.name ?? "Montado pela IA",
+      source_text: data.name ?? previous?.source_text ?? "Montado pela IA",
       meals: data.meals.map((m) => ({ time: m.time ?? "12:00", name: m.name, items: m.items })),
       hydration_ml: data.hydration_ml ?? null,
-      warnings: [],
+      // Preserva a meta calórica: usa a informada, senão mantém a do plano atual
+      // (evita zerar o anel de calorias ao editar refeições).
+      daily_kcal_target: data.daily_kcal_target ?? previous?.daily_kcal_target ?? null,
+      warnings: previous?.warnings ?? [],
     };
     await saveDietToArea(context.supabase, context.userId, plan);
     return { previous };
