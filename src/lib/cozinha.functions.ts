@@ -16,6 +16,7 @@ export type DietPlan = {
   source_text: string;
   meals: Meal[];
   hydration_ml?: number | null;
+  daily_kcal_target?: number | null;
   warnings?: string[];
 };
 
@@ -29,8 +30,10 @@ const MealSchema = z.object({
 const DietJsonSchema = z.object({
   meals: z.array(MealSchema).max(12),
   hydration_ml: z.number().int().min(0).max(8000).nullable().optional(),
+  daily_kcal_target: z.number().int().min(500).max(6000).nullable().optional(),
   warnings: z.array(z.string().max(200)).max(6).optional(),
 });
+
 
 async function saveDietToArea(
   supabase: import("@supabase/supabase-js").SupabaseClient,
@@ -67,10 +70,12 @@ export const parseDietPlan = createServerFn({ method: "POST" })
     const sys = [
       "Você é nutricionista assistente. Receba uma dieta em texto livre (português, pode estar bagunçada) e devolva APENAS JSON válido.",
       "Formato exato:",
-      '{ "meals":[{"time":"HH:MM","name":"...","items":["..."],"notes":"opcional"}], "hydration_ml": 2500, "warnings":["..."] }',
+      '{ "meals":[{"time":"HH:MM","name":"...","items":["..."],"notes":"opcional"}], "hydration_ml": 2500, "daily_kcal_target": 2000, "warnings":["..."] }',
       "Regras: ordene meals por horário; use HH:MM 24h; se faltar horário, distribua entre 07:00–22:00; items curtos.",
+      "daily_kcal_target: estime o total calórico diário aproximado somando as refeições descritas.",
       "Sem prosa, sem markdown, apenas o JSON.",
     ].join("\n");
+
 
     const res = await generateText({
       model,
@@ -93,8 +98,10 @@ export const parseDietPlan = createServerFn({ method: "POST" })
       source_text: data.raw_text,
       meals: parsed.meals,
       hydration_ml: parsed.hydration_ml ?? null,
+      daily_kcal_target: parsed.daily_kcal_target ?? null,
       warnings: parsed.warnings ?? [],
     };
+
 
     await saveDietToArea(context.supabase, context.userId, plan);
     return plan;
@@ -123,10 +130,12 @@ export const generateDietFromProfile = createServerFn({ method: "POST" })
       "Você é nutricionista assistente. Monte um plano alimentar de UM dia (a rotina se repete diariamente),",
       "adequado ao perfil informado, e devolva APENAS JSON válido.",
       "Formato exato:",
-      '{ "meals":[{"time":"HH:MM","name":"...","items":["..."],"notes":"opcional"}], "hydration_ml": 2500, "warnings":["..."] }',
+      '{ "meals":[{"time":"HH:MM","name":"...","items":["..."],"notes":"opcional"}], "hydration_ml": 2500, "daily_kcal_target": 2000, "warnings":["..."] }',
       "Regras: 4 a 6 refeições, ordenadas por horário HH:MM 24h entre 06:00–22:00; items curtos e realistas.",
+      "daily_kcal_target: estime a meta calórica diária adequada ao objetivo/perfil informado.",
       "Sem prosa, sem markdown, apenas o JSON.",
     ].join("\n");
+
     const userPrompt = [
       `Nome: ${profile.display_name ?? "—"}`,
       `Objetivo: ${profile.goal}`,
@@ -160,8 +169,10 @@ export const generateDietFromProfile = createServerFn({ method: "POST" })
       source_text: `Gerado pela IA a partir do perfil (objetivo: ${profile.goal})`,
       meals: parsed.meals,
       hydration_ml: parsed.hydration_ml ?? null,
+      daily_kcal_target: parsed.daily_kcal_target ?? null,
       warnings: parsed.warnings ?? [],
     };
+
     await saveDietToArea(context.supabase, context.userId, plan);
     return plan;
   });
