@@ -15,10 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import {
   clearDietPlan,
   generateDietFromProfile,
@@ -216,7 +214,6 @@ function PlanoPage() {
   const fnConfirmLog = useServerFn(confirmFoodLog);
   const fnDeleteLog = useServerFn(deleteFoodLogEntry);
 
-  const [displayName, setDisplayName] = useState("Você");
   const [plan, setPlan] = useState<DietPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -270,15 +267,6 @@ function PlanoPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("id", data.user.id)
-          .maybeSingle();
-        if (profile?.display_name) setDisplayName(profile.display_name);
-      }
       try {
         const p = await fnGet();
         setPlan(p);
@@ -430,7 +418,6 @@ function PlanoPage() {
             Sua dieta, calorias e histórico do dia
           </p>
         </div>
-        <ProfileMenu displayName={displayName} />
       </header>
 
       {/* Anel de calorias — dado real do diário */}
@@ -657,7 +644,7 @@ function PlanoPage() {
         type="button"
         onClick={openLog}
         aria-label="Registrar alimento"
-        className="fixed bottom-24 left-1/2 z-40 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full border border-ember/40 bg-charcoal-900 text-ember forge-raised active:scale-95"
+        className="fixed bottom-28 right-4 z-40 grid h-14 w-14 place-items-center rounded-full border border-ember/40 bg-charcoal-900 text-ember forge-raised active:scale-95"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
         <Camera className="h-6 w-6" strokeWidth={2.2} />

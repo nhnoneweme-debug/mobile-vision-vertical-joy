@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from "react";
-import { AiOrb } from "./AiOrb";
+import { AppBottomBar } from "./AppBottomBar";
 import { BackButton } from "./BackButton";
-import { NotificationsBell } from "./NotificationsBell";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
 
@@ -19,7 +18,7 @@ function applyAccessibilityFromPrefs(prefs: {
 export function MobileShell({
   children,
   hideNav = false,
-  hideMentor: _hideMentor = false, // kept for API compat; mentor moved into BottomNav
+  hideMentor: _hideMentor = false, // kept for API compat; nav consolidada na AppBottomBar
 }: {
   children: ReactNode;
   hideNav?: boolean;
@@ -43,14 +42,13 @@ export function MobileShell({
   return (
     <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-col bg-background">
       {!hideNav && <BackButton />}
-      {!hideNav && <NotificationsBell />}
       <main
         className="flex-1 pb-28"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         {children}
       </main>
-      {!hideNav && <AiOrb />}
+      {!hideNav && <AppBottomBar />}
     </div>
   );
 }
