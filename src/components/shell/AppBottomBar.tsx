@@ -63,6 +63,10 @@ export function AppBottomBar() {
   const scrollDir = useScrollDirection();
   const hidden = scrollDir === "down";
 
+  // Telas de chat imersivo (assistente/conversar) têm composer próprio fixo no
+  // rodapé — esconde a barra pra não sobrepor. O BackButton (topo) permite sair.
+  if (onIaRoute) return null;
+
   return (
     <nav
       className={
