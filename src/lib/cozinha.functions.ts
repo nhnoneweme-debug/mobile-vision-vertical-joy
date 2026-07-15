@@ -34,6 +34,7 @@ const DietJsonSchema = z.object({
   warnings: z.array(z.string().max(200)).max(6).optional(),
 });
 
+
 async function saveDietToArea(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   userId: string,
@@ -75,6 +76,7 @@ export const parseDietPlan = createServerFn({ method: "POST" })
       "Sem prosa, sem markdown, apenas o JSON.",
     ].join("\n");
 
+
     const res = await generateText({
       model,
       system: sys,
@@ -99,6 +101,7 @@ export const parseDietPlan = createServerFn({ method: "POST" })
       daily_kcal_target: parsed.daily_kcal_target ?? null,
       warnings: parsed.warnings ?? [],
     };
+
 
     await saveDietToArea(context.supabase, context.userId, plan);
     return plan;
@@ -132,6 +135,7 @@ export const generateDietFromProfile = createServerFn({ method: "POST" })
       "daily_kcal_target: estime a meta calórica diária adequada ao objetivo/perfil informado.",
       "Sem prosa, sem markdown, apenas o JSON.",
     ].join("\n");
+
     const userPrompt = [
       `Nome: ${profile.display_name ?? "—"}`,
       `Objetivo: ${profile.goal}`,
@@ -168,6 +172,7 @@ export const generateDietFromProfile = createServerFn({ method: "POST" })
       daily_kcal_target: parsed.daily_kcal_target ?? null,
       warnings: parsed.warnings ?? [],
     };
+
     await saveDietToArea(context.supabase, context.userId, plan);
     return plan;
   });
