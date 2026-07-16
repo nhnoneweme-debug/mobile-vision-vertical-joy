@@ -803,6 +803,66 @@ export type Database = {
         }
         Relationships: []
       }
+      google_calendar_connections: {
+        Row: {
+          access_token: string
+          calendar_id: string
+          created_at: string
+          last_synced_at: string | null
+          refresh_token: string | null
+          sync_enabled: boolean
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string
+          created_at?: string
+          last_synced_at?: string | null
+          refresh_token?: string | null
+          sync_enabled?: boolean
+          token_expires_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string
+          created_at?: string
+          last_synced_at?: string | null
+          refresh_token?: string | null
+          sync_enabled?: boolean
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_calendar_event_map: {
+        Row: {
+          google_event_id: string
+          id: string
+          last_synced_at: string
+          mission_id: string | null
+          user_id: string
+        }
+        Insert: {
+          google_event_id: string
+          id?: string
+          last_synced_at?: string
+          mission_id?: string | null
+          user_id: string
+        }
+        Update: {
+          google_event_id?: string
+          id?: string
+          last_synced_at?: string
+          mission_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           group_id: string

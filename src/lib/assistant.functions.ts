@@ -1,10 +1,119 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
 
 export type AssistantMessage = { role: "user" | "assistant"; content: string; created_at: string };
+export type Conversation = { id: string; title: string; updated_at: string };
+export type ChatSettings = {
+  persona: "caloroso" | "direto" | "tecnico";
+  response_length: "curtas" | "equilibrado" | "detalhadas";
+  focus: "geral" | "treino" | "nutricao" | "mente";
+  custom_instructions: string;
+};
+
+export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
+  persona: "caloroso",
+  response_length: "equilibrado",
+  focus: "geral",
+  custom_instructions: "",
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
+
+// --- Conversas -------------------------------------------------------------
+
+export const listConversations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<Conversation[]> => {
+    const db = context.supabase as Db;
+    const { data } = await db
+      .from("chat_conversations")
+      .select("id, title, updated_at")
+      .eq("user_id", context.userId)
+      .order("updated_at", { ascending: false })
+      .limit(50);
+    return (data ?? []) as Conversation[];
+  });
+
+export const getConversationMessages = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ conversation_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<AssistantMessage[]> => {
+    const db = context.supabase as Db;
+    const { data: rows } = await db
+      .from("assistant_messages")
+      .select("role, content, created_at")
+      .eq("user_id", context.userId)
+      .eq("conversation_id", data.conversation_id)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    return (rows ?? []) as AssistantMessage[];
+  });
+
+export const deleteConversation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const db = context.supabase as Db;
+    // ON DELETE CASCADE apaga as mensagens junto.
+    await db.from("chat_conversations").delete().eq("id", data.id).eq("user_id", context.userId);
+    return { ok: true };
+  });
+
+export const renameConversation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), title: z.string().min(1).max(80) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const db = context.supabase as Db;
+    await db
+      .from("chat_conversations")
+      .update({ title: data.title })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    return { ok: true };
+  });
+
+// --- Configuração da IA ----------------------------------------------------
+
+export const getChatSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ChatSettings> => {
+    const db = context.supabase as Db;
+    const { data } = await db
+      .from("chat_settings")
+      .select("persona, response_length, focus, custom_instructions")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
+  });
+
+export const saveChatSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        persona: z.enum(["caloroso", "direto", "tecnico"]),
+        response_length: z.enum(["curtas", "equilibrado", "detalhadas"]),
+        focus: z.enum(["geral", "treino", "nutricao", "mente"]),
+        custom_instructions: z.string().max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const db = context.supabase as Db;
+    await db
+      .from("chat_settings")
+      .upsert(
+        { user_id: context.userId, ...data, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      );
+    return { ok: true };
+  });
+
+// --- Compat (lista plana antiga) ------------------------------------------
 
 export const listAssistantMessages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

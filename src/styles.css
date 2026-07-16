@@ -55,8 +55,6 @@
   /* Largura máxima do shell mobile — cresce com o viewport em desktop */
   --shell-max: clamp(360px, 100vw, 480px);
 
-
-
   /* Charcoal scale (#1a1a1a → #4a4a4a) */
   --charcoal-900: oklch(0.18 0 0);
   --charcoal-800: oklch(0.245 0 0);
@@ -236,7 +234,11 @@
     overscroll-behavior-y: none;
   }
 
-  h1, h2, h3, h4, .font-display {
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
     font-family: var(--font-display);
     letter-spacing: 0.02em;
   }
@@ -253,7 +255,8 @@
 }
 
 @keyframes ember-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 1px color-mix(in oklab, var(--ember) 30%, transparent),
       0 0 18px -2px color-mix(in oklab, var(--ember) 45%, transparent);
@@ -269,13 +272,12 @@
 
 /* Card com "peso": brilho no topo, sombra profunda embaixo — parece uma ficha física. */
 @utility forge-card {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--card) 100%, white 4%) 0%,
-      var(--card) 42%,
-      color-mix(in oklab, var(--card) 100%, black 8%) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--card) 100%, white 4%) 0%,
+    var(--card) 42%,
+    color-mix(in oklab, var(--card) 100%, black 8%) 100%
+  );
   border: 1px solid var(--color-border);
   box-shadow:
     0 1px 0 0 oklch(1 0 0 / 7%) inset,
@@ -293,7 +295,9 @@
 
 /* Pressão tátil: afunda de leve ao tocar. */
 @utility forge-press {
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
 }
 @utility forge-press-active {
   transform: translateY(1px) scale(0.985);
@@ -301,9 +305,17 @@
 
 /* "Carimbo" ao completar um hábito. */
 @keyframes stamp-in {
-  0% { transform: scale(0.4); opacity: 0; }
-  55% { transform: scale(1.18); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 @utility stamp-in {
   animation: stamp-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.5);
@@ -330,10 +342,25 @@ html.high-contrast {
   --muted-foreground: oklch(95% 0 0);
 }
 
-/* Shell responsivo — desktop alarga o container centralizado */
+/* Shell responsivo — desktop alarga o container centralizado e ativa sidebar */
+:root {
+  --sidebar-width: 0px;
+  --sidebar-visible: 0;
+}
 @media (min-width: 1024px) {
-  :root { --shell-max: 640px; }
+  :root {
+    --shell-max: 960px;
+    --sidebar-width: 240px;
+    --sidebar-visible: 1;
+  }
 }
 @media (min-width: 1280px) {
-  :root { --shell-max: 720px; }
+  :root {
+    --shell-max: 1080px;
+  }
+}
+@media (min-width: 1440px) {
+  :root {
+    --shell-max: 1200px;
+  }
 }
