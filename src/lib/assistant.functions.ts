@@ -99,7 +99,7 @@ export const getChatSettings = createServerFn({ method: "GET" })
     const db = context.supabase as Db;
     const { data } = await db
       .from("chat_settings")
-      .select("persona, response_length, focus, custom_instructions, assistant_name")
+      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender")
       .eq("user_id", context.userId)
       .maybeSingle();
     return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
@@ -114,8 +114,9 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         response_length: z.enum(["curtas", "equilibrado", "detalhadas"]),
         focus: z.enum(["geral", "treino", "nutricao", "mente"]),
         custom_instructions: z.string().max(500),
-        // trim + max: "  " vira "" e cai no fallback (Weme).
+        // trim + max: "  " vira "" e cai no fallback (WiMi).
         assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
+        voice_gender: z.enum(["feminina", "masculina"]),
       })
       .parse(d),
   )
