@@ -7,6 +7,7 @@ import { Moon, Send, BedDouble, Sunrise, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import { authHeaders } from "@/lib/auth-headers";
 import { HeaderBackButton } from "@/components/shell/HeaderBackButton";
+import { DayChecklist } from "./DayChecklist";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import type { RitualType } from "@/lib/ritual";
 
@@ -163,6 +164,9 @@ export function DumpChat({ mode }: { mode: RitualType }) {
 
       <div className="border-t border-border bg-charcoal-900/95 px-3 py-3 backdrop-blur-xl">
         <div className="mx-auto w-full max-w-[var(--shell-max)]">
+          {/* Só na noite: fechar o dia é confirmar o que foi combinado pra hoje. */}
+          {mode === "night" && <DayChecklist />}
+
           {listening && (
             <p className="mb-2 flex items-center gap-1.5 text-[11px] text-ember">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember" />
