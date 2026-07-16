@@ -142,6 +142,17 @@ export const syncMissionsToCalendar = createServerFn({ method: "POST" })
     const db = context.supabase as Db;
     const token = await ensureAccessToken(db, context.userId);
 
+    // Fuso real da pessoa — mandar tudo como São Paulo joga o treino de quem
+    // mora em outro fuso na hora errada do Google Calendar.
+    const { data: prefs } = await db
+      .from("notification_prefs")
+      .select("timezone")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const timeZone = prefs?.timezone || "America/Sao_Paulo";
+
+    // Compromissos, lembretes e treinos são todos user_missions — o que a
+    // pessoa agenda na Agenda (inclusive "Treino de força") cai aqui.
     const { data: missions } = await db
       .from("user_missions")
       .select("id, title, notes, scheduled_time, end_time, weekday_mask, mission_type, active")
@@ -181,7 +192,6 @@ export const syncMissionsToCalendar = createServerFn({ method: "POST" })
       mission_type: string;
     }>) {
       const existingEventId = eventMap.get(mission.id);
-      if (existingEventId) continue;
 
       const startTime = mission.scheduled_time || "09:00:00";
       const endTime = mission.end_time || startTime;
@@ -196,37 +206,48 @@ export const syncMissionsToCalendar = createServerFn({ method: "POST" })
       const event: any = {
         summary: mission.title,
         description: mission.notes || "",
-        start: {
-          dateTime: `${todayStr}T${startTime}`,
-          timeZone: "America/Sao_Paulo",
-        },
-        end: {
-          dateTime: `${todayStr}T${endTime}`,
-          timeZone: "America/Sao_Paulo",
-        },
+        start: { dateTime: `${todayStr}T${startTime}`, timeZone },
+        end: { dateTime: `${todayStr}T${endTime}`, timeZone },
       };
 
       if (mission.mission_type === "daily" || (mission.mission_type === "weekly" && byDay.length)) {
         event.recurrence = [`RRULE:FREQ=WEEKLY;BYDAY=${byDay.join(",")};COUNT=52`];
       }
 
-      const url = `${GOOGLE_CALENDAR_API}/calendars/primary/events`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(event),
-      });
+      // Já sincronizado: atualiza em vez de pular, senão renomear/reagendar o
+      // compromisso aqui deixava o evento velho pra sempre no Google.
+      const res = existingEventId
+        ? await fetch(
+            `${GOOGLE_CALENDAR_API}/calendars/primary/events/${encodeURIComponent(existingEventId)}`,
+            {
+              method: "PATCH",
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify(event),
+            },
+          )
+        : await fetch(`${GOOGLE_CALENDAR_API}/calendars/primary/events`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(event),
+          });
+
       if (res.ok) {
-        const created = await res.json();
-        await db.from("google_calendar_event_map").insert({
-          user_id: context.userId,
-          mission_id: mission.id,
-          google_event_id: created.id,
-        });
+        if (!existingEventId) {
+          const created = await res.json();
+          await db.from("google_calendar_event_map").insert({
+            user_id: context.userId,
+            mission_id: mission.id,
+            google_event_id: created.id,
+          });
+        }
         synced++;
+      } else if (existingEventId && (res.status === 404 || res.status === 410)) {
+        // Apagado no Google: esquece o vínculo pra recriar no próximo sync.
+        await db
+          .from("google_calendar_event_map")
+          .delete()
+          .eq("user_id", context.userId)
+          .eq("mission_id", mission.id);
       }
     }
 
