@@ -2,21 +2,20 @@
 // da mesma fonte, e importar assistant.functions.ts aqui arrastaria createServerFn.
 
 /** Como a inteligência digital se chama quando o usuário não escolheu um nome. */
-export const ASSISTANT_NAME_FALLBACK = "Weme";
+export const ASSISTANT_NAME_FALLBACK = "WiMi";
 export const ASSISTANT_NAME_MAX = 24;
 
 /**
  * Nome efetivo da IA. Ponto único de fallback — o banco guarda '' pra
- * distinguir "não escolheu" de "escolheu Weme".
+ * distinguir "não escolheu" de "escolheu WiMi".
  */
 export function assistantName(s: { assistant_name?: string | null } | null | undefined): string {
   return s?.assistant_name?.trim() || ASSISTANT_NAME_FALLBACK;
 }
 
 /**
- * Saudação da IA. Forma neutra de gênero de propósito: o nome é livre, então
- * "Sou a <nome>" erraria a concordância em metade dos casos.
+ * Saudação da IA. Texto único que aparece na primeira bolha do /assistente.
  */
 export function assistantGreeting(nome: string): string {
-  return `Oi! Aqui é ${nome}, sua inteligência digital. Me conta o que você quer — treino, dieta, um hábito ou um compromisso. Eu pergunto o que faltar e monto uma proposta pra você confirmar.`;
+  return `Oi, sou o ${nome}, sua inteligência digital. O que vamos trabalhar hoje?`;
 }

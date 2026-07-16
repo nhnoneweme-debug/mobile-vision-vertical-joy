@@ -48,11 +48,11 @@ import {
 import type { Proposal } from "@/routes/api/assistant";
 
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
-// que carregam (o fallback é "Weme").
+// que carregam (o fallback é "WiMi").
 const GREETING = assistantGreeting(ASSISTANT_NAME_FALLBACK);
 
 export const Route = createFileRoute("/_authenticated/assistente")({
-  head: () => ({ meta: [{ title: "Inteligência Digital — Weme" }] }),
+  head: () => ({ meta: [{ title: `${ASSISTANT_NAME_FALLBACK} — Inteligência Digital` }] }),
   component: AssistantPage,
 });
 
@@ -174,7 +174,7 @@ function AssistantPage() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, gender: settings.voice_gender }),
       });
       if (r.ok) {
         const blob = await r.blob();
@@ -199,12 +199,31 @@ function AssistantPage() {
     speakFallback(text);
   }
 
+  function pickPtBrVoice(gender: "feminina" | "masculina"): SpeechSynthesisVoice | null {
+    if (!("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    const ptbr = voices.filter((v) => /pt(-|_)?BR/i.test(v.lang) || /pt(-|_)?PT/i.test(v.lang));
+    if (!ptbr.length) return null;
+    // Heurística por nome (browsers não expõem gênero na API).
+    const femHints = /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
+    const maleHints = /(male|homem|felipe|ricardo|daniel|paulo|joão|joao|diego|thiago|antonio)/i;
+    const wanted = gender === "feminina" ? femHints : maleHints;
+    const other = gender === "feminina" ? maleHints : femHints;
+    return (
+      ptbr.find((v) => wanted.test(v.name)) ??
+      ptbr.find((v) => !other.test(v.name)) ??
+      ptbr[0]
+    );
+  }
+
   function speakFallback(text: string) {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
     utter.rate = 1;
+    const v = pickPtBrVoice(settings.voice_gender);
+    if (v) utter.voice = v;
     utter.onstart = () => setSpeaking(true);
     utter.onend = () => setSpeaking(false);
     utter.onerror = () => setSpeaking(false);
@@ -531,11 +550,11 @@ function AssistantPage() {
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl leading-none tracking-wide text-foreground">
-            INTELIGÊNCIA DIGITAL
+          <h1 className="truncate font-display text-xl leading-none tracking-wide text-foreground">
+            {assistantName(settings).toUpperCase()}
           </h1>
           <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            Conversa, entende e propõe — você confirma
+            Inteligência Digital
             {voiceMode ? (
               <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-ember/15 px-1.5 py-0.5 text-[9px] font-display tracking-[0.15em] text-ember">
                 {listening ? "🎙 OUVINDO" : speaking ? "🔊 FALANDO" : "🎤 VOZ"}
@@ -543,30 +562,6 @@ function AssistantPage() {
             ) : null}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={startNewConversation}
-          aria-label="Nova conversa"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setConvOpen(true)}
-          aria-label="Histórico de conversas"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
-        >
-          <History className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setCfgOpen(true)}
-          aria-label="Configurar a IA"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
       </header>
 
       <div className="space-y-3 px-4 pt-4">
@@ -640,9 +635,33 @@ function AssistantPage() {
       <div className="h-28" />
 
       <div
-        className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2.5 backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
+        {/* Controles ao alcance do polegar (item 3): nova, histórico, config. */}
+        <div className="mb-2 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={startNewConversation}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+          >
+            <MessageSquarePlus className="h-3.5 w-3.5" /> NOVA
+          </button>
+          <button
+            type="button"
+            onClick={() => setConvOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+          >
+            <History className="h-3.5 w-3.5" /> HISTÓRICO
+          </button>
+          <button
+            type="button"
+            onClick={() => setCfgOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" /> AJUSTAR
+          </button>
+        </div>
         {pendingImages.length ? (
           <div className="mb-2 flex gap-2 overflow-x-auto">
             {pendingImages.map((img, i) => (
@@ -880,6 +899,17 @@ function AssistantPage() {
                 { v: "treino", label: "Treino" },
                 { v: "nutricao", label: "Nutrição" },
                 { v: "mente", label: "Mente" },
+              ]}
+            />
+            <SegGroup
+              label="VOZ DA IA"
+              value={settings.voice_gender}
+              onChange={(v) =>
+                persistSettings({ ...settings, voice_gender: v as ChatSettings["voice_gender"] })
+              }
+              options={[
+                { v: "feminina", label: "Feminina" },
+                { v: "masculina", label: "Masculina" },
               ]}
             />
             <div>

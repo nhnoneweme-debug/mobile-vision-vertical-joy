@@ -5,6 +5,7 @@ import { ASSISTANT_NAME_MAX } from "./assistant-name";
 
 export type AssistantMessage = { role: "user" | "assistant"; content: string; created_at: string };
 export type Conversation = { id: string; title: string; updated_at: string };
+export type VoiceGender = "feminina" | "masculina";
 export type ChatSettings = {
   persona: "caloroso" | "direto" | "tecnico";
   response_length: "curtas" | "equilibrado" | "detalhadas";
@@ -12,6 +13,8 @@ export type ChatSettings = {
   custom_instructions: string;
   /** Vazio = usar ASSISTANT_NAME_FALLBACK. */
   assistant_name: string;
+  /** Gênero da voz da IA (TTS + Web Speech fallback). */
+  voice_gender: VoiceGender;
 };
 
 export {
@@ -27,6 +30,7 @@ export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   focus: "geral",
   custom_instructions: "",
   assistant_name: "",
+  voice_gender: "feminina",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +99,7 @@ export const getChatSettings = createServerFn({ method: "GET" })
     const db = context.supabase as Db;
     const { data } = await db
       .from("chat_settings")
-      .select("persona, response_length, focus, custom_instructions, assistant_name")
+      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender")
       .eq("user_id", context.userId)
       .maybeSingle();
     return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
@@ -110,8 +114,9 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         response_length: z.enum(["curtas", "equilibrado", "detalhadas"]),
         focus: z.enum(["geral", "treino", "nutricao", "mente"]),
         custom_instructions: z.string().max(500),
-        // trim + max: "  " vira "" e cai no fallback (Weme).
+        // trim + max: "  " vira "" e cai no fallback (WiMi).
         assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
+        voice_gender: z.enum(["feminina", "masculina"]),
       })
       .parse(d),
   )
