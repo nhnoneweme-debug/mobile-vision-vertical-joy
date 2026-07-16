@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Bell, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread, generateMyNudges } from "@/lib/notifications";
-import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { ProfileMenu } from "./ProfileMenu";
 
 // Barra inferior única do app: Notificações (esq.) · IA em destaque (centro) ·
