@@ -901,6 +901,17 @@ function AssistantPage() {
                 { v: "mente", label: "Mente" },
               ]}
             />
+            <SegGroup
+              label="VOZ DA IA"
+              value={settings.voice_gender}
+              onChange={(v) =>
+                persistSettings({ ...settings, voice_gender: v as ChatSettings["voice_gender"] })
+              }
+              options={[
+                { v: "feminina", label: "Feminina" },
+                { v: "masculina", label: "Masculina" },
+              ]}
+            />
             <div>
               <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
                 INSTRUÇÕES PERSONALIZADAS
