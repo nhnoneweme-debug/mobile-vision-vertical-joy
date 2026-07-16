@@ -91,7 +91,7 @@ export function ProfileMenu({ displayName }: { displayName: string }) {
               <p className="mb-2 font-display text-[11px] tracking-[0.22em] text-muted-foreground">
                 {section.section.toUpperCase()}
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col gap-1.5">
                 {section.items.map((item) => {
                   const active = pathname.startsWith(item.to);
                   const Icon = item.icon;
@@ -101,14 +101,14 @@ export function ProfileMenu({ displayName }: { displayName: string }) {
                       to={item.to}
                       onClick={() => setOpen(false)}
                       className={
-                        "flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-center transition-colors " +
+                        "flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors " +
                         (active
                           ? "border-ember/60 bg-ember/10 text-ember"
-                          : "border-border/60 text-muted-foreground")
+                          : "border-border/60 text-foreground/90")
                       }
                     >
-                      <Icon className="h-4 w-4" strokeWidth={2.2} />
-                      <span className="font-display text-[9px] leading-tight tracking-[0.14em]">
+                      <Icon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+                      <span className="min-w-0 flex-1 truncate font-display text-[13px] tracking-[0.14em]">
                         {item.label.toUpperCase()}
                       </span>
                     </Link>

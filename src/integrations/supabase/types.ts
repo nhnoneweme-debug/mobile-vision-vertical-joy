@@ -264,6 +264,7 @@ export type Database = {
       assistant_messages: {
         Row: {
           content: string
+          conversation_id: string | null
           created_at: string
           id: string
           role: string
@@ -271,6 +272,7 @@ export type Database = {
         }
         Insert: {
           content: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
           role: string
@@ -278,12 +280,21 @@ export type Database = {
         }
         Update: {
           content?: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
           role?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assistant_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       belief_confrontations: {
         Row: {
@@ -483,6 +494,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_settings: {
+        Row: {
+          custom_instructions: string
+          focus: string
+          persona: string
+          response_length: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          custom_instructions?: string
+          focus?: string
+          persona?: string
+          response_length?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          custom_instructions?: string
+          focus?: string
+          persona?: string
+          response_length?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       content_reports: {
         Row: {
