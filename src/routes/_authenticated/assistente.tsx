@@ -48,11 +48,11 @@ import {
 import type { Proposal } from "@/routes/api/assistant";
 
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
-// que carregam (o fallback é "Weme").
+// que carregam (o fallback é "WiMi").
 const GREETING = assistantGreeting(ASSISTANT_NAME_FALLBACK);
 
 export const Route = createFileRoute("/_authenticated/assistente")({
-  head: () => ({ meta: [{ title: "Inteligência Digital — Weme" }] }),
+  head: () => ({ meta: [{ title: `${ASSISTANT_NAME_FALLBACK} — Inteligência Digital` }] }),
   component: AssistantPage,
 });
 
@@ -174,7 +174,7 @@ function AssistantPage() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, gender: settings.voice_gender }),
       });
       if (r.ok) {
         const blob = await r.blob();
@@ -199,12 +199,31 @@ function AssistantPage() {
     speakFallback(text);
   }
 
+  function pickPtBrVoice(gender: "feminina" | "masculina"): SpeechSynthesisVoice | null {
+    if (!("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    const ptbr = voices.filter((v) => /pt(-|_)?BR/i.test(v.lang) || /pt(-|_)?PT/i.test(v.lang));
+    if (!ptbr.length) return null;
+    // Heurística por nome (browsers não expõem gênero na API).
+    const femHints = /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
+    const maleHints = /(male|homem|felipe|ricardo|daniel|paulo|joão|joao|diego|thiago|antonio)/i;
+    const wanted = gender === "feminina" ? femHints : maleHints;
+    const other = gender === "feminina" ? maleHints : femHints;
+    return (
+      ptbr.find((v) => wanted.test(v.name)) ??
+      ptbr.find((v) => !other.test(v.name)) ??
+      ptbr[0]
+    );
+  }
+
   function speakFallback(text: string) {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
     utter.rate = 1;
+    const v = pickPtBrVoice(settings.voice_gender);
+    if (v) utter.voice = v;
     utter.onstart = () => setSpeaking(true);
     utter.onend = () => setSpeaking(false);
     utter.onerror = () => setSpeaking(false);
