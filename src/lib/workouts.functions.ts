@@ -40,6 +40,7 @@ export type WorkoutProgressRow = {
   done: boolean;
   series: number;
   weights: number[];
+  reps_done: number[];
 };
 
 // NOTA: as tabelas workout_* ainda não estão no types.ts gerado (regenera após a
@@ -203,7 +204,7 @@ export const getTodayProgress = createServerFn({ method: "POST" })
     const db = context.supabase as Db;
     const { data: rows, error } = await db
       .from("workout_progress")
-      .select("day_key, exercise_key, done, series, weights")
+      .select("day_key, exercise_key, done, series, weights, reps_done")
       .eq("user_id", context.userId)
       .eq("plan_id", data.planId)
       .eq("day_key", data.dayKey)
@@ -224,15 +225,20 @@ export const logSerie = createServerFn({ method: "POST" })
         exerciseKey: z.string().min(1).max(64),
         target: z.number().int().min(1).max(50),
         weight: z.number().min(0).max(2000).optional(),
+        // Opcional: quem só quer marcar o peso não fica travado.
+        reps: z.number().int().min(0).max(999).optional(),
       })
       .parse(d),
   )
   .handler(
-    async ({ data, context }): Promise<{ series: number; done: boolean; weights: number[] }> => {
+    async ({
+      data,
+      context,
+    }): Promise<{ series: number; done: boolean; weights: number[]; reps_done: number[] }> => {
       const db = context.supabase as Db;
       const { data: cur } = await db
         .from("workout_progress")
-        .select("series, weights")
+        .select("series, weights, reps_done")
         .eq("user_id", context.userId)
         .eq("plan_id", data.planId)
         .eq("day_key", data.dayKey)
@@ -241,11 +247,14 @@ export const logSerie = createServerFn({ method: "POST" })
         .maybeSingle();
       const prevSeries = Number(cur?.series ?? 0);
       const prevWeights: number[] = Array.isArray(cur?.weights) ? cur.weights : [];
+      const prevReps: number[] = Array.isArray(cur?.reps_done) ? cur.reps_done : [];
       if (prevSeries >= data.target) {
-        return { series: prevSeries, done: true, weights: prevWeights };
+        return { series: prevSeries, done: true, weights: prevWeights, reps_done: prevReps };
       }
       const series = prevSeries + 1;
+      // weights e reps_done crescem juntos — o índice tem que bater com a série.
       const weights = [...prevWeights, data.weight ?? 0];
+      const reps_done = [...prevReps, data.reps ?? 0];
       const done = series >= data.target;
       const { error } = await db.from("workout_progress").upsert(
         {
@@ -255,13 +264,14 @@ export const logSerie = createServerFn({ method: "POST" })
           exercise_key: data.exerciseKey,
           series,
           weights,
+          reps_done,
           done,
           progress_date: today(),
         },
         { onConflict: "user_id,plan_id,day_key,exercise_key" },
       );
       if (error) throw new Error(error.message);
-      return { series, done, weights };
+      return { series, done, weights, reps_done };
     },
   );
 
@@ -278,11 +288,14 @@ export const undoSerie = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(
-    async ({ data, context }): Promise<{ series: number; done: boolean; weights: number[] }> => {
+    async ({
+      data,
+      context,
+    }): Promise<{ series: number; done: boolean; weights: number[]; reps_done: number[] }> => {
       const db = context.supabase as Db;
       const { data: cur } = await db
         .from("workout_progress")
-        .select("series, weights")
+        .select("series, weights, reps_done")
         .eq("user_id", context.userId)
         .eq("plan_id", data.planId)
         .eq("day_key", data.dayKey)
@@ -291,8 +304,11 @@ export const undoSerie = createServerFn({ method: "POST" })
         .maybeSingle();
       const prevSeries = Number(cur?.series ?? 0);
       const prevWeights: number[] = Array.isArray(cur?.weights) ? cur.weights : [];
+      const prevReps: number[] = Array.isArray(cur?.reps_done) ? cur.reps_done : [];
       const series = Math.max(0, prevSeries - 1);
+      // Desfazer corta os dois juntos, senão o índice deixa de bater com a série.
       const weights = prevWeights.slice(0, series);
+      const reps_done = prevReps.slice(0, series);
       const { error } = await db.from("workout_progress").upsert(
         {
           user_id: context.userId,
@@ -301,13 +317,14 @@ export const undoSerie = createServerFn({ method: "POST" })
           exercise_key: data.exerciseKey,
           series,
           weights,
+          reps_done,
           done: false,
           progress_date: today(),
         },
         { onConflict: "user_id,plan_id,day_key,exercise_key" },
       );
       if (error) throw new Error(error.message);
-      return { series, done: false, weights };
+      return { series, done: false, weights, reps_done };
     },
   );
 

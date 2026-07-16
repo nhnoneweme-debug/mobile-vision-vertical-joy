@@ -10,6 +10,8 @@ import type { NotificationPrefs, RitualType } from "@/lib/ritual";
 
 export const MORNING_WINDOW_H = 3;
 export const NIGHT_WINDOW_H = 4;
+/** O dump da noite abre ANTES da hora de dormir — pegar a pessoa já na cama é tarde. */
+export const NIGHT_LEAD_H = 0.5;
 
 export type DumpWindow = {
   type: RitualType;
@@ -37,8 +39,12 @@ export function currentDumpWindow(
   prefs: Pick<NotificationPrefs, "morning_hour" | "night_hour">,
   now: Date = new Date(),
 ): DumpWindow | null {
+  // A janela da noite abre 30 min antes da hora de dormir. O + 24 % 24 importa:
+  // com night_hour = 0 (dorme à meia-noite) o início seria -0.5 → vira 23:30.
+  const nightStart = (prefs.night_hour - NIGHT_LEAD_H + 24) % 24;
+
   const sinceMorning = hoursSince(now, prefs.morning_hour);
-  const sinceNight = hoursSince(now, prefs.night_hour);
+  const sinceNight = hoursSince(now, nightStart);
   const inMorning = sinceMorning < MORNING_WINDOW_H;
   const inNight = sinceNight < NIGHT_WINDOW_H;
 
@@ -47,7 +53,7 @@ export function currentDumpWindow(
   }
   if (inNight) {
     // Passou da meia-noite: o dump ainda é sobre o dia que acabou.
-    const crossedMidnight = now.getHours() + now.getMinutes() / 60 < prefs.night_hour;
+    const crossedMidnight = now.getHours() + now.getMinutes() / 60 < nightStart;
     const ref = new Date(now);
     if (crossedMidnight) ref.setDate(ref.getDate() - 1);
     return { type: "night", refDate: isoDate(ref) };

@@ -2961,6 +2961,7 @@ export type Database = {
           id: string
           plan_id: string
           progress_date: string
+          reps_done: Json
           series: number
           updated_at: string
           user_id: string
@@ -2973,6 +2974,7 @@ export type Database = {
           id?: string
           plan_id: string
           progress_date?: string
+          reps_done?: Json
           series?: number
           updated_at?: string
           user_id: string
@@ -2985,6 +2987,7 @@ export type Database = {
           id?: string
           plan_id?: string
           progress_date?: string
+          reps_done?: Json
           series?: number
           updated_at?: string
           user_id?: string

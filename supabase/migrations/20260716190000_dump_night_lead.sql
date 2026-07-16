@@ -1,0 +1,16 @@
+-- A janela do dump da noite abre 30 min ANTES da hora de dormir.
+--
+-- Pegar a pessoa já na cama é tarde: o objetivo é fechar o dia antes de dormir,
+-- não depois. Espelha NIGHT_LEAD_H em src/lib/dump.ts — os dois têm que mudar
+-- juntos, senão a faixa da Home e o push discordam.
+--
+-- O MOD(... + 24, 24) no início da janela cobre night_hour = 0 (dorme à
+-- meia-noite): -0.5 viraria negativo e quebraria a comparação; assim vira 23:30.
+--
+-- Corpo completo aplicado via query_database (CREATE OR REPLACE FUNCTION
+-- public.generate_nudges_for) — ver 20260716120000_dump_windows_by_user_hours.sql
+-- para o histórico da função. Mudanças desta revisão:
+--   + v_night_start := MOD((v_night_hour - 0.5 + 24)::numeric, 24);
+--   ~ v_since_night usa v_night_start (antes: v_night_hour)
+--   ~ v_night_date compara com v_night_start
+--   ~ copy do nudge da noite: "Daqui a pouco é hora de dormir"
