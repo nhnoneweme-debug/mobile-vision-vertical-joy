@@ -5,6 +5,7 @@ import { ASSISTANT_NAME_MAX } from "./assistant-name";
 
 export type AssistantMessage = { role: "user" | "assistant"; content: string; created_at: string };
 export type Conversation = { id: string; title: string; updated_at: string };
+export type VoiceGender = "feminina" | "masculina";
 export type ChatSettings = {
   persona: "caloroso" | "direto" | "tecnico";
   response_length: "curtas" | "equilibrado" | "detalhadas";
@@ -12,6 +13,8 @@ export type ChatSettings = {
   custom_instructions: string;
   /** Vazio = usar ASSISTANT_NAME_FALLBACK. */
   assistant_name: string;
+  /** Gênero da voz da IA (TTS + Web Speech fallback). */
+  voice_gender: VoiceGender;
 };
 
 export {
@@ -27,6 +30,7 @@ export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   focus: "geral",
   custom_instructions: "",
   assistant_name: "",
+  voice_gender: "feminina",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
