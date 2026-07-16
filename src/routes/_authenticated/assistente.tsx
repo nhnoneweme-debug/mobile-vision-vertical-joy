@@ -18,6 +18,7 @@ import {
   MicOff,
   Volume2,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -597,9 +598,12 @@ function AssistantPage() {
             return (
               <div key={m.id} className="flex justify-start gap-1.5">
                 <div className="forge-card max-w-[86%] rounded-2xl rounded-bl-md px-3.5 py-2.5">
-                  <p className="whitespace-pre-wrap text-sm leading-snug text-foreground">
-                    {m.text}
-                  </p>
+                  {/* A IA responde em markdown (**negrito**, listas). Renderizar
+                      como texto puro mostrava os asteriscos crus pro usuário —
+                      mesmo padrão já usado no /conversar e no DumpChat. */}
+                  <div className="prose prose-sm prose-invert max-w-none text-sm leading-snug text-foreground prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-display">
+                    <ReactMarkdown>{m.text}</ReactMarkdown>
+                  </div>
                 </div>
                 <button
                   type="button"

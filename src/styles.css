@@ -47,6 +47,7 @@
   --color-charcoal-800: var(--charcoal-800);
   --color-charcoal-700: var(--charcoal-700);
   --color-locked: var(--locked);
+  --color-water: var(--water);
 }
 
 :root {
@@ -65,6 +66,9 @@
   --ember-glow: oklch(0.72 0.21 42);
 
   --locked: oklch(0.38 0 0);
+
+  /* Hidratação — azul fixo: é semântico (água), não segue o accent do tema. */
+  --water: oklch(0.68 0.15 233);
 
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.96 0 0);

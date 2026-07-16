@@ -752,6 +752,7 @@ export type Database = {
           quantity_text: string | null
           source: string
           user_id: string
+          water_ml: number
         }
         Insert: {
           barcode?: string | null
@@ -764,6 +765,7 @@ export type Database = {
           quantity_text?: string | null
           source?: string
           user_id: string
+          water_ml?: number
         }
         Update: {
           barcode?: string | null
@@ -776,6 +778,7 @@ export type Database = {
           quantity_text?: string | null
           source?: string
           user_id?: string
+          water_ml?: number
         }
         Relationships: []
       }

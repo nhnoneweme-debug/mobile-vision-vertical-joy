@@ -4,9 +4,14 @@ import { Plus, Check, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import {
-  listMissions, createMission, toggleMissionToday,
-  maskToDays, toggleDay, WEEKDAY_LABELS,
-  type UserMissionWithMeta, type MissionType,
+  listMissions,
+  createMission,
+  toggleMissionToday,
+  maskToDays,
+  toggleDay,
+  WEEKDAY_LABELS,
+  type UserMissionWithMeta,
+  type MissionType,
 } from "@/lib/missions";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
@@ -19,10 +24,23 @@ type View = "dia" | "semana" | "mes" | "ano";
 const MON_FIRST = [1, 2, 3, 4, 5, 6, 0]; // seg..dom (índices weekday, dom=0)
 const DAY_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const WEEK_HEAD = ["S", "T", "Q", "Q", "S", "S", "D"];
+const WEEK_HEAD_FULL = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
+/** Compromissos visíveis por dia na visão MÊS do desktop (no mobile é 1). */
+const MONTH_MAX_EVENTS = 3;
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MONTHS_FULL = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
@@ -50,13 +68,15 @@ function blockHeight(start: string | null, end: string | null): number {
   let mins = 60;
   if (end) {
     const [eh, em] = end.split(":").map(Number);
-    mins = (eh * 60 + em) - (sh * 60 + sm);
+    mins = eh * 60 + em - (sh * 60 + sm);
   }
   return Math.max(18, (mins / 60) * ROW_H - 2);
 }
 
 function DayTaskBox({
-  m, userId, onChanged,
+  m,
+  userId,
+  onChanged,
 }: {
   m: UserMissionWithMeta;
   userId: string;
@@ -67,7 +87,12 @@ function DayTaskBox({
   async function toggle() {
     if (busy) return;
     setBusy(true);
-    try { await toggleMissionToday(m, userId); onChanged(); } finally { setBusy(false); }
+    try {
+      await toggleMissionToday(m, userId);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div
@@ -78,7 +103,8 @@ function DayTaskBox({
     >
       <div className="flex items-start justify-between gap-2">
         <span className={"font-display text-sm " + (done ? "text-ember/70" : "text-ember")}>
-          {hhmm(m.scheduled_time)}{m.end_time ? `–${hhmm(m.end_time)}` : ""}
+          {hhmm(m.scheduled_time)}
+          {m.end_time ? `–${hhmm(m.end_time)}` : ""}
         </span>
         <button
           type="button"
@@ -86,13 +112,20 @@ function DayTaskBox({
           aria-label={done ? "Desmarcar tarefa" : "Concluir tarefa"}
           className={
             "forge-press grid h-7 w-7 shrink-0 place-items-center rounded-md border active:forge-press-active " +
-            (done ? "border-ember bg-ember text-charcoal-900 ember-glow" : "border-border bg-charcoal-800 text-muted-foreground")
+            (done
+              ? "border-ember bg-ember text-charcoal-900 ember-glow"
+              : "border-border bg-charcoal-800 text-muted-foreground")
           }
         >
           {done && <Check className="h-4 w-4" strokeWidth={3} />}
         </button>
       </div>
-      <p className={"text-sm leading-snug " + (done ? "text-muted-foreground line-through" : "text-foreground")}>
+      <p
+        className={
+          "text-sm leading-snug " +
+          (done ? "text-muted-foreground line-through" : "text-foreground")
+        }
+      >
         {m.title}
       </p>
     </div>
@@ -100,7 +133,10 @@ function DayTaskBox({
 }
 
 function CreatePanel({
-  userId, defaultMask, onCreated, onClose,
+  userId,
+  defaultMask,
+  onCreated,
+  onClose,
 }: {
   userId: string;
   defaultMask: number;
@@ -121,8 +157,12 @@ function CreatePanel({
     const type: MissionType = mask === 127 ? "daily" : "weekly";
     try {
       await createMission(userId, {
-        title, scheduled_time: time || null, end_time: endTime || null,
-        weekday_mask: mask || 127, mission_type: type, xp_reward: 15,
+        title,
+        scheduled_time: time || null,
+        end_time: endTime || null,
+        weekday_mask: mask || 127,
+        mission_type: type,
+        xp_reward: 15,
       });
       onCreated();
       onClose();
@@ -135,12 +175,19 @@ function CreatePanel({
     <div className="forge-card mx-4 mt-3 rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-lg tracking-wide text-foreground">Novo compromisso</h3>
-        <button type="button" onClick={onClose} className="text-muted-foreground" aria-label="Fechar">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-muted-foreground"
+          aria-label="Fechar"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      <label className="mb-1 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">TÍTULO</label>
+      <label className="mb-1 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+        TÍTULO
+      </label>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -150,7 +197,9 @@ function CreatePanel({
 
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div>
-          <label className="mb-1 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">INÍCIO</label>
+          <label className="mb-1 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+            INÍCIO
+          </label>
           <input
             type="time"
             value={time}
@@ -159,7 +208,9 @@ function CreatePanel({
           />
         </div>
         <div>
-          <label className="mb-1 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">FIM</label>
+          <label className="mb-1 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+            FIM
+          </label>
           <input
             type="time"
             value={endTime}
@@ -172,10 +223,14 @@ function CreatePanel({
         </div>
       </div>
       {endInvalid && (
-        <p className="mb-3 -mt-1 text-[11px] text-destructive">O fim precisa ser depois do início.</p>
+        <p className="mb-3 -mt-1 text-[11px] text-destructive">
+          O fim precisa ser depois do início.
+        </p>
       )}
 
-      <label className="mb-1.5 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">DIAS</label>
+      <label className="mb-1.5 block font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+        DIAS
+      </label>
       <div className="mb-4 flex gap-1.5">
         {MON_FIRST.map((idx) => {
           const on = maskToDays(mask).includes(idx);
@@ -186,7 +241,9 @@ function CreatePanel({
               onClick={() => setMask((mk) => toggleDay(mk, idx))}
               className={
                 "grid h-9 flex-1 place-items-center rounded-lg border font-display text-sm " +
-                (on ? "border-ember/40 bg-ember text-charcoal-900" : "border-border bg-charcoal-900 text-muted-foreground")
+                (on
+                  ? "border-ember/40 bg-ember text-charcoal-900"
+                  : "border-border bg-charcoal-900 text-muted-foreground")
               }
             >
               {WEEKDAY_LABELS[idx]}
@@ -215,7 +272,11 @@ function AgendaPage() {
   const [showForm, setShowForm] = useState(false);
 
   const reload = useCallback(async (uid: string) => {
-    try { setMissions(await listMissions(uid)); } catch { setMissions([]); }
+    try {
+      setMissions(await listMissions(uid));
+    } catch {
+      setMissions([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -227,7 +288,9 @@ function AgendaPage() {
       setUserId(uid);
       await reload(uid);
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [reload]);
 
   const today = new Date();
@@ -400,7 +463,12 @@ function AgendaPage() {
                 const isToday = sameDay(d, today);
                 return (
                   <div key={i} className="flex-1 text-center">
-                    <div className={"font-display text-[9px] tracking-[0.15em] lg:text-[11px] " + (isToday ? "text-ember" : "text-muted-foreground")}>
+                    <div
+                      className={
+                        "font-display text-[9px] tracking-[0.15em] lg:text-[11px] " +
+                        (isToday ? "text-ember" : "text-muted-foreground")
+                      }
+                    >
                       {DAY_SHORT[d.getDay()].toUpperCase()}
                     </div>
                     <div
@@ -437,28 +505,48 @@ function AgendaPage() {
                   return (
                     <div
                       key={i}
-                      className={"relative flex-1 border-l border-border/40 " + (isToday ? "bg-ember/[0.04]" : "")}
+                      className={
+                        "relative flex-1 border-l border-border/40 " +
+                        (isToday ? "bg-ember/[0.04]" : "")
+                      }
                     >
                       {/* Linhas de hora */}
                       {HOURS.map((h) => (
-                        <div key={h} className="border-t border-border/25" style={{ height: ROW_H }} />
+                        <div
+                          key={h}
+                          className="border-t border-border/25"
+                          style={{ height: ROW_H }}
+                        />
                       ))}
                       {/* Blocos de tarefa */}
                       {dayMissions.map((m) => (
                         <button
                           key={m.id}
                           type="button"
-                          onClick={() => { setAnchor(d); setView("dia"); }}
+                          onClick={() => {
+                            setAnchor(d);
+                            setView("dia");
+                          }}
                           className={
                             "absolute left-0.5 right-0.5 overflow-hidden rounded-md px-1 py-0.5 text-left active:scale-[0.98] " +
-                            (m.done_today ? "bg-ember/40 text-charcoal-900" : "bg-ember/85 text-charcoal-900")
+                            (m.done_today
+                              ? "bg-ember/40 text-charcoal-900"
+                              : "bg-ember/85 text-charcoal-900")
                           }
-                          style={{ top: timeToOffset(m.scheduled_time), height: blockHeight(m.scheduled_time, m.end_time ?? null) }}
+                          style={{
+                            top: timeToOffset(m.scheduled_time),
+                            height: blockHeight(m.scheduled_time, m.end_time ?? null),
+                          }}
                         >
                           <span className="block font-display text-[8px] leading-tight lg:text-[11px]">
                             {hhmm(m.scheduled_time)}
                           </span>
-                          <span className={"block truncate text-[8px] leading-tight lg:text-[11px] " + (m.done_today ? "line-through" : "")}>
+                          <span
+                            className={
+                              "block truncate text-[8px] leading-tight lg:text-[11px] " +
+                              (m.done_today ? "line-through" : "")
+                            }
+                          >
                             {m.title}
                           </span>
                         </button>
@@ -481,7 +569,15 @@ function AgendaPage() {
           <div className="forge-card rounded-2xl p-3">
             <div className="mb-1 grid grid-cols-7 gap-1 lg:gap-1.5">
               {WEEK_HEAD.map((d, i) => (
-                <span key={i} className="text-center font-display text-[10px] tracking-widest text-muted-foreground lg:text-xs">{d}</span>
+                <span
+                  key={i}
+                  className="text-center font-display text-[10px] tracking-widest text-muted-foreground lg:text-left lg:text-[11px] lg:tracking-[0.2em]"
+                >
+                  {/* "S T Q Q S S D" é ambíguo; no desktop cabe o nome curto,
+                      alinhado à esquerda igual ao número do dia na célula. */}
+                  <span className="lg:hidden">{d}</span>
+                  <span className="hidden lg:inline">{WEEK_HEAD_FULL[i]}</span>
+                </span>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-1 lg:gap-1.5">
@@ -490,7 +586,10 @@ function AgendaPage() {
                 const m = anchor.getMonth();
                 const firstOffset = mondayIdx(new Date(y, m, 1).getDay());
                 const daysInMonth = new Date(y, m + 1, 0).getDate();
-                const cells: (number | null)[] = [...Array(firstOffset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+                const cells: (number | null)[] = [
+                  ...Array(firstOffset).fill(null),
+                  ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+                ];
                 return cells.map((day, i) => {
                   if (day === null) return <span key={i} />;
                   const date = new Date(y, m, day);
@@ -500,21 +599,65 @@ function AgendaPage() {
                     <button
                       key={i}
                       type="button"
-                      onClick={() => { setAnchor(date); setView("dia"); }}
+                      onClick={() => {
+                        setAnchor(date);
+                        setView("dia");
+                      }}
                       className={
-                        "flex min-h-[52px] flex-col rounded-lg p-1 text-left lg:min-h-[84px] lg:p-1.5 " +
-                        (isToday ? "bg-ember text-charcoal-900" : "bg-charcoal-800/40 text-foreground/80 active:bg-charcoal-800")
+                        "flex min-h-[52px] flex-col rounded-lg p-1 text-left lg:min-h-[124px] lg:gap-0.5 lg:p-2 " +
+                        (isToday
+                          ? "bg-ember text-charcoal-900"
+                          : "bg-charcoal-800/40 text-foreground/80 active:bg-charcoal-800")
                       }
                     >
-                      <span className="font-display text-[11px] leading-none lg:text-sm">{day}</span>
-                      {dayMs.length > 0 && (
-                        <span className={"mt-0.5 truncate text-[7px] leading-tight lg:mt-1 lg:text-[10px] " + (isToday ? "text-charcoal-900/80" : "text-ember")}>
-                          {hhmm(dayMs[0].scheduled_time)} {dayMs[0].title}
+                      <span className="font-display text-[11px] leading-none lg:text-base">
+                        {day}
+                      </span>
+
+                      {/* Mobile mostra 1 compromisso; desktop mostra até 3 —
+                          cabe, e "+7 mais" escondia o mês inteiro atrás de um
+                          contador. Cada um vira uma pastilha com hora em cima
+                          do título, que assim não trunca no meio da palavra. */}
+                      {dayMs.slice(0, MONTH_MAX_EVENTS).map((ms, k) => (
+                        <span
+                          key={ms.id}
+                          className={
+                            "mt-0.5 min-w-0 rounded px-1 py-0.5 text-[7px] leading-tight lg:mt-0 lg:px-1.5 lg:py-1 lg:text-[10px] " +
+                            (k > 0 ? "hidden lg:block " : "") +
+                            (isToday
+                              ? "bg-charcoal-900/15 text-charcoal-900"
+                              : "bg-ember/12 text-ember")
+                          }
+                        >
+                          <span className="hidden font-display tabular-nums lg:block">
+                            {hhmm(ms.scheduled_time)}
+                          </span>
+                          <span className="block truncate">
+                            <span className="lg:hidden">{hhmm(ms.scheduled_time)} </span>
+                            {ms.title}
+                          </span>
+                        </span>
+                      ))}
+
+                      {/* O contador difere por viewport porque o nº visível difere. */}
+                      {dayMs.length > 1 && (
+                        <span
+                          className={
+                            "mt-auto truncate pt-0.5 text-[7px] leading-tight lg:hidden " +
+                            (isToday ? "text-charcoal-900/70" : "text-muted-foreground")
+                          }
+                        >
+                          +{dayMs.length - 1} mais
                         </span>
                       )}
-                      {dayMs.length > 1 && (
-                        <span className={"truncate text-[7px] leading-tight lg:text-[10px] " + (isToday ? "text-charcoal-900/70" : "text-muted-foreground")}>
-                          +{dayMs.length - 1} mais
+                      {dayMs.length > MONTH_MAX_EVENTS && (
+                        <span
+                          className={
+                            "mt-auto hidden truncate pt-0.5 text-[10px] leading-tight lg:block " +
+                            (isToday ? "text-charcoal-900/70" : "text-muted-foreground")
+                          }
+                        >
+                          +{dayMs.length - MONTH_MAX_EVENTS} mais
                         </span>
                       )}
                     </button>
@@ -523,7 +666,9 @@ function AgendaPage() {
               })()}
             </div>
           </div>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">Toque num dia para ver os compromissos.</p>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            Toque num dia para ver os compromissos.
+          </p>
         </section>
       )}
 
@@ -532,19 +677,30 @@ function AgendaPage() {
         <section className="px-4 pt-4">
           <div className="grid grid-cols-3 gap-2.5 lg:grid-cols-4 lg:gap-3">
             {MONTHS.map((mn, mi) => {
-              const isThis = mi === today.getMonth() && anchor.getFullYear() === today.getFullYear();
+              const isThis =
+                mi === today.getMonth() && anchor.getFullYear() === today.getFullYear();
               return (
                 <button
                   key={mi}
                   type="button"
-                  onClick={() => { const d = new Date(anchor); d.setMonth(mi); d.setDate(1); setAnchor(d); setView("mes"); }}
+                  onClick={() => {
+                    const d = new Date(anchor);
+                    d.setMonth(mi);
+                    d.setDate(1);
+                    setAnchor(d);
+                    setView("mes");
+                  }}
                   className={
                     "forge-card flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl active:forge-press-active lg:aspect-[3/2] " +
                     (isThis ? "border-ember/50" : "")
                   }
                 >
                   <span className="font-display text-lg tracking-wide text-foreground">{mn}</span>
-                  {isThis && <span className="font-display text-[9px] tracking-[0.2em] text-ember">ATUAL</span>}
+                  {isThis && (
+                    <span className="font-display text-[9px] tracking-[0.2em] text-ember">
+                      ATUAL
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -560,8 +716,12 @@ function AgendaPage() {
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
         <span className="flex-1">
-          <span className="block font-display text-base tracking-wide text-foreground">Pedir para a IA</span>
-          <span className="block text-[11px] text-muted-foreground">“agende treino seg e qua às 18h”</span>
+          <span className="block font-display text-base tracking-wide text-foreground">
+            Pedir para a IA
+          </span>
+          <span className="block text-[11px] text-muted-foreground">
+            “agende treino seg e qua às 18h”
+          </span>
         </span>
       </Link>
 

@@ -14,6 +14,14 @@ export type FoodLogEntry = {
   kcal: number;
   source: "photo" | "barcode" | "manual";
   barcode: string | null;
+  /** Mililitros de água da entrada. 0 = não é hidratação. */
+  water_ml: number;
+};
+
+export type TodayFoodLog = {
+  entries: FoodLogEntry[];
+  totalKcal: number;
+  totalWaterMl: number;
 };
 
 export type FoodProposal = {
@@ -224,6 +232,7 @@ export const confirmFoodLog = createServerFn({ method: "POST" })
         quantity_text: z.string().max(120).optional(),
         source: z.enum(["photo", "barcode", "manual"]),
         barcode: z.string().max(20).optional(),
+        water_ml: z.number().int().min(0).max(5000).optional(),
       })
       .parse(d),
   )
@@ -237,6 +246,7 @@ export const confirmFoodLog = createServerFn({ method: "POST" })
         quantity_text: data.quantity_text ?? null,
         source: data.source,
         barcode: data.barcode ?? null,
+        water_ml: data.water_ml ?? 0,
       })
       .select("*")
       .single();
@@ -259,7 +269,7 @@ export const deleteFoodLogEntry = createServerFn({ method: "POST" })
 
 export const getTodayFoodLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ entries: FoodLogEntry[]; totalKcal: number }> => {
+  .handler(async ({ context }): Promise<TodayFoodLog> => {
     const { data, error } = await context.supabase
       .from("food_log_entries")
       .select("*")
@@ -269,7 +279,8 @@ export const getTodayFoodLog = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const entries = (data ?? []) as FoodLogEntry[];
     const totalKcal = entries.reduce((s, e) => s + e.kcal, 0);
-    return { entries, totalKcal };
+    const totalWaterMl = entries.reduce((s, e) => s + (e.water_ml ?? 0), 0);
+    return { entries, totalKcal, totalWaterMl };
   });
 
 // Histórico diário de kcal para o gráfico semanal/mensal.

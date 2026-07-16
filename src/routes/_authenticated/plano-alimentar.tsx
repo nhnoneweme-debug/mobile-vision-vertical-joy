@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 import { DietEditor, type DietDraft } from "@/components/area/DietEditor";
 import { BarcodeScanner } from "@/components/plano/BarcodeScanner";
+import { WaterRing } from "@/components/plano/WaterRing";
 import {
   clearDietPlan,
   generateDietFromProfile,
@@ -224,6 +225,7 @@ function PlanoPage() {
 
   const [todayEntries, setTodayEntries] = useState<FoodLogEntry[]>([]);
   const [todayKcal, setTodayKcal] = useState(0);
+  const [todayWaterMl, setTodayWaterMl] = useState(0);
   const [range, setRange] = useState<"SEM" | "MEN">("SEM");
   const [weekData, setWeekData] = useState<number[]>([]);
   const [monthData, setMonthData] = useState<number[]>([]);
@@ -256,6 +258,7 @@ function PlanoPage() {
       const r = await fnToday();
       setTodayEntries(r.entries);
       setTodayKcal(r.totalKcal);
+      setTodayWaterMl(r.totalWaterMl);
     } catch (e) {
       console.error(e);
     }
@@ -516,6 +519,15 @@ function PlanoPage() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Hidratação — a meta já vinha do plano; faltava o consumo do dia. */}
+          <div className="mt-4 border-t border-border pt-4">
+            <WaterRing
+              consumedMl={todayWaterMl}
+              goalMl={plan?.hydration_ml ?? null}
+              onLogged={loadToday}
+            />
           </div>
 
           <div className="mt-4 border-t border-border pt-3">
@@ -824,9 +836,7 @@ function PlanoPage() {
       </Sheet>
 
       {/* Scanner de código de barras (câmera) */}
-      {scanOpen && (
-        <BarcodeScanner onDetected={handleScanned} onClose={() => setScanOpen(false)} />
-      )}
+      {scanOpen && <BarcodeScanner onDetected={handleScanned} onClose={() => setScanOpen(false)} />}
 
       {/* Registrar alimento — foto / código de barras / manual, cálculo real e confirmação */}
       <Sheet open={logOpen} onOpenChange={setLogOpen}>

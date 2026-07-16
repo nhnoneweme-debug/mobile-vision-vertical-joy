@@ -98,7 +98,7 @@ export function ProfileMenu({
           <button
             type="button"
             aria-label="Menu do perfil"
-            className="ember-glow grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-charcoal-800 active:scale-95"
+            className="ember-glow grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-charcoal-800 active:scale-95"
           >
             <span className="font-display text-xl text-ember">{initial}</span>
           </button>
