@@ -550,11 +550,11 @@ function AssistantPage() {
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl leading-none tracking-wide text-foreground">
-            INTELIGÊNCIA DIGITAL
+          <h1 className="truncate font-display text-xl leading-none tracking-wide text-foreground">
+            {assistantName(settings).toUpperCase()}
           </h1>
           <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            Conversa, entende e propõe — você confirma
+            Inteligência Digital
             {voiceMode ? (
               <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-ember/15 px-1.5 py-0.5 text-[9px] font-display tracking-[0.15em] text-ember">
                 {listening ? "🎙 OUVINDO" : speaking ? "🔊 FALANDO" : "🎤 VOZ"}
@@ -562,30 +562,6 @@ function AssistantPage() {
             ) : null}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={startNewConversation}
-          aria-label="Nova conversa"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setConvOpen(true)}
-          aria-label="Histórico de conversas"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
-        >
-          <History className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setCfgOpen(true)}
-          aria-label="Configurar a IA"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
       </header>
 
       <div className="space-y-3 px-4 pt-4">
