@@ -1,15 +1,48 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  Flame, Droplet, Dumbbell, Brain, Moon, Zap, Clipboard, Utensils,
-  Sparkles, Trees, BookOpen, Heart, Eye, Check, Plus, Minus, Pin, type LucideIcon,
+  Flame,
+  Droplet,
+  Dumbbell,
+  Brain,
+  Moon,
+  Zap,
+  Clipboard,
+  Utensils,
+  Sparkles,
+  Trees,
+  BookOpen,
+  Heart,
+  Eye,
+  Check,
+  Plus,
+  Minus,
+  type LucideIcon,
 } from "lucide-react";
-import { listHabits, incrementHabit, decrementHabit, FREQUENCY_META, type HabitWithMeta } from "@/lib/habits";
+import {
+  listHabits,
+  incrementHabit,
+  decrementHabit,
+  homeHabits,
+  migrateLegacyPins,
+  FREQUENCY_META,
+  type HabitWithMeta,
+} from "@/lib/habits";
 
 const ICONS: Record<string, LucideIcon> = {
-  flame: Flame, droplet: Droplet, dumbbell: Dumbbell, brain: Brain, moon: Moon,
-  zap: Zap, clipboard: Clipboard, utensils: Utensils, sparkles: Sparkles,
-  trees: Trees, book: BookOpen, heart: Heart, eye: Eye,
+  flame: Flame,
+  droplet: Droplet,
+  dumbbell: Dumbbell,
+  brain: Brain,
+  moon: Moon,
+  zap: Zap,
+  clipboard: Clipboard,
+  utensils: Utensils,
+  sparkles: Sparkles,
+  trees: Trees,
+  book: BookOpen,
+  heart: Heart,
+  eye: Eye,
 };
 
 function HabitRowItem({
@@ -136,60 +169,40 @@ function HabitRowItem({
   );
 }
 
-const MAX_PINNED = 7;
-
 export function HabitTrackerStrip({ userId }: { userId: string }) {
   const [habits, setHabits] = useState<HabitWithMeta[] | null>(null);
-  const [pinned, setPinned] = useState<Set<string>>(new Set());
-  const [editing, setEditing] = useState(false);
-  const storageKey = `habits.pinned.${userId}`;
 
+  // A Home só EXIBE o que foi fixado — escolher quais é na aba Hábitos.
   useEffect(() => {
     let active = true;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setPinned(new Set(JSON.parse(raw) as string[]));
-    } catch { /* noop */ }
-    listHabits(userId)
-      .then((h) => active && setHabits(h))
-      .catch(() => active && setHabits([]));
+    (async () => {
+      try {
+        let list = await listHabits(userId);
+        // Pins antigos viviam no localStorage; sobe pro banco uma vez.
+        if (await migrateLegacyPins(userId, list)) list = await listHabits(userId);
+        if (active) setHabits(list);
+      } catch {
+        if (active) setHabits([]);
+      }
+    })();
     return () => {
       active = false;
     };
-  }, [userId, storageKey]);
-
-  function togglePin(id: string) {
-    setPinned((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < MAX_PINNED) next.add(id);
-      try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch { /* noop */ }
-      return next;
-    });
-  }
+  }, [userId]);
 
   const all = habits ?? [];
-  const displayed = (pinned.size > 0 ? all.filter((h) => pinned.has(h.id)) : all).slice(0, MAX_PINNED);
+  const displayed = homeHabits(all);
 
   return (
     <section className="px-4 pt-5">
       <header className="mb-3 flex items-center gap-3">
         <h2 className="font-display text-xl tracking-[0.16em] text-foreground">HÁBITOS</h2>
         <span className="h-px flex-1 bg-border" />
-        {all.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setEditing((e) => !e)}
-            className="font-display text-[10px] tracking-[0.3em] text-ember active:opacity-70"
-          >
-            {editing ? "CONCLUIR" : "FIXAR"}
-          </button>
-        )}
         <Link
           to="/habitos"
           className="font-display text-[10px] tracking-[0.3em] text-muted-foreground active:opacity-70"
         >
-          GERIR →
+          ABRIR →
         </Link>
       </header>
 
@@ -207,39 +220,8 @@ export function HabitTrackerStrip({ userId }: { userId: string }) {
           <Plus className="h-4 w-4" />
           <span className="font-display text-sm tracking-wide">Criar seu primeiro hábito</span>
         </Link>
-      ) : editing ? (
-        <div className="space-y-2">
-          <p className="mb-1 text-[11px] text-muted-foreground">
-            Escolha até {MAX_PINNED} hábitos para fixar na Home ({pinned.size}/{MAX_PINNED}).
-          </p>
-          {all.map((h) => {
-            const on = pinned.has(h.id);
-            const Icon = ICONS[h.icon] ?? Flame;
-            const disabled = !on && pinned.size >= MAX_PINNED;
-            return (
-              <button
-                key={h.id}
-                type="button"
-                onClick={() => togglePin(h.id)}
-                disabled={disabled}
-                className={
-                  "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors disabled:opacity-40 " +
-                  (on ? "border-ember/50 bg-ember/10" : "border-border bg-charcoal-900")
-                }
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-charcoal-900 text-ember">
-                  <Icon className="h-4 w-4" strokeWidth={2.2} />
-                </span>
-                <span className="min-w-0 flex-1 truncate font-display text-base tracking-wide text-foreground">
-                  {h.title}
-                </span>
-                <Pin className={"h-5 w-5 shrink-0 " + (on ? "text-ember" : "text-muted-foreground")} strokeWidth={2.2} />
-              </button>
-            );
-          })}
-        </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0">
           {displayed.map((h) => (
             <HabitRowItem
               key={h.id}

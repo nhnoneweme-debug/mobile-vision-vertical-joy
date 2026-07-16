@@ -1041,6 +1041,7 @@ export type Database = {
           frequency: string
           icon: string
           id: string
+          pinned_at: string | null
           target: number
           target_per_week: number
           title: string
@@ -1054,6 +1055,7 @@ export type Database = {
           frequency?: string
           icon?: string
           id?: string
+          pinned_at?: string | null
           target?: number
           target_per_week?: number
           title: string
@@ -1067,6 +1069,7 @@ export type Database = {
           frequency?: string
           icon?: string
           id?: string
+          pinned_at?: string | null
           target?: number
           target_per_week?: number
           title?: string

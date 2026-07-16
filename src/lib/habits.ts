@@ -13,6 +13,7 @@ export type HabitRow = {
   frequency?: HabitFrequency | null; // novo — pode faltar em hábitos antigos
   target?: number | null; // meta por período (dia/semana/mês)
   active: boolean;
+  pinned_at?: string | null; // fixado na Home; NULL = não fixado
   created_at: string;
   updated_at: string;
 };
@@ -161,10 +162,7 @@ export async function toggleHabit(habit: HabitWithMeta, userId: string): Promise
  * frequência), respeitando o teto (period_target). Retorna false se já atingiu
  * o máximo. Grava o log numa data dentro do período (espalha para não colidir).
  */
-export async function incrementHabit(
-  userId: string,
-  habit: HabitWithMeta,
-): Promise<boolean> {
+export async function incrementHabit(userId: string, habit: HabitWithMeta): Promise<boolean> {
   const target = Math.max(1, habit.period_target || habitTarget(habit));
   if (habit.period_done >= target) return false;
 
@@ -182,7 +180,10 @@ export async function incrementHabit(
     status: "completed",
   });
   if (error) throw error;
-  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
+  supabase.rpc("check_perk_unlocks").then(
+    () => {},
+    () => {},
+  );
   return true;
 }
 
@@ -190,10 +191,7 @@ export async function incrementHabit(
  * Desfaz +1 conclusão do hábito no PERÍODO atual (corrige marcação por engano).
  * Remove o log mais recente do período. Retorna false se não houver nada a desfazer.
  */
-export async function decrementHabit(
-  userId: string,
-  habit: HabitWithMeta,
-): Promise<boolean> {
+export async function decrementHabit(userId: string, habit: HabitWithMeta): Promise<boolean> {
   const freq = habit.freq ?? habitFreq(habit);
   const pStart = periodStartISO(freq);
   const { data: logs, error } = await supabase
@@ -227,7 +225,8 @@ export async function createHabit(
 ): Promise<HabitRow> {
   const frequency = input.frequency ?? "weekly";
   const target =
-    input.target ?? (frequency === "daily" ? 1 : frequency === "monthly" ? 1 : input.target_per_week ?? 7);
+    input.target ??
+    (frequency === "daily" ? 1 : frequency === "monthly" ? 1 : (input.target_per_week ?? 7));
   const { data, error } = await supabase
     .from("habits")
     .insert({
@@ -237,7 +236,7 @@ export async function createHabit(
       area_slug: input.area_slug ?? "corpo",
       frequency,
       target,
-      target_per_week: frequency === "weekly" ? target : input.target_per_week ?? 7,
+      target_per_week: frequency === "weekly" ? target : (input.target_per_week ?? 7),
     })
     .select("*")
     .single();
@@ -246,8 +245,95 @@ export async function createHabit(
 }
 
 export async function archiveHabit(id: string): Promise<void> {
-  const { error } = await supabase.from("habits").update({ active: false }).eq("id", id);
+  // Arquivar solta o pin: um hábito arquivado não pode ocupar vaga na Home.
+  const { error } = await supabase
+    .from("habits")
+    .update({ active: false, pinned_at: null })
+    .eq("id", id);
   if (error) throw error;
+}
+
+// --- Fixar na Home ---------------------------------------------------------
+
+/** Quantos hábitos cabem na Home. */
+export const MAX_PINNED = 7;
+
+const legacyPinKey = (userId: string) => `habits.pinned.${userId}`;
+
+export function isPinned(h: Pick<HabitRow, "pinned_at">): boolean {
+  return !!h.pinned_at;
+}
+
+/** Fixados primeiro (na ordem em que foram fixados); o resto mantém a ordem de criação. */
+export function sortByPin<T extends Pick<HabitRow, "pinned_at">>(habits: T[]): T[] {
+  return [...habits].sort((a, b) => {
+    if (!a.pinned_at && !b.pinned_at) return 0;
+    if (!a.pinned_at) return 1;
+    if (!b.pinned_at) return -1;
+    return a.pinned_at.localeCompare(b.pinned_at);
+  });
+}
+
+/** O que a Home mostra: os fixados, ou os primeiros N se ninguém fixou nada. */
+export function homeHabits<T extends Pick<HabitRow, "pinned_at">>(habits: T[]): T[] {
+  const pinned = sortByPin(habits.filter((h) => h.pinned_at));
+  return (pinned.length > 0 ? pinned : habits).slice(0, MAX_PINNED);
+}
+
+export async function setHabitPinned(id: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("habits")
+    .update({ pinned_at: pinned ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Migra os pins que ficaram no localStorage antes deles existirem no banco.
+ *
+ * Roda uma vez: só age se o usuário ainda não tem nenhum pinned_at, pra não
+ * sobrescrever escolhas novas com o resíduo de um dispositivo antigo. A chave
+ * local é apagada em qualquer caso — inclusive quando não há o que migrar.
+ */
+export async function migrateLegacyPins(userId: string, habits: HabitRow[]): Promise<boolean> {
+  let ids: string[] = [];
+  try {
+    const raw = localStorage.getItem(legacyPinKey(userId));
+    if (!raw) return false;
+    ids = JSON.parse(raw) as string[];
+  } catch {
+    return false;
+  }
+
+  const jaTemNoBanco = habits.some((h) => h.pinned_at);
+  const validos = ids.filter((id) => habits.some((h) => h.id === id)).slice(0, MAX_PINNED);
+
+  if (jaTemNoBanco || validos.length === 0) {
+    try {
+      localStorage.removeItem(legacyPinKey(userId));
+    } catch {
+      /* noop */
+    }
+    return false;
+  }
+
+  // Preserva a ordem original do array local como ordem de fixação.
+  const base = Date.now();
+  await Promise.all(
+    validos.map((id, i) =>
+      supabase
+        .from("habits")
+        .update({ pinned_at: new Date(base + i).toISOString() })
+        .eq("id", id)
+        .eq("user_id", userId),
+    ),
+  );
+  try {
+    localStorage.removeItem(legacyPinKey(userId));
+  } catch {
+    /* noop */
+  }
+  return true;
 }
 
 type SeedHabit = { title: string; icon: string; area_slug: string; target_per_week: number };
