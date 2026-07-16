@@ -528,6 +528,7 @@ export type Database = {
           response_length: string
           updated_at: string
           user_id: string
+          voice_gender: string
         }
         Insert: {
           assistant_name?: string
@@ -537,6 +538,7 @@ export type Database = {
           response_length?: string
           updated_at?: string
           user_id: string
+          voice_gender?: string
         }
         Update: {
           assistant_name?: string
@@ -546,6 +548,7 @@ export type Database = {
           response_length?: string
           updated_at?: string
           user_id?: string
+          voice_gender?: string
         }
         Relationships: []
       }
