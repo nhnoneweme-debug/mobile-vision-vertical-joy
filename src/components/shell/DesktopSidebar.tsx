@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread } from "@/lib/notifications";
+import { ProfileMenu } from "./ProfileMenu";
 
 const NAV = [
   { to: "/home" as const, label: "Home", icon: Home },
@@ -131,6 +132,10 @@ export function DesktopSidebar() {
             </span>
           )}
         </Link>
+
+        {/* A barra inferior é lg:hidden — sem isto o desktop não tinha acesso
+            nenhum ao perfil nem ao resto da navegação do drawer. */}
+        <ProfileMenu displayName={displayName} variant="row" />
       </div>
     </aside>
   );

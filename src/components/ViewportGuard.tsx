@@ -28,13 +28,16 @@ export function ViewportGuard({
     if (!el || typeof window === "undefined") return;
 
     const measure = () => {
-      const rect = el.getBoundingClientRect();
+      // O wrapper é display:contents (não pode afetar o layout de quem embrulha),
+      // então ele não tem caixa própria: medimos o elemento real que o contém.
+      const box = el.parentElement ?? el;
+      const rect = box.getBoundingClientRect();
       const winW = window.innerWidth;
       const winH = window.innerHeight;
       // Overflow = amount content exceeds viewport (right/bottom edges)
       const rightOverflow = Math.max(0, Math.ceil(rect.right - winW - tolerance));
       const bottomOverflow = Math.max(0, Math.ceil(rect.bottom - winH - tolerance));
-      const widthOverflow = Math.max(0, Math.ceil(el.scrollWidth - winW - tolerance));
+      const widthOverflow = Math.max(0, Math.ceil(box.scrollWidth - winW - tolerance));
       const overflowX = Math.max(rightOverflow, widthOverflow);
       const overflowY = bottomOverflow;
       const outOfBounds = overflowX > 0 || overflowY > 0;
@@ -80,21 +83,18 @@ export function ViewportGuard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, width, height, resizeCount, tolerance, isOverlay, label]);
 
-  const devStyle: React.CSSProperties | undefined =
-    IS_DEV && outRef.current.out
-      ? {
-          outline: "2px dashed #ff3b3b",
-          outlineOffset: "-2px",
-          position: "relative",
-        }
-      : undefined;
-
   return (
+    // display:contents — este wrapper é só um ponto de medição e NÃO pode
+    // participar do layout. Com uma div normal aqui, ele virava um bloco entre
+    // o container (ex.: SheetContent `flex flex-col max-h-[85vh]`) e os filhos,
+    // quebrando a cadeia flex: o `flex-1 min-h-0` da área rolável perdia o pai
+    // flex, a lista crescia sem virar scroll e o final era cortado — foi assim
+    // que a seção CONTA sumia no drawer do celular.
     <div
       ref={wrapperRef}
       data-viewport-guard={id}
       data-out-of-bounds={outRef.current.out ? "true" : "false"}
-      style={devStyle}
+      style={{ display: "contents" }}
     >
       {children}
       {IS_DEV && outRef.current.out ? (

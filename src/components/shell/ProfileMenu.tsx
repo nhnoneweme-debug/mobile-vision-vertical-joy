@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   User, ShoppingBag, Trophy, Users, LineChart, ClipboardCheck,
-  Moon, Swords, Wand2, MapPin, MessageCircle,
+  Moon, Sunrise, Swords, Wand2, MapPin, MessageCircle, ChevronUp,
   CalendarDays, Flame, Dumbbell, Utensils, type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -27,6 +27,7 @@ const MENU: { section: string; items: NavItem[] }[] = [
       { to: "/progresso", label: "Progresso", icon: LineChart },
       { to: "/missoes", label: "Minhas Missões", icon: ClipboardCheck },
       { to: "/conquistas", label: "Conquistas & Saga", icon: Trophy },
+      { to: "/despertar", label: "Despertar (Dump do sonho)", icon: Sunrise },
       { to: "/dormir", label: "Dormir (Dump do dia)", icon: Moon },
       { to: "/jornada", label: "Jornada do Dia", icon: MapPin },
       { to: "/ritual", label: "Rituais", icon: Moon },
@@ -51,22 +52,42 @@ const MENU: { section: string; items: NavItem[] }[] = [
   },
 ];
 
-export function ProfileMenu({ displayName }: { displayName: string }) {
+export function ProfileMenu({
+  displayName,
+  variant = "orb",
+}: {
+  displayName: string;
+  /** "orb": bolinha da barra inferior (mobile). "row": linha da sidebar (desktop). */
+  variant?: "orb" | "row";
+}) {
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const initial = displayName.slice(0, 1).toUpperCase();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button
-          type="button"
-          aria-label="Menu do perfil"
-          className="ember-glow grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-charcoal-800 active:scale-95"
-        >
-          <span className="font-display text-xl text-ember">
-            {displayName.slice(0, 1).toUpperCase()}
-          </span>
-        </button>
+        {variant === "row" ? (
+          <button
+            type="button"
+            aria-label="Menu do perfil"
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-charcoal-800 hover:text-foreground"
+          >
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-charcoal-800 font-display text-sm text-ember">
+              {initial}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-left">{displayName}</span>
+            <ChevronUp className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Menu do perfil"
+            className="ember-glow grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-charcoal-800 active:scale-95"
+          >
+            <span className="font-display text-xl text-ember">{initial}</span>
+          </button>
+        )}
       </SheetTrigger>
 
       <SheetContent
