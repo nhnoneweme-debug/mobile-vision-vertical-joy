@@ -635,9 +635,33 @@ function AssistantPage() {
       <div className="h-28" />
 
       <div
-        className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2.5 backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
+        {/* Controles ao alcance do polegar (item 3): nova, histórico, config. */}
+        <div className="mb-2 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={startNewConversation}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+          >
+            <MessageSquarePlus className="h-3.5 w-3.5" /> NOVA
+          </button>
+          <button
+            type="button"
+            onClick={() => setConvOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+          >
+            <History className="h-3.5 w-3.5" /> HISTÓRICO
+          </button>
+          <button
+            type="button"
+            onClick={() => setCfgOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" /> AJUSTAR
+          </button>
+        </div>
         {pendingImages.length ? (
           <div className="mb-2 flex gap-2 overflow-x-auto">
             {pendingImages.map((img, i) => (
