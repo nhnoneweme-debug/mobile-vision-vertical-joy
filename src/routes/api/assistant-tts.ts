@@ -1,4 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { checkRateLimit } from "@/lib/ai-guardrails.server";
+
+const json = (obj: unknown, status: number) =>
+  new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 
 export const Route = createFileRoute("/api/assistant-tts")({
   server: {
@@ -6,12 +10,32 @@ export const Route = createFileRoute("/api/assistant-tts")({
       POST: async ({ request }) => {
         const apiKey = process.env.ELEVENLABS_API_KEY;
         const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: "ElevenLabs não configurado" }), {
-            status: 501,
-            headers: { "Content-Type": "application/json" },
-          });
+        // Sem chave: mantém o fallback (o cliente usa Web Speech). Antes da auth
+        // pra não vazar exigência de token quando o recurso nem está ativo.
+        if (!apiKey) return json({ error: "ElevenLabs não configurado" }, 501);
+
+        // Exige usuário autenticado (evita abuso anônimo da quota de voz).
+        const auth = request.headers.get("authorization") ?? "";
+        if (!auth.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+        const token = auth.slice(7);
+        let userId: string;
+        try {
+          const { createClient } = await import("@supabase/supabase-js");
+          const supabase = createClient(
+            process.env.SUPABASE_URL!,
+            process.env.SUPABASE_PUBLISHABLE_KEY!,
+            { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
+          );
+          const { data: claims, error } = await supabase.auth.getClaims(token);
+          if (error || !claims?.claims?.sub) return json({ error: "Unauthorized" }, 401);
+          userId = claims.claims.sub as string;
+        } catch {
+          return json({ error: "Unauthorized" }, 401);
         }
+
+        // Rate limit próprio pra TTS (bucket separado do chat).
+        const rl = checkRateLimit(`tts:${userId}`);
+        if (!rl.ok) return json({ error: rl.message }, 429);
 
         let body: { text?: string };
         try {

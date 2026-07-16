@@ -199,7 +199,10 @@ function AssistantPage() {
     try {
       const r = await fetch("/api/assistant-tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text }),
       });
       if (r.ok) {
