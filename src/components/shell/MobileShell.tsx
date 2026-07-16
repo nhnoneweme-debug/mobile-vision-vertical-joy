@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
 import { AppBottomBar } from "./AppBottomBar";
-import { BackButton } from "./BackButton";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
@@ -46,7 +45,6 @@ export function MobileShell({
       {!hideNav && <DesktopSidebar />}
 
       <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-1 flex-col">
-        {!hideNav && <BackButton />}
         <main className="flex-1 pb-28 lg:pb-8" style={{ paddingTop: "env(safe-area-inset-top)" }}>
           {children}
         </main>

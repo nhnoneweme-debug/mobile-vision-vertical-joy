@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Trophy, Calendar, Camera, X, Check } from "lucide-react";
+import { Trophy, Calendar, Camera, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
 import {
@@ -135,12 +135,6 @@ function DesafioDetailPage() {
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        <button
-          onClick={() => navigate({ to: "/circulo" })}
-          className="grid h-9 w-9 place-items-center rounded-lg border border-border"
-        >
-          <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-        </button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-lg tracking-wide text-foreground">
             {challenge?.title ?? "Desafio"}

@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, Sparkles } from "lucide-react";
+import { Bell, ChevronLeft, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread, generateMyNudges } from "@/lib/notifications";
+import { useGoBack } from "@/hooks/useGoBack";
 import { ProfileMenu } from "./ProfileMenu";
 
 // Barra inferior única do app: Notificações (esq.) · IA em destaque (centro) ·
@@ -11,6 +12,7 @@ import { ProfileMenu } from "./ProfileMenu";
 // do ProfileMenu.
 export function AppBottomBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { canGoBack, goBack } = useGoBack();
   const [displayName, setDisplayName] = useState("Você");
   const [unread, setUnread] = useState(0);
 
@@ -69,23 +71,41 @@ export function AppBottomBar() {
       className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)] lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="relative mx-3 mb-3 flex items-center justify-between rounded-2xl border border-border bg-charcoal-900/90 px-6 py-2.5 backdrop-blur-xl">
-        {/* Esquerda — Notificações */}
-        <Link
-          to="/notificacoes"
-          aria-label={`Notificações${unread > 0 ? ` (${unread} não lidas)` : ""}`}
-          className={
-            "relative grid h-12 w-12 place-items-center rounded-2xl transition-colors active:scale-95 " +
-            (onNotifRoute ? "text-ember" : "text-muted-foreground hover:text-foreground")
-          }
-        >
-          <Bell className="h-6 w-6" strokeWidth={2.2} />
-          {unread > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember px-1 font-display text-[9px] font-bold text-charcoal-900">
-              {unread > 9 ? "9+" : unread}
-            </span>
+      {/* 4 slots: Voltar · Notificações · (orbe da IA ao centro) · Perfil.
+          O orbe é absolute no centro, então os slots ficam em dois grupos —
+          justify-between com 4 filhos empurraria os do meio pra debaixo dele. */}
+      <div className="relative mx-3 mb-3 flex items-center justify-between rounded-2xl border border-border bg-charcoal-900/90 px-4 py-2.5 backdrop-blur-xl">
+        <div className="flex items-center gap-1">
+          {/* Voltar — sempre a página anterior; na Home não há pra onde voltar. */}
+          {canGoBack ? (
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="Voltar"
+              className="grid h-12 w-12 place-items-center rounded-2xl text-muted-foreground transition-colors hover:text-foreground active:scale-95"
+            >
+              <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
+            </button>
+          ) : (
+            <span className="h-12 w-12" aria-hidden="true" />
           )}
-        </Link>
+
+          <Link
+            to="/notificacoes"
+            aria-label={`Notificações${unread > 0 ? ` (${unread} não lidas)` : ""}`}
+            className={
+              "relative grid h-12 w-12 place-items-center rounded-2xl transition-colors active:scale-95 " +
+              (onNotifRoute ? "text-ember" : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            <Bell className="h-6 w-6" strokeWidth={2.2} />
+            {unread > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember px-1 font-display text-[9px] font-bold text-charcoal-900">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </Link>
+        </div>
 
         {/* Centro — IA em destaque (elevado, sobreposto ao topo da barra) */}
         <Link

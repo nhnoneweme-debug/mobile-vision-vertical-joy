@@ -281,7 +281,7 @@ function AgendaPage() {
   return (
     <MobileShell>
       <header
-        className="sticky top-0 z-30 border-b border-border bg-charcoal-900/85 pb-3 pl-14 pr-4 pt-5 backdrop-blur-xl"
+        className="sticky top-0 z-30 border-b border-border bg-charcoal-900/85 pb-3 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
         <div className="mb-2.5 flex items-center justify-between">

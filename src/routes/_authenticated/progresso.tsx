@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Trophy, ArrowLeft } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ScoreRing } from "@/components/progresso/ScoreRing";
@@ -85,12 +85,6 @@ function ProgressoPage() {
   return (
     <MobileShell>
       <header className="flex items-center gap-3 px-4 pt-6">
-        <Link
-          to="/mapa"
-          className="grid h-9 w-9 place-items-center rounded-xl border border-border bg-charcoal-900 text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
         <div className="flex items-center gap-2">
           <Trophy className="h-4 w-4 text-ember" />
           <h1 className="font-display text-2xl tracking-[0.18em] text-foreground">

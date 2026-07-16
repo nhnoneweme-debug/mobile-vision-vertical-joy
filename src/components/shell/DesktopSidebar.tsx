@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Bell,
   CalendarDays,
+  ChevronLeft,
   Dumbbell,
   Home,
   ListChecks,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread } from "@/lib/notifications";
+import { useGoBack } from "@/hooks/useGoBack";
 import { ProfileMenu } from "./ProfileMenu";
 
 const NAV = [
@@ -29,6 +31,7 @@ const NAV = [
 
 export function DesktopSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { canGoBack, goBack } = useGoBack();
   const [displayName, setDisplayName] = useState("Você");
   const [unread, setUnread] = useState(0);
 
@@ -67,18 +70,31 @@ export function DesktopSidebar() {
   }, [pathname]);
 
   return (
-    <aside className="hidden h-[100dvh] w-[var(--sidebar-width)] shrink-0 flex-col border-r border-border bg-charcoal-900 lg:flex">
+    // sticky: a barra é `h-[100dvh]` mas quem rola é a janela — sem isto ela
+    // subia junto com a página e sumia.
+    <aside className="sticky top-0 hidden h-[100dvh] w-[var(--sidebar-width)] shrink-0 flex-col border-r border-border bg-charcoal-900 lg:flex">
       <div className="flex items-center gap-2.5 border-b border-border px-5 py-4">
         <div className="grid h-9 w-9 place-items-center rounded-xl bg-ember text-charcoal-900">
           <Sparkles className="h-5 w-5" strokeWidth={2.4} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-sm tracking-[0.18em] text-foreground">
-            PERSONAL IA
-          </p>
+          <p className="truncate font-display text-sm tracking-[0.18em] text-foreground">WEME</p>
           <p className="truncate text-[10px] text-muted-foreground">{displayName}</p>
         </div>
       </div>
+
+      {/* Voltar do desktop — o único; no mobile ele vive na barra inferior. */}
+      {canGoBack && (
+        <button
+          type="button"
+          onClick={goBack}
+          aria-label="Voltar"
+          className="mx-3 mt-3 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-charcoal-800 hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span>Voltar</span>
+        </button>
+      )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         {NAV.map((item) => {

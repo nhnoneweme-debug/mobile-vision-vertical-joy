@@ -1,9 +1,24 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  User, ShoppingBag, Trophy, Users, LineChart, ClipboardCheck,
-  Moon, Sunrise, Swords, Wand2, MapPin, MessageCircle, ChevronUp,
-  CalendarDays, Flame, Dumbbell, Utensils, type LucideIcon,
+  User,
+  ShoppingBag,
+  Trophy,
+  Users,
+  LineChart,
+  ClipboardCheck,
+  Moon,
+  Sunrise,
+  Swords,
+  Wand2,
+  MapPin,
+  MessageCircle,
+  ChevronUp,
+  CalendarDays,
+  Flame,
+  Dumbbell,
+  Utensils,
+  type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 

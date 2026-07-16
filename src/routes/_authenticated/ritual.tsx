@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Sunrise, Moon, Sparkles, Check, ArrowLeft } from "lucide-react";
+import { Sunrise, Moon, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -115,12 +115,6 @@ function RitualPage() {
         className="border-b border-border px-4 pb-5"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        <Link
-          to="/mapa"
-          className="mb-3 inline-flex items-center gap-1 font-display text-[10px] tracking-[0.3em] text-muted-foreground"
-        >
-          <ArrowLeft className="h-3 w-3" /> MAPA
-        </Link>
         <p className="font-display text-[10px] tracking-[0.4em] text-ember">
           {headerMeta.label}
         </p>

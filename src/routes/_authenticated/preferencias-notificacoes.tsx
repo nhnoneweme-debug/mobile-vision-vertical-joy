@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, Bell, Moon, Save } from "lucide-react";
+import { Bell, Moon, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -91,13 +91,6 @@ function PrefsPage() {
     <MobileShell>
       <div className="px-4 pt-4 pb-32">
         <header className="mb-4 flex items-center gap-2">
-          <Link
-            to="/notificacoes"
-            className="rounded-full border border-border p-2 text-muted-foreground"
-            aria-label="Voltar"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
           <div>
             <p className="font-display text-[10px] tracking-[0.3em] text-ember">AJUSTES</p>
             <h1 className="font-display text-xl tracking-wide text-foreground">Preferências de push</h1>

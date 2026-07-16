@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Award, BookOpen, Lock, Check, Flame, Sparkles, Crown, Calendar, Sprout, Sunrise, Compass, Users, ShoppingBag, TowerControl } from "lucide-react";
+import { Award, BookOpen, Lock, Check, Flame, Sparkles, Crown, Calendar, Sprout, Sunrise, Compass, Users, ShoppingBag, TowerControl } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import {
@@ -115,10 +115,6 @@ function ConquistasPage() {
         className="border-b border-border px-4 pb-4"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
-        <Link to="/mapa" className="inline-flex items-center gap-1 text-muted-foreground">
-          <ArrowLeft className="h-4 w-4" />
-          <span className="font-display text-[10px] tracking-[0.3em]">MAPA</span>
-        </Link>
         <h1 className="mt-2 font-display text-3xl tracking-wide text-foreground">
           Conquistas & Saga
         </h1>

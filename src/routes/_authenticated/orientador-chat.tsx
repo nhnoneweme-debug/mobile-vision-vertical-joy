@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { ChatThread } from "@/components/orientador/ChatThread";
 import { listMyOrientadores } from "@/lib/orientador-chat";
@@ -50,13 +50,6 @@ function OrientadorChatPage() {
         className="flex items-center gap-3 border-b border-border px-4 pb-5"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        <Link
-          to="/perfil"
-          className="rounded-full border border-border p-2"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
-        </Link>
         <div>
           <p className="font-display text-[10px] tracking-[0.4em] text-ember">
             ORIENTADOR

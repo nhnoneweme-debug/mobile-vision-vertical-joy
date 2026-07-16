@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Hammer } from "lucide-react";
+import {  } from "@tanstack/react-router";
+import { Hammer } from "lucide-react";
 import type { Area } from "@/components/map/areas";
 
 export function AreaPlaceholder({ area }: { area: Area }) {
@@ -10,13 +10,6 @@ export function AreaPlaceholder({ area }: { area: Area }) {
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 px-4 pb-4 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
-        <Link
-          to="/mapa"
-          className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-foreground hover:border-ember/40"
-          aria-label="Voltar pro mapa"
-        >
-          <ArrowLeft className="h-5 w-5" strokeWidth={2.2} />
-        </Link>
         <div className="min-w-0 flex-1">
           <p className="font-display text-[10px] tracking-[0.3em] text-ember">
             ÁREA · {area.tagline.toUpperCase()}

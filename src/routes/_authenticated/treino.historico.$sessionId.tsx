@@ -1,7 +1,6 @@
-import { createFileRoute, Link, useParams, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { SessionCard } from "@/components/treino/HistoryList";
 import { getWorkoutHistory, type HistoryEntry } from "@/lib/workouts.functions";
@@ -25,7 +24,6 @@ export const Route = createFileRoute("/_authenticated/treino/historico/$sessionI
 function SessionDetailPage() {
   const { sessionId } = useParams({ from: "/_authenticated/treino/historico/$sessionId" });
   const fn = useServerFn(getWorkoutHistory);
-  const router = useRouter();
   const [entry, setEntry] = useState<HistoryEntry | null | undefined>(undefined);
 
   useEffect(() => {
@@ -44,14 +42,6 @@ function SessionDetailPage() {
   return (
     <MobileShell>
       <header className="flex items-center gap-3 px-4 pt-4">
-        <button
-          type="button"
-          onClick={() => router.history.back()}
-          aria-label="Voltar"
-          className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-charcoal-900 text-foreground active:scale-95"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
         <div className="min-w-0 flex-1">
           <p className="font-display text-[10px] tracking-[0.3em] text-ember">HISTÓRICO</p>
           <h1 className="truncate font-display text-lg tracking-wide text-foreground">

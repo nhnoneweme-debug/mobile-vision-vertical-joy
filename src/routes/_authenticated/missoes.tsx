@@ -1,24 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Bell,
-  BellRing,
-  CalendarDays,
-  Check,
-  ChevronLeft,
-  Clock,
-  Copy,
-  Flame,
-  Link2,
-  Link2Off,
-  ListChecks,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Bell, BellRing, CalendarDays, Check, Clock, Copy, Flame, Link2, Link2Off, ListChecks, Pencil, Plus, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -299,14 +281,6 @@ function MissoesPage() {
     <MobileShell>
       <header className="sticky top-0 z-20 border-b border-border bg-charcoal-900/90 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/mapa" })}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground"
-            aria-label="Voltar"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
           <div className="flex-1">
             <h1 className="font-display text-lg tracking-wide">MINHAS MISSÕES</h1>
             <p className="text-[11px] text-muted-foreground">
