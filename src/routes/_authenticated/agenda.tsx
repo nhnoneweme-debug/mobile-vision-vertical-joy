@@ -371,7 +371,7 @@ function AgendaPage() {
                   </span>
                 </div>
                 <div
-                  className="grid grid-cols-2 gap-2 overflow-y-auto pr-0.5"
+                  className="grid grid-cols-2 gap-2 overflow-y-auto pr-0.5 lg:grid-cols-3"
                   style={{ maxHeight: "60vh" }}
                 >
                   {items.map((m) => (
@@ -395,17 +395,17 @@ function AgendaPage() {
           <div className="forge-card rounded-2xl p-2">
             {/* Cabeçalho fixo com os dias */}
             <div className="mb-1 flex border-b border-border/50 pb-1">
-              <div className="w-9 shrink-0" />
+              <div className="w-9 shrink-0 lg:w-12" />
               {weekDays.map((d, i) => {
                 const isToday = sameDay(d, today);
                 return (
                   <div key={i} className="flex-1 text-center">
-                    <div className={"font-display text-[9px] tracking-[0.15em] " + (isToday ? "text-ember" : "text-muted-foreground")}>
+                    <div className={"font-display text-[9px] tracking-[0.15em] lg:text-[11px] " + (isToday ? "text-ember" : "text-muted-foreground")}>
                       {DAY_SHORT[d.getDay()].toUpperCase()}
                     </div>
                     <div
                       className={
-                        "mx-auto mt-0.5 grid h-6 w-6 place-items-center rounded-full font-display text-xs " +
+                        "mx-auto mt-0.5 grid h-6 w-6 place-items-center rounded-full font-display text-xs lg:h-7 lg:w-7 lg:text-sm " +
                         (isToday ? "bg-ember text-charcoal-900" : "text-foreground/80")
                       }
                     >
@@ -420,10 +420,10 @@ function AgendaPage() {
             <div className="overflow-y-auto" style={{ maxHeight: "62vh" }}>
               <div className="relative flex" style={{ height: GRID_H }}>
                 {/* Coluna de horários */}
-                <div className="w-9 shrink-0">
+                <div className="w-9 shrink-0 lg:w-12">
                   {HOURS.map((h) => (
                     <div key={h} className="relative" style={{ height: ROW_H }}>
-                      <span className="absolute -top-1.5 right-1 font-display text-[9px] text-muted-foreground">
+                      <span className="absolute -top-1.5 right-1 font-display text-[9px] text-muted-foreground lg:text-[11px]">
                         {h}h
                       </span>
                     </div>
@@ -455,10 +455,10 @@ function AgendaPage() {
                           }
                           style={{ top: timeToOffset(m.scheduled_time), height: blockHeight(m.scheduled_time, m.end_time ?? null) }}
                         >
-                          <span className="block font-display text-[8px] leading-tight">
+                          <span className="block font-display text-[8px] leading-tight lg:text-[11px]">
                             {hhmm(m.scheduled_time)}
                           </span>
-                          <span className={"block truncate text-[8px] leading-tight " + (m.done_today ? "line-through" : "")}>
+                          <span className={"block truncate text-[8px] leading-tight lg:text-[11px] " + (m.done_today ? "line-through" : "")}>
                             {m.title}
                           </span>
                         </button>
@@ -479,12 +479,12 @@ function AgendaPage() {
       {view === "mes" && (
         <section className="px-4 pt-4">
           <div className="forge-card rounded-2xl p-3">
-            <div className="mb-1 grid grid-cols-7 gap-1">
+            <div className="mb-1 grid grid-cols-7 gap-1 lg:gap-1.5">
               {WEEK_HEAD.map((d, i) => (
-                <span key={i} className="text-center font-display text-[10px] tracking-widest text-muted-foreground">{d}</span>
+                <span key={i} className="text-center font-display text-[10px] tracking-widest text-muted-foreground lg:text-xs">{d}</span>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1 lg:gap-1.5">
               {(() => {
                 const y = anchor.getFullYear();
                 const m = anchor.getMonth();
@@ -502,18 +502,18 @@ function AgendaPage() {
                       type="button"
                       onClick={() => { setAnchor(date); setView("dia"); }}
                       className={
-                        "flex min-h-[52px] flex-col rounded-lg p-1 text-left " +
+                        "flex min-h-[52px] flex-col rounded-lg p-1 text-left lg:min-h-[84px] lg:p-1.5 " +
                         (isToday ? "bg-ember text-charcoal-900" : "bg-charcoal-800/40 text-foreground/80 active:bg-charcoal-800")
                       }
                     >
-                      <span className="font-display text-[11px] leading-none">{day}</span>
+                      <span className="font-display text-[11px] leading-none lg:text-sm">{day}</span>
                       {dayMs.length > 0 && (
-                        <span className={"mt-0.5 truncate text-[7px] leading-tight " + (isToday ? "text-charcoal-900/80" : "text-ember")}>
+                        <span className={"mt-0.5 truncate text-[7px] leading-tight lg:mt-1 lg:text-[10px] " + (isToday ? "text-charcoal-900/80" : "text-ember")}>
                           {hhmm(dayMs[0].scheduled_time)} {dayMs[0].title}
                         </span>
                       )}
                       {dayMs.length > 1 && (
-                        <span className={"truncate text-[7px] leading-tight " + (isToday ? "text-charcoal-900/70" : "text-muted-foreground")}>
+                        <span className={"truncate text-[7px] leading-tight lg:text-[10px] " + (isToday ? "text-charcoal-900/70" : "text-muted-foreground")}>
                           +{dayMs.length - 1} mais
                         </span>
                       )}
@@ -530,7 +530,7 @@ function AgendaPage() {
       {/* ---- ANO ---- */}
       {view === "ano" && (
         <section className="px-4 pt-4">
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5 lg:grid-cols-4 lg:gap-3">
             {MONTHS.map((mn, mi) => {
               const isThis = mi === today.getMonth() && anchor.getFullYear() === today.getFullYear();
               return (
@@ -539,7 +539,7 @@ function AgendaPage() {
                   type="button"
                   onClick={() => { const d = new Date(anchor); d.setMonth(mi); d.setDate(1); setAnchor(d); setView("mes"); }}
                   className={
-                    "forge-card flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl active:forge-press-active " +
+                    "forge-card flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl active:forge-press-active lg:aspect-[3/2] " +
                     (isThis ? "border-ember/50" : "")
                   }
                 >

@@ -253,18 +253,18 @@ function MonthView({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 px-1 pb-1">
+      <div className="grid grid-cols-7 gap-1 px-1 pb-1 lg:gap-1.5">
         {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
           <div
             key={i}
-            className="text-center font-display text-[9px] tracking-[0.2em] text-muted-foreground"
+            className="text-center font-display text-[9px] tracking-[0.2em] text-muted-foreground lg:text-[11px]"
           >
             {d}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1 lg:gap-1.5">
         {weeks.flat().map((d) => {
           const key = dateKey(d);
           const inMonth = d.getMonth() === cursor.month;
@@ -277,7 +277,7 @@ function MonthView({ userId }: { userId: string }) {
             <button
               key={key}
               onClick={() => setSelected(isSel ? null : key)}
-              className={`relative aspect-square rounded-lg text-[10px] font-display tracking-wider transition-all ${intensity(xp)} ${
+              className={`relative aspect-square rounded-lg text-[10px] font-display tracking-wider transition-all lg:aspect-[4/3] lg:text-sm ${intensity(xp)} ${
                 !inMonth ? "opacity-30" : ""
               } ${isSel ? "ring-2 ring-ember" : isToday ? "ring-1 ring-foreground/60" : ""}`}
             >

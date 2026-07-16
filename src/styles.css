@@ -346,21 +346,29 @@ html.high-contrast {
 :root {
   --sidebar-width: 0px;
   --sidebar-visible: 0;
+
+  /* Célula da grade mensal do MonthGlance — o JS deriva a altura do card daqui. */
+  --mg-cell: 46px;
+  --mg-gap: 4px;
 }
+/* O conteúdo é mono-coluna (mobile-first): alargar demais estica cards e grades
+   em vez de mostrar mais coisa. Coluna confortável + sidebar fora dela. */
 @media (min-width: 1024px) {
   :root {
-    --shell-max: 960px;
+    --shell-max: 780px;
     --sidebar-width: 240px;
     --sidebar-visible: 1;
+    --mg-cell: 72px;
+    --mg-gap: 6px;
   }
 }
 @media (min-width: 1280px) {
   :root {
-    --shell-max: 1080px;
+    --shell-max: 860px;
   }
 }
 @media (min-width: 1440px) {
   :root {
-    --shell-max: 1200px;
+    --shell-max: 920px;
   }
 }
