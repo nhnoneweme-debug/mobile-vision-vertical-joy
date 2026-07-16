@@ -867,7 +867,15 @@ export type Database = {
           mission_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_event_map_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "user_missions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_members: {
         Row: {
