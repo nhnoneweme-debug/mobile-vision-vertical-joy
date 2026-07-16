@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { Sparkles, Send } from "lucide-react";
 import { authHeaders } from "@/lib/auth-headers";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { HeaderBackButton } from "@/components/shell/HeaderBackButton";
 
 export const Route = createFileRoute("/_authenticated/conversar")({
   head: () => ({ meta: [{ title: "Conversar com o Orientador — Weme" }] }),
@@ -54,9 +55,12 @@ function ConversarPage() {
   return (
     <MobileShell>
       <header
-        className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pr-4 pt-5 backdrop-blur-xl"
+        className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
+        {/* A barra inferior some aqui (o composer ocupa o rodapé), então a
+            saída fica no header. No desktop quem traz o voltar é a sidebar. */}
+        <HeaderBackButton onlyMobile />
         <span className="ember-glow grid h-10 w-10 place-items-center rounded-2xl bg-charcoal-800 text-ember">
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>

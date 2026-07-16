@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { Moon, Send, BedDouble, Sunrise, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import { authHeaders } from "@/lib/auth-headers";
+import { HeaderBackButton } from "@/components/shell/HeaderBackButton";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import type { RitualType } from "@/lib/ritual";
 
@@ -20,13 +21,7 @@ const MODES = {
     intro:
       "Bom dia. Antes que o sonho escape — o que você lembra? Pode falar cru, sem ordem, eu organizo.",
     placeholder: "dump do sonho…",
-    quick: [
-      "sonhei que…",
-      "não lembro o sonho",
-      "acordei cansado",
-      "dormi bem",
-      "feche o ritual",
-    ],
+    quick: ["sonhei que…", "não lembro o sonho", "acordei cansado", "dormi bem", "feche o ritual"],
     accent: {
       bg: "from-charcoal-900 via-charcoal-900 to-amber-950/30",
       chip: "bg-amber-400/80",
@@ -112,6 +107,9 @@ export function DumpChat({ mode }: { mode: RitualType }) {
       <header className="border-b border-border bg-charcoal-900/85 px-4 py-4 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-[var(--shell-max)] items-center justify-between">
           <div className="flex items-center gap-2">
+            {/* Tela cheia, sem MobileShell: aqui não há barra inferior nem
+                sidebar, então o voltar aparece nos dois viewports. */}
+            <HeaderBackButton />
             <span
               className={`flex h-9 w-9 items-center justify-center rounded-full text-charcoal-900 ${cfg.accent.chip} ${cfg.accent.shadow}`}
             >

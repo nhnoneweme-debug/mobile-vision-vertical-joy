@@ -183,7 +183,7 @@ function CirculoPage() {
   return (
     <MobileShell>
       <header
-        className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pr-4 pt-5 backdrop-blur-xl"
+        className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
         <span className="ember-glow grid h-10 w-10 place-items-center rounded-2xl bg-charcoal-800 text-ember">

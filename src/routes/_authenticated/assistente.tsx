@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { HeaderBackButton } from "@/components/shell/HeaderBackButton";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createHabit, archiveHabit, type HabitFrequency } from "@/lib/habits";
@@ -495,9 +496,12 @@ function AssistantPage() {
   return (
     <MobileShell>
       <header
-        className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pr-4 pt-5 backdrop-blur-xl"
+        className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
+        {/* A barra inferior some aqui (o composer ocupa o rodapé), então a
+            saída fica no header. No desktop quem traz o voltar é a sidebar. */}
+        <HeaderBackButton onlyMobile />
         <span className="ember-glow grid h-10 w-10 place-items-center rounded-2xl bg-charcoal-800 text-ember">
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
