@@ -85,7 +85,7 @@ function WearablesPage() {
           <h1 className="font-display text-2xl tracking-wide text-foreground">WEARABLES</h1>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Sono, passos e frequência cardíaca alimentam automaticamente seus rituais e o Personal IA Score.
+          Sono, passos e frequência cardíaca alimentam automaticamente seus rituais e o Weme Score.
         </p>
       </header>
 

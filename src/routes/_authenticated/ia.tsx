@@ -12,7 +12,7 @@ import type { Proposal } from "@/lib/ia-capture";
 export const Route = createFileRoute("/_authenticated/ia")({
   head: () => ({
     meta: [
-      { title: "IA-Coletora — Personal IA" },
+      { title: "IA-Coletora — Weme" },
       { name: "description", content: "Dump por texto/áudio. A IA organiza e registra para você." },
     ],
   }),

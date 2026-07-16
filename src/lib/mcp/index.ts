@@ -13,10 +13,10 @@ const projectRef =
 
 export default defineMcp({
   name: "personal-ia-mcp",
-  title: "Personal IA",
+  title: "Weme",
   version: "0.1.0",
   instructions:
-    "Ferramentas do Personal IA para o usuário autenticado: consultar perfil, missões, hábitos e notificações, e gerar nudges pendentes do dia.",
+    "Ferramentas do Weme para o usuário autenticado: consultar perfil, missões, hábitos e notificações, e gerar nudges pendentes do dia.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

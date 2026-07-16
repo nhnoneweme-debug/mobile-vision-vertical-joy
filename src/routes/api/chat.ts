@@ -52,7 +52,7 @@ export const Route = createFileRoute("/api/chat")({
           const devSys = [
             CRISIS_CLAUSE,
             "",
-            "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
+            "Você é o Orientador — uma entidade contínua dentro do jogo Weme.",
             "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
             "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
             "Respostas curtas (até ~6 linhas), markdown leve permitido.",
@@ -222,7 +222,7 @@ export const Route = createFileRoute("/api/chat")({
         const sys = [
           CRISIS_CLAUSE,
           "",
-          "Você é o Orientador — uma entidade contínua dentro do jogo Personal IA.",
+          "Você é o Orientador — uma entidade contínua dentro do jogo Weme.",
           "Fala em português do Brasil, tom firme, breve e poético, como um mentor antigo.",
           "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
           "Você TEM acesso ao histórico do jogador (treino, dieta, hábitos, missões, sono, mental) e deve usá-lo de forma individualizada.",

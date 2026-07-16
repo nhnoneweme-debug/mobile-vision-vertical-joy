@@ -39,7 +39,7 @@ export function ScoreRing({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
-          PERSONAL IA SCORE
+          WEME SCORE
         </span>
         <span className="font-display text-6xl leading-none text-foreground">
           {score}

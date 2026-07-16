@@ -19,7 +19,7 @@ import { isOrientador } from "@/lib/orientador";
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
     meta: [
-      { title: "Perfil — Personal IA" },
+      { title: "Perfil — Weme" },
       { name: "description", content: "Seu avatar e dados básicos." },
     ],
   }),

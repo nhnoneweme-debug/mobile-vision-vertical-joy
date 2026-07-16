@@ -37,7 +37,7 @@ import {
 } from "@/lib/challenges";
 
 export const Route = createFileRoute("/_authenticated/circulo")({
-  head: () => ({ meta: [{ title: "Círculo — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Círculo — Weme" }] }),
   component: CirculoPage,
 });
 

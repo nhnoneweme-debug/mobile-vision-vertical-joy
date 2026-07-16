@@ -15,7 +15,7 @@ import {
 export const Route = createFileRoute("/_authenticated/desafios")({
   head: () => ({
     meta: [
-      { title: "Desafios — Personal IA" },
+      { title: "Desafios — Weme" },
       { name: "description", content: "Desafios coletivos com prêmios dinâmicos." },
     ],
   }),

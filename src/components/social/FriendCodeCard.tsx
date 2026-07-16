@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 export function FriendCodeCard({ code }: { code: string | null }) {
   if (!code) return null;
-  const shareText = `Caminhe comigo no Personal IA. Meu código de viajante é ${code}.`;
+  const shareText = `Caminhe comigo no Weme. Meu código de viajante é ${code}.`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
   return (
     <div className="rounded-2xl border border-ember/40 bg-ember/5 p-4">

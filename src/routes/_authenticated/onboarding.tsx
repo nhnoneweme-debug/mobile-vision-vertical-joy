@@ -15,7 +15,7 @@ import { ArrowRight } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
     meta: [
-      { title: "Onboarding — Personal IA" },
+      { title: "Onboarding — Weme" },
       { name: "description", content: "Defina seu avatar, objetivo e classe." },
     ],
   }),

@@ -40,7 +40,7 @@ import {
 } from "@/lib/food-log.functions";
 
 export const Route = createFileRoute("/_authenticated/plano-alimentar")({
-  head: () => ({ meta: [{ title: "Plano Alimentar — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Plano Alimentar — Weme" }] }),
   component: PlanoPage,
 });
 

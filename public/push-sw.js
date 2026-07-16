@@ -1,4 +1,4 @@
-/* Vertical Vision — Push Service Worker (VAPID) */
+/* Weme — Push Service Worker (VAPID) */
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
@@ -12,9 +12,9 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch (_) {
-    payload = { title: 'Vertical Vision', body: event.data ? event.data.text() : '' };
+    payload = { title: 'Weme', body: event.data ? event.data.text() : '' };
   }
-  const title = payload.title || 'Vertical Vision';
+  const title = payload.title || 'Weme';
   const options = {
     body: payload.body || '',
     icon: '/icons/icon-192.png',

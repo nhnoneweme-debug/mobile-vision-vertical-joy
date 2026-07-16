@@ -21,13 +21,13 @@ function safeNext(next: string | undefined): string | undefined {
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Entrar — Personal IA" },
-      { name: "description", content: "Entre ou crie sua conta no Personal IA por email, telefone ou SSO." },
-      { property: "og:title", content: "Entrar — Personal IA" },
-      { property: "og:description", content: "Entre ou crie sua conta no Personal IA por email, telefone ou SSO." },
+      { title: "Entrar — Weme" },
+      { name: "description", content: "Entre ou crie sua conta no Weme por email, telefone ou SSO." },
+      { property: "og:title", content: "Entrar — Weme" },
+      { property: "og:description", content: "Entre ou crie sua conta no Weme por email, telefone ou SSO." },
       { property: "og:url", content: "https://mobile-vision-vertical-joy.lovable.app/auth" },
-      { name: "twitter:title", content: "Entrar — Personal IA" },
-      { name: "twitter:description", content: "Entre ou crie sua conta no Personal IA por email, telefone ou SSO." },
+      { name: "twitter:title", content: "Entrar — Weme" },
+      { name: "twitter:description", content: "Entre ou crie sua conta no Weme por email, telefone ou SSO." },
     ],
     links: [{ rel: "canonical", href: "https://mobile-vision-vertical-joy.lovable.app/auth" }],
   }),
@@ -200,7 +200,7 @@ function AuthPage() {
           <ArrowLeft className="h-5 w-5" strokeWidth={2.2} />
         </Link>
         <p className="font-display text-[10px] tracking-[0.4em] text-ember">
-          PERSONAL IA
+          WEME
         </p>
       </header>
 

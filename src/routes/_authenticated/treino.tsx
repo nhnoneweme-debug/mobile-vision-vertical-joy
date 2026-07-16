@@ -15,7 +15,7 @@ import { PostWorkoutCheckinSheet } from "@/components/circulo/PostWorkoutCheckin
 import { HistoryList } from "@/components/treino/HistoryList";
 
 export const Route = createFileRoute("/_authenticated/treino")({
-  head: () => ({ meta: [{ title: "Treino — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Treino — Weme" }] }),
   component: TreinoPage,
 });
 

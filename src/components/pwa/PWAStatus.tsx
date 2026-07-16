@@ -71,7 +71,7 @@ export function PWAStatus() {
               <Download className="h-4 w-4" strokeWidth={2.2} />
             </div>
             <p className="flex-1 truncate font-display text-[11px] tracking-[0.18em] text-foreground">
-              INSTALAR PERSONAL IA
+              INSTALAR WEME
             </p>
             <button
               onClick={dismiss}

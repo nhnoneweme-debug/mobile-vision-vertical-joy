@@ -25,7 +25,7 @@ import { sendTestPush } from "@/lib/push.functions";
 export const Route = createFileRoute("/_authenticated/notificacoes")({
   head: () => ({
     meta: [
-      { title: "Notificações — Personal IA" },
+      { title: "Notificações — Weme" },
       { name: "description", content: "Cutucadas inteligentes: missões pendentes, streak em risco, rituais e mensagens do orientador." },
     ],
   }),

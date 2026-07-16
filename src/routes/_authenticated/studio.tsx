@@ -20,7 +20,7 @@ import {
 export const Route = createFileRoute("/_authenticated/studio")({
   head: () => ({
     meta: [
-      { title: "Studio — Personal IA" },
+      { title: "Studio — Weme" },
       { name: "description", content: "Criação de desafios e prêmios dinâmicos." },
     ],
   }),

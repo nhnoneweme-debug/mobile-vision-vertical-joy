@@ -108,7 +108,7 @@ export const AREAS: Area[] = [
   {
     slug: "progresso",
     name: "Templo do Progresso",
-    tagline: "Personal IA Score",
+    tagline: "Weme Score",
     description:
       "Sua evolução: score, medidas, fotos opcionais e relatórios.",
     icon: Trophy,

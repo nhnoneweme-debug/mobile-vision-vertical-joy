@@ -7,19 +7,19 @@ const SITE_URL = "https://mobile-vision-vertical-joy.lovable.app";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Personal IA — Sua jornada de bem-estar" },
+      { title: "Weme — Sua jornada de bem-estar" },
       {
         name: "description",
         content:
-          "Personal IA transforma cuidar de si em uma jornada viva: treino, sono, mente e rotina guiados por IA.",
+          "Weme transforma cuidar de si em uma jornada viva: treino, sono, mente e rotina guiados por IA.",
       },
-      { property: "og:title", content: "Personal IA — Sua jornada de bem-estar" },
+      { property: "og:title", content: "Weme — Sua jornada de bem-estar" },
       {
         property: "og:description",
         content: "Sua jornada gamificada de bem-estar guiada por IA.",
       },
       { property: "og:url", content: `${SITE_URL}/` },
-      { name: "twitter:title", content: "Personal IA — Sua jornada de bem-estar" },
+      { name: "twitter:title", content: "Weme — Sua jornada de bem-estar" },
       {
         name: "twitter:description",
         content: "Sua jornada gamificada de bem-estar guiada por IA.",
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "Personal IA",
+          name: "Weme",
           url: SITE_URL,
         }),
       },
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
-          name: "Personal IA",
+          name: "Weme",
           url: SITE_URL,
         }),
       },
@@ -75,7 +75,7 @@ function Splash() {
           <Sparkles className="h-7 w-7 text-ember" strokeWidth={2.2} />
         </div>
         <p className="mt-6 font-display text-[11px] tracking-[0.4em] text-ember">
-          PERSONAL IA
+          WEME
         </p>
         <h1 className="mt-2 font-display text-5xl leading-[0.95] tracking-wide text-foreground">
           Cuide de si <br /> como uma <br />

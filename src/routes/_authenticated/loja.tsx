@@ -23,7 +23,7 @@ import {
 export const Route = createFileRoute("/_authenticated/loja")({
   head: () => ({
     meta: [
-      { title: "Marketplace de Brasas — Personal IA" },
+      { title: "Marketplace de Brasas — Weme" },
       {
         name: "description",
         content: "Perks temporários, pacotes sazonais e cosméticos. Economia viva movida a Brasas.",

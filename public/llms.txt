@@ -1,8 +1,8 @@
-# Personal IA
+# Weme
 
-> Personal IA é uma jornada gamificada de bem-estar guiada por IA, integrando treino, sono, alimentação, mente e rotina em um mundo mobile-first.
+> Weme é uma jornada gamificada de bem-estar guiada por IA, integrando treino, sono, alimentação, mente e rotina em um mundo mobile-first.
 
 ## Pages
 
-- [Início](/): Apresentação do Personal IA e entrada no mundo.
+- [Início](/): Apresentação do Weme e entrada no mundo.
 - [Entrar](/auth): Criação de conta e login por email, telefone ou SSO.

@@ -8,7 +8,7 @@ import { MobileShell } from "@/components/shell/MobileShell";
 export const Route = createFileRoute("/_authenticated/preferencias-notificacoes")({
   head: () => ({
     meta: [
-      { title: "Preferências de notificação — Personal IA" },
+      { title: "Preferências de notificação — Weme" },
       { name: "description", content: "Escolha quais categorias de push receber e defina sua janela de silêncio." },
     ],
   }),

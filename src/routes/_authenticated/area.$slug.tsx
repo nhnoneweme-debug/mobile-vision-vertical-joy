@@ -29,8 +29,8 @@ export const Route = createFileRoute("/_authenticated/area/$slug")({
     const area = getArea(params.slug);
     return {
       meta: [
-        { title: `${area?.name ?? "Área"} — Personal IA` },
-        { name: "description", content: area?.description ?? "Área do mundo Personal IA." },
+        { title: `${area?.name ?? "Área"} — Weme` },
+        { name: "description", content: area?.description ?? "Área do mundo Weme." },
       ],
     };
   },

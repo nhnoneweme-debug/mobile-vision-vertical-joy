@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Personal IA — Charcoal & Ember dark premium tokens.
+ * Weme — Charcoal & Ember dark premium tokens.
  * All colors in oklch. Bebas Neue (display) + Barlow (body) loaded
  * via <link> in src/routes/__root.tsx head.
  */

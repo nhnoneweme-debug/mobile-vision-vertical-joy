@@ -45,7 +45,7 @@ import {
 export const Route = createFileRoute("/_authenticated/social")({
   head: () => ({
     meta: [
-      { title: "Praça Social — Personal IA" },
+      { title: "Praça Social — Weme" },
       { name: "description", content: "Amigos, guildas e desafios coletivos." },
     ],
   }),

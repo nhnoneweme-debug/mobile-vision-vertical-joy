@@ -14,7 +14,7 @@ import { XPToast } from "@/components/map/XPToast";
 export const Route = createFileRoute("/_authenticated/ritual")({
   head: () => ({
     meta: [
-      { title: "Ritual diário — Personal IA" },
+      { title: "Ritual diário — Weme" },
       { name: "description", content: "Abra e feche o dia com intenção." },
     ],
   }),

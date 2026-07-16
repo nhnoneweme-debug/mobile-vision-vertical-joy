@@ -36,7 +36,7 @@ import {
 export const Route = createFileRoute("/_authenticated/missoes")({
   head: () => ({
     meta: [
-      { title: "Minhas Missões — Personal IA" },
+      { title: "Minhas Missões — Weme" },
       {
         name: "description",
         content:

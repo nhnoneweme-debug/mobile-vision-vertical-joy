@@ -17,7 +17,7 @@ import {
 export const Route = createFileRoute("/_authenticated/mental")({
   head: () => ({
     meta: [
-      { title: "Jardim Mental — Personal IA" },
+      { title: "Jardim Mental — Weme" },
       {
         name: "description",
         content:

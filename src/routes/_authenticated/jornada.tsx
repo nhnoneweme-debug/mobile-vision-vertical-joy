@@ -7,7 +7,7 @@ import { MobileShell } from "@/components/shell/MobileShell";
 import { listDayBlocks, createDayBlock, completeDayBlock } from "@/lib/wake.functions";
 
 export const Route = createFileRoute("/_authenticated/jornada")({
-  head: () => ({ meta: [{ title: "Jornada do Dia — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Jornada do Dia — Weme" }] }),
   component: JornadaPage,
 });
 

@@ -110,7 +110,7 @@ const TIPS: Record<string, MentorTip> = {
     ],
   },
   "/progresso": {
-    title: "Personal IA Score",
+    title: "Weme Score",
     blurb:
       "Seu score consolida treino, sono, mente, social e disciplina. Toque nos anéis pra ver o que puxa pra cima ou pra baixo.",
     questions: [

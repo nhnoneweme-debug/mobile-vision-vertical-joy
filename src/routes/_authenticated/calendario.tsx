@@ -39,7 +39,7 @@ import { monthlyHabitProgress } from "@/lib/habits";
 export const Route = createFileRoute("/_authenticated/calendario")({
   head: () => ({
     meta: [
-      { title: "Calendário — Personal IA" },
+      { title: "Calendário — Weme" },
       {
         name: "description",
         content:

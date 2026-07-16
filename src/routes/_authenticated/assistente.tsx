@@ -43,7 +43,7 @@ const GREETING =
   "Oi! Sou sua Inteligência Digital. Me conta o que você quer — treino, dieta, um hábito ou um compromisso. Eu pergunto o que faltar e monto uma proposta pra você confirmar.";
 
 export const Route = createFileRoute("/_authenticated/assistente")({
-  head: () => ({ meta: [{ title: "Inteligência Digital — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Inteligência Digital — Weme" }] }),
   component: AssistantPage,
 });
 

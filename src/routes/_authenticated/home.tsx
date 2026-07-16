@@ -13,7 +13,7 @@ import { listMissions, maskToDays } from "@/lib/missions";
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
     meta: [
-      { title: "Início — Personal IA" },
+      { title: "Início — Weme" },
       { name: "description", content: "Seu dia, hábitos e a Inteligência Digital num só lugar." },
     ],
   }),

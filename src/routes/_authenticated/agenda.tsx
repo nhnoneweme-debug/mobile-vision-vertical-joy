@@ -10,7 +10,7 @@ import {
 } from "@/lib/missions";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
-  head: () => ({ meta: [{ title: "Agenda — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Agenda — Weme" }] }),
   component: AgendaPage,
 });
 

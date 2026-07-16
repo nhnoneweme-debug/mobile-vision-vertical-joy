@@ -8,7 +8,7 @@ import { authHeaders } from "@/lib/auth-headers";
 import { MobileShell } from "@/components/shell/MobileShell";
 
 export const Route = createFileRoute("/_authenticated/conversar")({
-  head: () => ({ meta: [{ title: "Conversar com o Orientador — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Conversar com o Orientador — Weme" }] }),
   component: ConversarPage,
 });
 

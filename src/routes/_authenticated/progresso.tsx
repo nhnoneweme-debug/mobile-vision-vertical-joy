@@ -22,10 +22,10 @@ import { areaLevelProgress, listAllAreaProgress } from "@/lib/area-missions";
 export const Route = createFileRoute("/_authenticated/progresso")({
   head: () => ({
     meta: [
-      { title: "Templo do Progresso — Personal IA" },
+      { title: "Templo do Progresso — Weme" },
       {
         name: "description",
-        content: "Seu Personal IA Score consolidado e evolução semanal.",
+        content: "Seu Weme Score consolidado e evolução semanal.",
       },
     ],
   }),

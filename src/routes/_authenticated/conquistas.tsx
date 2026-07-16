@@ -21,7 +21,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/conquistas")({
   head: () => ({
     meta: [
-      { title: "Conquistas — Personal IA" },
+      { title: "Conquistas — Weme" },
       { name: "description", content: "Suas conquistas e a Saga do Oráculo das Brasas." },
     ],
   }),

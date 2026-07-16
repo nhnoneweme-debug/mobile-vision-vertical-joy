@@ -19,7 +19,7 @@ import {
 } from "@/lib/challenges";
 
 export const Route = createFileRoute("/_authenticated/circulo/desafio/$id")({
-  head: () => ({ meta: [{ title: "Desafio — Personal IA" }] }),
+  head: () => ({ meta: [{ title: "Desafio — Weme" }] }),
   component: DesafioDetailPage,
   errorComponent: ({ reset }) => (
     <MobileShell>

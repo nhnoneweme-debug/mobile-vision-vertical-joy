@@ -1,6 +1,6 @@
 {
-  "name": "Personal IA",
-  "short_name": "Personal IA",
+  "name": "Weme",
+  "short_name": "Weme",
   "description": "Sua jornada gamificada de bem-estar guiada por IA.",
   "start_url": "/mapa",
   "scope": "/",

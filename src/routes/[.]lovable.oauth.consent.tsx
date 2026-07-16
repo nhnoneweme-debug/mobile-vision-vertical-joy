@@ -98,13 +98,13 @@ function ConsentPage() {
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
     >
       <p className="font-display text-[10px] tracking-[0.4em] text-ember">
-        PERSONAL IA
+        WEME
       </p>
       <h1 className="font-display text-2xl leading-tight text-foreground">
         Conectar {clientName} à sua conta
       </h1>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        {clientName} vai poder usar o Personal IA em seu nome: consultar seu
+        {clientName} vai poder usar o Weme em seu nome: consultar seu
         perfil, missões, hábitos e notificações, e gerar nudges do dia.
       </p>
 

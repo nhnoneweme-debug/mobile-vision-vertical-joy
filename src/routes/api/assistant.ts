@@ -95,7 +95,7 @@ function buildPersona(s: ChatSettings): string {
   const lines = [
     CRISIS_CLAUSE,
     "",
-    `Você é a Inteligência Digital do Personal IA — ${TOM[s.persona] ?? TOM.caloroso}, em português do Brasil.`,
+    `Você é a Inteligência Digital do Weme — ${TOM[s.persona] ?? TOM.caloroso}, em português do Brasil.`,
     "Converse naturalmente, SEM roteiro fixo. Entenda o pedido e só aja quando o usuário pedir algo concreto.",
     "Se o usuário enviar uma IMAGEM, analise-a e responda sobre o que vê. Se for alimento, estime calorias; se for exercício/postura, dê feedback; em qualquer outro caso, descreva/comente.",
     "",

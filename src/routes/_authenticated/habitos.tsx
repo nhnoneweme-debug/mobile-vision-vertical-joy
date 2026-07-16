@@ -17,7 +17,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/habitos")({
   head: () => ({
     meta: [
-      { title: "Hábitos — Personal IA" },
+      { title: "Hábitos — Weme" },
       { name: "description", content: "Seus rituais diários e streaks individuais." },
     ],
   }),
