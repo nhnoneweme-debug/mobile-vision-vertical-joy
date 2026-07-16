@@ -17,8 +17,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
+import { Route as ApiGoogleCalendarCallbackRouteImport } from './routes/api/google-calendar-callback'
 import { Route as ApiConverseRouteImport } from './routes/api/converse'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiAssistantTtsRouteImport } from './routes/api/assistant-tts'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as AuthenticatedWearablesRouteImport } from './routes/_authenticated/wearables'
 import { Route as AuthenticatedTreinoRouteImport } from './routes/_authenticated/treino'
@@ -97,6 +99,12 @@ const ApiIaCaptureRoute = ApiIaCaptureRouteImport.update({
   path: '/api/ia-capture',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleCalendarCallbackRoute =
+  ApiGoogleCalendarCallbackRouteImport.update({
+    id: '/api/google-calendar-callback',
+    path: '/api/google-calendar-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiConverseRoute = ApiConverseRouteImport.update({
   id: '/api/converse',
   path: '/api/converse',
@@ -105,6 +113,11 @@ const ApiConverseRoute = ApiConverseRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssistantTtsRoute = ApiAssistantTtsRouteImport.update({
+  id: '/api/assistant-tts',
+  path: '/api/assistant-tts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
@@ -345,8 +358,10 @@ export interface FileRoutesByFullPath {
   '/treino': typeof AuthenticatedTreinoRouteWithChildren
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/assistant-tts': typeof ApiAssistantTtsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/converse': typeof ApiConverseRoute
+  '/api/google-calendar-callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -394,8 +409,10 @@ export interface FileRoutesByTo {
   '/treino': typeof AuthenticatedTreinoRouteWithChildren
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/assistant-tts': typeof ApiAssistantTtsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/converse': typeof ApiConverseRoute
+  '/api/google-calendar-callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -445,8 +462,10 @@ export interface FileRoutesById {
   '/_authenticated/treino': typeof AuthenticatedTreinoRouteWithChildren
   '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/assistant-tts': typeof ApiAssistantTtsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/converse': typeof ApiConverseRoute
+  '/api/google-calendar-callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -496,8 +515,10 @@ export interface FileRouteTypes {
     | '/treino'
     | '/wearables'
     | '/api/assistant'
+    | '/api/assistant-tts'
     | '/api/chat'
     | '/api/converse'
+    | '/api/google-calendar-callback'
     | '/api/ia-capture'
     | '/api/sleep-chat'
     | '/checkout/return'
@@ -545,8 +566,10 @@ export interface FileRouteTypes {
     | '/treino'
     | '/wearables'
     | '/api/assistant'
+    | '/api/assistant-tts'
     | '/api/chat'
     | '/api/converse'
+    | '/api/google-calendar-callback'
     | '/api/ia-capture'
     | '/api/sleep-chat'
     | '/checkout/return'
@@ -595,8 +618,10 @@ export interface FileRouteTypes {
     | '/_authenticated/treino'
     | '/_authenticated/wearables'
     | '/api/assistant'
+    | '/api/assistant-tts'
     | '/api/chat'
     | '/api/converse'
+    | '/api/google-calendar-callback'
     | '/api/ia-capture'
     | '/api/sleep-chat'
     | '/checkout/return'
@@ -618,8 +643,10 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
+  ApiAssistantTtsRoute: typeof ApiAssistantTtsRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiConverseRoute: typeof ApiConverseRoute
+  ApiGoogleCalendarCallbackRoute: typeof ApiGoogleCalendarCallbackRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
   ApiSleepChatRoute: typeof ApiSleepChatRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
@@ -687,6 +714,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIaCaptureRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google-calendar-callback': {
+      id: '/api/google-calendar-callback'
+      path: '/api/google-calendar-callback'
+      fullPath: '/api/google-calendar-callback'
+      preLoaderRoute: typeof ApiGoogleCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/converse': {
       id: '/api/converse'
       path: '/api/converse'
@@ -699,6 +733,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assistant-tts': {
+      id: '/api/assistant-tts'
+      path: '/api/assistant-tts'
+      fullPath: '/api/assistant-tts'
+      preLoaderRoute: typeof ApiAssistantTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assistant': {
@@ -1071,8 +1112,10 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiAssistantRoute: ApiAssistantRoute,
+  ApiAssistantTtsRoute: ApiAssistantTtsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiConverseRoute: ApiConverseRoute,
+  ApiGoogleCalendarCallbackRoute: ApiGoogleCalendarCallbackRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
   ApiSleepChatRoute: ApiSleepChatRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,

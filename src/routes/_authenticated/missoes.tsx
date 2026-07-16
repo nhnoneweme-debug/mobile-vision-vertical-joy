@@ -9,14 +9,18 @@ import {
   Clock,
   Copy,
   Flame,
+  Link2,
+  Link2Off,
   ListChecks,
   Pencil,
   Plus,
+  RefreshCw,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 import { XPToast } from "@/components/map/XPToast";
@@ -38,6 +42,14 @@ import {
   type UserMissionWithMeta,
 } from "@/lib/missions";
 import { AREAS } from "@/components/map/areas";
+import {
+  getGoogleCalendarAuthUrl,
+  exchangeGoogleCode,
+  disconnectGoogleCalendar,
+  getGoogleCalendarStatus,
+  syncMissionsToCalendar,
+  toggleCalendarSync,
+} from "@/lib/google-calendar.functions";
 
 export const Route = createFileRoute("/_authenticated/missoes")({
   head: () => ({
@@ -53,6 +65,8 @@ export const Route = createFileRoute("/_authenticated/missoes")({
   validateSearch: (s: Record<string, unknown>) => ({
     area: typeof s.area === "string" ? s.area : undefined,
     new: s.new === "1" || s.new === 1 || s.new === true ? true : undefined,
+    gcal: typeof s.gcal === "string" ? s.gcal : undefined,
+    code: typeof s.code === "string" ? s.code : undefined,
   }),
   component: MissoesPage,
 });
@@ -62,6 +76,13 @@ type Tab = "today" | "week" | "all";
 function MissoesPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const fnGetAuthUrl = useServerFn(getGoogleCalendarAuthUrl);
+  const fnExchangeCode = useServerFn(exchangeGoogleCode);
+  const fnDisconnect = useServerFn(disconnectGoogleCalendar);
+  const fnGetGCalStatus = useServerFn(getGoogleCalendarStatus);
+  const fnSyncToCalendar = useServerFn(syncMissionsToCalendar);
+  const fnToggleSync = useServerFn(toggleCalendarSync);
+
   const [userId, setUserId] = useState<string | null>(null);
   const [missions, setMissions] = useState<UserMissionWithMeta[]>([]);
   const [tab, setTab] = useState<Tab>("today");
@@ -74,6 +95,9 @@ function MissoesPage() {
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification !== "undefined" ? Notification.permission : "unsupported",
   );
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalSyncEnabled, setGcalSyncEnabled] = useState(false);
+  const [gcalSyncing, setGcalSyncing] = useState(false);
 
   const refresh = useCallback(async (uid: string) => {
     const rows = await listMissions(uid);
@@ -94,6 +118,88 @@ function MissoesPage() {
       }
     })();
   }, [refresh]);
+
+  // Google Calendar: troca código OAuth + verifica status
+  useEffect(() => {
+    (async () => {
+      try {
+        const status = await fnGetGCalStatus();
+        setGcalConnected(!!status.connected);
+        setGcalSyncEnabled(!!(status as { sync_enabled?: boolean }).sync_enabled);
+      } catch {
+        /* noop */
+      }
+      if (search.gcal === "success" && search.code) {
+        try {
+          await fnExchangeCode({ data: { code: search.code } });
+          toast.success("Google Calendar conectado.");
+          setGcalConnected(true);
+          setGcalSyncEnabled(true);
+          navigate({
+            to: "/missoes",
+            search: { area: search.area, new: search.new, gcal: undefined, code: undefined },
+            replace: true,
+          });
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Erro ao conectar Google Calendar");
+          navigate({
+            to: "/missoes",
+            search: { area: search.area, new: search.new, gcal: undefined, code: undefined },
+            replace: true,
+          });
+        }
+      } else if (search.gcal === "error") {
+        toast.error("Conexão com Google Calendar cancelada.");
+        navigate({
+          to: "/missoes",
+          search: { area: search.area, new: search.new, gcal: undefined, code: undefined },
+          replace: true,
+        });
+      }
+    })();
+  }, [search.gcal, search.code, fnExchangeCode, fnGetGCalStatus, navigate]);
+
+  async function connectGoogleCalendar() {
+    try {
+      const { url } = await fnGetAuthUrl();
+      window.open(url, "_blank", "width=500,height=700");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar URL de autorização");
+    }
+  }
+
+  async function disconnectGCal() {
+    try {
+      await fnDisconnect();
+      setGcalConnected(false);
+      setGcalSyncEnabled(false);
+      toast("Google Calendar desconectado.");
+    } catch {
+      toast.error("Erro ao desconectar.");
+    }
+  }
+
+  async function syncNow() {
+    setGcalSyncing(true);
+    try {
+      const res = await fnSyncToCalendar();
+      toast.success(`${(res as { synced?: number }).synced ?? 0} missões sincronizadas.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao sincronizar.");
+    } finally {
+      setGcalSyncing(false);
+    }
+  }
+
+  async function handleToggleSync(enabled: boolean) {
+    setGcalSyncEnabled(enabled);
+    try {
+      await fnToggleSync({ data: { enabled } });
+    } catch {
+      toast.error("Erro ao alterar sincronização.");
+      setGcalSyncEnabled(!enabled);
+    }
+  }
 
   // Agendador in-tab: dispara Notification quando bater o horário (± lembrete)
   useEffect(() => {
@@ -203,7 +309,9 @@ function MissoesPage() {
           </button>
           <div className="flex-1">
             <h1 className="font-display text-lg tracking-wide">MINHAS MISSÕES</h1>
-            <p className="text-[11px] text-muted-foreground">Crie, agende e ganhe XP no seu ritmo.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Crie, agende e ganhe XP no seu ritmo.
+            </p>
           </div>
           <button
             type="button"
@@ -241,6 +349,60 @@ function MissoesPage() {
       </header>
 
       <div className="space-y-4 px-4 py-4 pb-32">
+        {/* Google Calendar */}
+        <div className="rounded-xl border border-border bg-charcoal-800/50 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <CalendarDays
+              className={
+                "h-4 w-4 shrink-0 " + (gcalConnected ? "text-emerald-400" : "text-muted-foreground")
+              }
+            />
+            <span className="flex-1 text-xs text-foreground">
+              {gcalConnected ? "Google Calendar conectado" : "Google Calendar"}
+            </span>
+            {gcalConnected ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={syncNow}
+                  disabled={gcalSyncing}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground active:scale-95 disabled:opacity-40"
+                  aria-label="Sincronizar agora"
+                >
+                  <RefreshCw className={"h-3.5 w-3.5 " + (gcalSyncing ? "animate-spin" : "")} />
+                </button>
+                <button
+                  type="button"
+                  onClick={disconnectGCal}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-border text-muted-foreground hover:text-destructive active:scale-95"
+                  aria-label="Desconectar Google Calendar"
+                >
+                  <Link2Off className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={connectGoogleCalendar}
+                className="flex items-center gap-1 rounded-lg bg-ember px-2.5 py-1 font-display text-[10px] tracking-[0.18em] text-charcoal-900 active:scale-95"
+              >
+                <Link2 className="h-3.5 w-3.5" /> CONECTAR
+              </button>
+            )}
+          </div>
+          {gcalConnected ? (
+            <label className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={gcalSyncEnabled}
+                onChange={(e) => handleToggleSync(e.target.checked)}
+                className="h-3.5 w-3.5 accent-ember"
+              />
+              Sincronizar missões automaticamente
+            </label>
+          ) : null}
+        </div>
+
         {notifPerm !== "granted" && notifPerm !== "unsupported" && (
           <button
             type="button"
@@ -255,7 +417,10 @@ function MissoesPage() {
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-charcoal-900" />
+              <div
+                key={i}
+                className="h-20 animate-pulse rounded-2xl border border-border bg-charcoal-900"
+              />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -376,8 +541,7 @@ function MissionRow({
           </span>
           {m.remind_before_min > 0 && (
             <span className="flex items-center gap-1">
-              <Bell className="h-3 w-3" />
-              −{m.remind_before_min}min
+              <Bell className="h-3 w-3" />−{m.remind_before_min}min
             </span>
           )}
           {areaName && <span>· {areaName}</span>}
@@ -580,7 +744,9 @@ function Composer({
         )}
 
         <label className="block">
-          <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">TÍTULO</span>
+          <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+            TÍTULO
+          </span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -592,7 +758,9 @@ function Composer({
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">TIPO</span>
+            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+              TIPO
+            </span>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as MissionType)}
@@ -604,7 +772,9 @@ function Composer({
             </select>
           </label>
           <label className="block">
-            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">ÁREA</span>
+            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+              ÁREA
+            </span>
             <select
               value={area ?? ""}
               onChange={(e) => setArea(e.target.value || null)}
@@ -622,7 +792,9 @@ function Composer({
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">HORÁRIO</span>
+            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+              HORÁRIO
+            </span>
             <input
               type="time"
               value={time}
@@ -647,7 +819,9 @@ function Composer({
 
         {type !== "one_off" && (
           <div className="mt-3">
-            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">DIAS</span>
+            <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+              DIAS
+            </span>
             <div className="mt-1 flex gap-1">
               {WEEKDAY_LABELS.map((lbl, i) => {
                 const on = (mask & (1 << i)) !== 0;
@@ -709,7 +883,9 @@ function Composer({
         </label>
 
         <label className="mt-3 block">
-          <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">NOTAS</span>
+          <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">
+            NOTAS
+          </span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

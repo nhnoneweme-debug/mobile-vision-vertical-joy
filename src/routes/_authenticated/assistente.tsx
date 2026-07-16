@@ -1,22 +1,52 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Send, Check, X, ArrowRight, RotateCcw } from "lucide-react";
+import {
+  Sparkles,
+  Send,
+  Check,
+  X,
+  ArrowRight,
+  RotateCcw,
+  MessageSquarePlus,
+  History,
+  SlidersHorizontal,
+  Trash2,
+  Camera,
+  Mic,
+  MicOff,
+  Volume2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createHabit, archiveHabit, type HabitFrequency } from "@/lib/habits";
 import { createMission, archiveMission, type MissionType } from "@/lib/missions";
 import { createWorkoutPlan, deleteWorkoutPlan } from "@/lib/workouts.functions";
 import { saveDietPlan, restoreDietPlan } from "@/lib/cozinha.functions";
-import { listAssistantMessages } from "@/lib/assistant.functions";
+import { resizeImageFile } from "@/lib/image-utils";
+import {
+  listConversations,
+  getConversationMessages,
+  deleteConversation,
+  getChatSettings,
+  saveChatSettings,
+  CHAT_SETTINGS_DEFAULT,
+  type Conversation,
+  type ChatSettings,
+} from "@/lib/assistant.functions";
 import type { Proposal } from "@/routes/api/assistant";
+
+const GREETING =
+  "Oi! Sou sua Inteligência Digital. Me conta o que você quer — treino, dieta, um hábito ou um compromisso. Eu pergunto o que faltar e monto uma proposta pra você confirmar.";
 
 export const Route = createFileRoute("/_authenticated/assistente")({
   head: () => ({ meta: [{ title: "Inteligência Digital — Personal IA" }] }),
   component: AssistantPage,
 });
 
+type ImageAttachment = { base64: string; mediaType: string };
 type ProposalMsg = {
   id: number;
   role: "proposal";
@@ -26,7 +56,7 @@ type ProposalMsg = {
 };
 type Msg =
   | { id: number; role: "assistant"; text: string }
-  | { id: number; role: "user"; text: string }
+  | { id: number; role: "user"; text: string; images?: ImageAttachment[] }
   | ProposalMsg;
 
 let seq = 0;
@@ -34,66 +64,296 @@ const nid = () => ++seq;
 
 const DIAS = ["D", "S", "T", "Q", "Q", "S", "S"]; // Dom..Sáb (bit = 1<<idx)
 const uid = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-const freqMap: Record<string, HabitFrequency> = { diario: "daily", semanal: "weekly", mensal: "monthly" };
-const tipoMap: Record<string, MissionType> = { unico: "one_off", diario: "daily", semanal: "weekly" };
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+const freqMap: Record<string, HabitFrequency> = {
+  diario: "daily",
+  semanal: "weekly",
+  mensal: "monthly",
+};
+const tipoMap: Record<string, MissionType> = {
+  unico: "one_off",
+  diario: "daily",
+  semanal: "weekly",
+};
 
 function AssistantPage() {
   const fnCreatePlan = useServerFn(createWorkoutPlan);
   const fnDeletePlan = useServerFn(deleteWorkoutPlan);
   const fnSaveDiet = useServerFn(saveDietPlan);
   const fnRestoreDiet = useServerFn(restoreDietPlan);
-  const fnHistory = useServerFn(listAssistantMessages);
+  const fnListConversations = useServerFn(listConversations);
+  const fnGetConversation = useServerFn(getConversationMessages);
+  const fnDeleteConversation = useServerFn(deleteConversation);
+  const fnGetSettings = useServerFn(getChatSettings);
+  const fnSaveSettings = useServerFn(saveChatSettings);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
-      id: nid(),
-      role: "assistant",
-      text: "Oi! Sou sua Inteligência Digital. Me conta o que você quer — treino, dieta, um hábito ou um compromisso. Eu pergunto o que faltar e monto uma proposta pra você confirmar.",
-    },
-  ]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ id: nid(), role: "assistant", text: GREETING }]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const undoRef = useRef<Record<number, () => Promise<void>>>({});
+
+  // Conversas + configuração da IA
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [convOpen, setConvOpen] = useState(false);
+  const [cfgOpen, setCfgOpen] = useState(false);
+  const [settings, setSettings] = useState<ChatSettings>(CHAT_SETTINGS_DEFAULT);
+  const [savingCfg, setSavingCfg] = useState(false);
+
+  const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+
+  async function handleImageSelect(files: FileList | null) {
+    if (!files?.length) return;
+    const MAX_IMAGES = 3;
+    const remaining = MAX_IMAGES - pendingImages.length;
+    const toProcess = Array.from(files).slice(0, remaining);
+    if (toProcess.length === 0) {
+      toast.error(`Máximo ${MAX_IMAGES} imagens por mensagem.`);
+      return;
+    }
+    try {
+      const processed = await Promise.all(toProcess.map((f) => resizeImageFile(f)));
+      setPendingImages((prev) => [...prev, ...processed]);
+    } catch {
+      toast.error("Não consegui processar a imagem.");
+    }
+    if (imgInputRef.current) imgInputRef.current.value = "";
+  }
+
+  function removePendingImage(idx: number) {
+    setPendingImages((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function toggleVoice() {
+    if (voiceMode) {
+      stopListening();
+      setVoiceMode(false);
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error("Seu navegador não suporta reconhecimento de voz.");
+      return;
+    }
+    setVoiceMode(true);
+    startListening(SR);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function startListening(SR: any) {
+    const rec = new SR();
+    rec.lang = "pt-BR";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onstart = () => setListening(true);
+    rec.onend = () => {
+      setListening(false);
+      if (voiceMode) rec.start();
+    };
+    rec.onerror = () => setListening(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (ev: any) => {
+      let transcript = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript;
+      }
+      if (transcript.trim()) {
+        setInput((prev) => (prev + " " + transcript.trim()).trim());
+      }
+    };
+    try {
+      rec.start();
+      recognitionRef.current = rec;
+    } catch {
+      toast.error("Não consegui iniciar o microfone.");
+    }
+  }
+
+  function stopListening() {
+    const rec = recognitionRef.current;
+    if (rec) {
+      try {
+        rec.abort();
+      } catch {
+        /* noop */
+      }
+      recognitionRef.current = null;
+    }
+    setListening(false);
+  }
+
+  async function speakText(text: string) {
+    if (!text.trim()) return;
+    try {
+      const r = await fetch("/api/assistant-tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (r.ok) {
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onplay = () => setSpeaking(true);
+        audio.onended = () => {
+          setSpeaking(false);
+          URL.revokeObjectURL(url);
+        };
+        audio.onerror = () => {
+          setSpeaking(false);
+          URL.revokeObjectURL(url);
+          speakFallback(text);
+        };
+        audio.play().catch(() => speakFallback(text));
+        return;
+      }
+    } catch {
+      /* fallback abaixo */
+    }
+    speakFallback(text);
+  }
+
+  function speakFallback(text: string) {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "pt-BR";
+    utter.rate = 1;
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utter);
+  }
+
+  async function refreshConversations() {
+    try {
+      setConversations(await fnListConversations());
+    } catch {
+      /* noop */
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
     (async () => {
       try {
-        const hist = await fnHistory();
-        if (hist.length) setMsgs(hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg));
-      } catch { /* sem histórico */ }
+        const convs = await fnListConversations();
+        setConversations(convs);
+        // Retoma a conversa mais recente, se houver.
+        if (convs.length) {
+          const latest = convs[0];
+          setConversationId(latest.id);
+          const hist = await fnGetConversation({ data: { conversation_id: latest.id } });
+          if (hist.length)
+            setMsgs(hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg));
+        }
+      } catch {
+        /* sem histórico */
+      }
+      try {
+        setSettings(await fnGetSettings());
+      } catch {
+        /* usa defaults */
+      }
     })();
-  }, [fnHistory]);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, thinking]);
+  }, [fnListConversations, fnGetConversation, fnGetSettings]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, thinking]);
+
+  function startNewConversation() {
+    setConversationId(null);
+    setMsgs([{ id: nid(), role: "assistant", text: GREETING }]);
+    setConvOpen(false);
+  }
+
+  async function loadConversation(id: string) {
+    setConvOpen(false);
+    setConversationId(id);
+    try {
+      const hist = await fnGetConversation({ data: { conversation_id: id } });
+      setMsgs(
+        hist.length
+          ? hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg)
+          : [{ id: nid(), role: "assistant", text: GREETING }],
+      );
+    } catch {
+      toast.error("Não consegui carregar a conversa.");
+    }
+  }
+
+  async function removeConversation(id: string) {
+    try {
+      await fnDeleteConversation({ data: { id } });
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (id === conversationId) startNewConversation();
+      toast("Conversa apagada.");
+    } catch {
+      toast.error("Não consegui apagar.");
+    }
+  }
+
+  async function persistSettings(next: ChatSettings) {
+    setSettings(next);
+    setSavingCfg(true);
+    try {
+      await fnSaveSettings({ data: next });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar config.");
+    } finally {
+      setSavingCfg(false);
+    }
+  }
 
   type MsgInput = Msg extends infer T ? (T extends { id: number } ? Omit<T, "id"> : never) : never;
   function push(m: MsgInput) {
     setMsgs((prev) => [...prev, { ...(m as Msg), id: nid() }]);
   }
   function patchProposal(id: number, patch: Partial<ProposalMsg>) {
-    setMsgs((prev) => prev.map((m) => (m.id === id && m.role === "proposal" ? { ...m, ...patch } : m)));
+    setMsgs((prev) =>
+      prev.map((m) => (m.id === id && m.role === "proposal" ? { ...m, ...patch } : m)),
+    );
   }
   function updateData(id: number, data: Proposal["data"]) {
     setMsgs((prev) =>
       prev.map((m) =>
-        m.id === id && m.role === "proposal" ? ({ ...m, proposal: { ...m.proposal, data } as Proposal }) : m,
+        m.id === id && m.role === "proposal"
+          ? { ...m, proposal: { ...m.proposal, data } as Proposal }
+          : m,
       ),
     );
   }
 
   async function send(text: string) {
     const t = text.trim();
-    if (!t || thinking) return;
+    const imgs = pendingImages;
+    if ((!t && !imgs.length) || thinking) return;
     const convo = msgs
-      .filter((m): m is Extract<Msg, { role: "user" | "assistant" }> => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role, text: m.text }));
-    push({ role: "user", text: t });
+      .filter(
+        (m): m is Extract<Msg, { role: "user" | "assistant" }> =>
+          m.role === "user" || m.role === "assistant",
+      )
+      .map((m) => ({
+        role: m.role,
+        text: m.text,
+        ...(m.role === "user" && m.images ? { images: m.images } : {}),
+      }));
+    push({ role: "user", text: t || "(imagem)", ...(imgs.length ? { images: imgs } : {}) });
     setInput("");
+    setPendingImages([]);
     setThinking(true);
 
     // Bolha do assistente que cresce token a token (criada no 1º delta).
@@ -117,8 +377,14 @@ function AssistantPage() {
     try {
       const r = await fetch("/api/assistant", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ messages: [...convo, { role: "user", text: t }] }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          messages: [...convo, { role: "user", text: t, ...(imgs.length ? { images: imgs } : {}) }],
+          conversation_id: conversationId ?? undefined,
+        }),
       });
       if (!r.ok || !r.body) throw new Error(String(r.status));
 
@@ -126,6 +392,8 @@ function AssistantPage() {
       const decoder = new TextDecoder();
       let buffer = "";
       let sawError = false;
+      let full = "";
+      const isNewConversation = conversationId == null;
 
       // Consome o SSE: eventos separados por linha em branco, cada um "data: {json}".
       for (;;) {
@@ -139,16 +407,20 @@ function AssistantPage() {
           if (!line.startsWith("data:")) continue;
           const payload = line.slice(5).trim();
           if (!payload) continue;
-          let evt: { type: string; delta?: string; proposals?: Proposal[] };
+          let evt: { type: string; delta?: string; proposals?: Proposal[]; id?: string };
           try {
             evt = JSON.parse(payload);
           } catch {
             continue;
           }
-          if (evt.type === "text" && evt.delta) {
+          if (evt.type === "conversation" && evt.id) {
+            setConversationId(evt.id);
+          } else if (evt.type === "text" && evt.delta) {
+            full += evt.delta;
             appendDelta(evt.delta);
           } else if (evt.type === "proposals") {
-            for (const p of evt.proposals ?? []) push({ role: "proposal", proposal: p, status: "pending" });
+            for (const p of evt.proposals ?? [])
+              push({ role: "proposal", proposal: p, status: "pending" });
           } else if (evt.type === "error") {
             sawError = true;
           }
@@ -158,6 +430,8 @@ function AssistantPage() {
       if (sawError && assistantId == null) {
         appendDelta("Tive um problema pra responder agora. Tenta de novo?");
       }
+      if (voiceMode && full.trim()) speakText(full.trim());
+      if (isNewConversation) void refreshConversations();
     } catch {
       if (assistantId == null) appendDelta("Tive um problema pra responder agora. Tenta de novo?");
     } finally {
@@ -166,7 +440,10 @@ function AssistantPage() {
   }
 
   async function confirm(msg: ProposalMsg) {
-    if (!userId) { toast.error("Faça login."); return; }
+    if (!userId) {
+      toast.error("Faça login.");
+      return;
+    }
     const p = msg.proposal;
     try {
       if (p.kind === "habito") {
@@ -176,7 +453,9 @@ function AssistantPage() {
           target: p.data.meta ?? 1,
           area_slug: p.data.area,
         });
-        undoRef.current[msg.id] = async () => { await archiveHabit(h.id); };
+        undoRef.current[msg.id] = async () => {
+          await archiveHabit(h.id);
+        };
         patchProposal(msg.id, { status: "done", cta: { to: "/home", label: "Ver na Home" } });
       } else if (p.kind === "compromisso") {
         const mask = (p.data.dias_semana ?? []).reduce((acc, d) => acc | (1 << d), 0);
@@ -188,23 +467,43 @@ function AssistantPage() {
           end_time: p.data.horario_fim ?? null,
           weekday_mask: mask || 127,
         });
-        undoRef.current[msg.id] = async () => { await archiveMission(m.id); };
+        undoRef.current[msg.id] = async () => {
+          await archiveMission(m.id);
+        };
         patchProposal(msg.id, { status: "done", cta: { to: "/agenda", label: "Ver na Agenda" } });
       } else if (p.kind === "treino") {
         const days = p.data.dias.map((d) => ({
           id: uid(),
           dia: d.dia,
           foco: d.foco,
-          exercicios: d.exercicios.map((e) => ({ id: uid(), nome: e.nome, series: e.series, reps: e.reps })),
+          exercicios: d.exercicios.map((e) => ({
+            id: uid(),
+            nome: e.nome,
+            series: e.series,
+            reps: e.reps,
+          })),
         }));
         const plan = await fnCreatePlan({ data: { name: p.data.nome, days, source: "ai" } });
-        undoRef.current[msg.id] = async () => { await fnDeletePlan({ data: { id: plan.id } }); };
+        undoRef.current[msg.id] = async () => {
+          await fnDeletePlan({ data: { id: plan.id } });
+        };
         patchProposal(msg.id, { status: "done", cta: { to: "/treino", label: "Ver no Treino" } });
       } else {
-        const meals = p.data.refeicoes.map((r) => ({ time: r.horario, name: r.nome, items: r.itens }));
-        const { previous } = await fnSaveDiet({ data: { name: p.data.nome, hydration_ml: p.data.hidratacao_ml, meals } });
-        undoRef.current[msg.id] = async () => { await fnRestoreDiet({ data: { plan: previous } }); };
-        patchProposal(msg.id, { status: "done", cta: { to: "/area/cozinha", label: "Ver na Dieta" } });
+        const meals = p.data.refeicoes.map((r) => ({
+          time: r.horario,
+          name: r.nome,
+          items: r.itens,
+        }));
+        const { previous } = await fnSaveDiet({
+          data: { name: p.data.nome, hydration_ml: p.data.hidratacao_ml, meals },
+        });
+        undoRef.current[msg.id] = async () => {
+          await fnRestoreDiet({ data: { plan: previous } });
+        };
+        patchProposal(msg.id, {
+          status: "done",
+          cta: { to: "/area/cozinha", label: "Ver na Dieta" },
+        });
       }
       toast.success("Criado com sucesso.");
     } catch (e) {
@@ -240,9 +539,42 @@ function AssistantPage() {
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl leading-none tracking-wide text-foreground">INTELIGÊNCIA DIGITAL</h1>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">Conversa, entende e propõe — você confirma</p>
+          <h1 className="font-display text-xl leading-none tracking-wide text-foreground">
+            INTELIGÊNCIA DIGITAL
+          </h1>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            Conversa, entende e propõe — você confirma
+            {voiceMode ? (
+              <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-ember/15 px-1.5 py-0.5 text-[9px] font-display tracking-[0.15em] text-ember">
+                {listening ? "🎙 OUVINDO" : speaking ? "🔊 FALANDO" : "🎤 VOZ"}
+              </span>
+            ) : null}
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={startNewConversation}
+          aria-label="Nova conversa"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setConvOpen(true)}
+          aria-label="Histórico de conversas"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
+        >
+          <History className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setCfgOpen(true)}
+          aria-label="Configurar a IA"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground active:scale-95"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
       </header>
 
       <div className="space-y-3 px-4 pt-4">
@@ -250,18 +582,42 @@ function AssistantPage() {
           if (m.role === "user") {
             return (
               <div key={m.id} className="flex justify-end">
-                <div className="max-w-[82%] rounded-2xl rounded-br-md bg-ember px-3.5 py-2.5 text-charcoal-900">
-                  <p className="text-sm leading-snug">{m.text}</p>
+                <div className="max-w-[82%] space-y-1.5">
+                  {m.images?.length ? (
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      {m.images.map((img, i) => (
+                        <img
+                          key={i}
+                          src={`data:${img.mediaType};base64,${img.base64}`}
+                          alt="anexo"
+                          className="h-24 w-24 rounded-lg border border-border object-cover"
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="rounded-2xl rounded-br-md bg-ember px-3.5 py-2.5 text-charcoal-900">
+                    <p className="text-sm leading-snug">{m.text}</p>
+                  </div>
                 </div>
               </div>
             );
           }
           if (m.role === "assistant") {
             return (
-              <div key={m.id} className="flex justify-start">
+              <div key={m.id} className="flex justify-start gap-1.5">
                 <div className="forge-card max-w-[86%] rounded-2xl rounded-bl-md px-3.5 py-2.5">
-                  <p className="whitespace-pre-wrap text-sm leading-snug text-foreground">{m.text}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-snug text-foreground">
+                    {m.text}
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => speakText(m.text)}
+                  aria-label="Ouvir resposta"
+                  className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground active:scale-95"
+                >
+                  <Volume2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             );
           }
@@ -292,19 +648,78 @@ function AssistantPage() {
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2.5 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        <div className="flex items-end gap-2">
+        {pendingImages.length ? (
+          <div className="mb-2 flex gap-2 overflow-x-auto">
+            {pendingImages.map((img, i) => (
+              <div key={i} className="relative shrink-0">
+                <img
+                  src={`data:${img.mediaType};base64,${img.base64}`}
+                  alt="preview"
+                  className="h-16 w-16 rounded-lg border border-border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePendingImage(i)}
+                  className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-destructive text-[10px] text-white"
+                  aria-label="Remover imagem"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex items-end gap-1.5">
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="hidden"
+            onChange={(e) => handleImageSelect(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => imgInputRef.current?.click()}
+            disabled={thinking || pendingImages.length >= 3}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 active:scale-95"
+            aria-label="Anexar imagem"
+          >
+            <Camera className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={toggleVoice}
+            disabled={thinking}
+            className={
+              "grid h-11 w-11 shrink-0 place-items-center rounded-xl border active:scale-95 " +
+              (listening
+                ? "border-ember bg-ember/10 text-ember"
+                : "border-border text-muted-foreground hover:text-foreground")
+            }
+            aria-label={listening ? "Parar de ouvir" : "Falar por voz"}
+          >
+            {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          </button>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send(input);
+              }
+            }}
             rows={1}
-            placeholder="Fala comigo…"
+            placeholder={listening ? "Estou ouvindo…" : "Fala comigo…"}
             className="max-h-28 flex-1 resize-none rounded-xl border border-input bg-charcoal-800 px-3 py-2.5 text-foreground outline-none placeholder:text-muted-foreground focus:border-ember/60"
           />
           <button
             type="button"
             onClick={() => send(input)}
-            disabled={!input.trim() || thinking}
+            disabled={(!input.trim() && !pendingImages.length) || thinking}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ember text-charcoal-900 disabled:opacity-40 active:scale-95"
             aria-label="Enviar"
           >
@@ -312,13 +727,195 @@ function AssistantPage() {
           </button>
         </div>
       </div>
+
+      {/* Drawer — histórico de conversas */}
+      <Sheet open={convOpen} onOpenChange={setConvOpen}>
+        <SheetContent
+          side="bottom"
+          className="mx-auto flex max-h-[85vh] max-w-[var(--shell-max)] flex-col rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
+              <History className="h-4 w-4 text-ember" /> SUAS CONVERSAS
+            </SheetTitle>
+          </SheetHeader>
+          <button
+            type="button"
+            onClick={startNewConversation}
+            className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-ember px-3 py-2.5 font-display text-[11px] tracking-[0.2em] text-charcoal-900"
+          >
+            <MessageSquarePlus className="h-3.5 w-3.5" /> NOVA CONVERSA
+          </button>
+          <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pb-4" data-lenis-prevent>
+            {conversations.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                Nenhuma conversa ainda.
+              </p>
+            ) : (
+              conversations.map((c) => (
+                <div
+                  key={c.id}
+                  className={
+                    "flex items-center gap-2 rounded-xl border px-3 py-2.5 " +
+                    (c.id === conversationId
+                      ? "border-ember/50 bg-ember/5"
+                      : "border-border bg-charcoal-900/50")
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={() => loadConversation(c.id)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="block truncate text-sm text-foreground">{c.title}</span>
+                    <span className="block text-[10px] text-muted-foreground">
+                      {new Date(c.updated_at).toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeConversation(c.id)}
+                    aria-label="Apagar conversa"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Sheet — configuração da IA */}
+      <Sheet open={cfgOpen} onOpenChange={setCfgOpen}>
+        <SheetContent
+          side="bottom"
+          className="mx-auto flex max-h-[88vh] max-w-[var(--shell-max)] flex-col rounded-t-2xl border-border bg-charcoal-900/95 backdrop-blur-xl"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle className="flex items-center gap-2 font-display tracking-[0.18em] text-foreground">
+              <SlidersHorizontal className="h-4 w-4 text-ember" /> REGULAR A IA
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto pb-4" data-lenis-prevent>
+            <SegGroup
+              label="PERSONALIDADE"
+              value={settings.persona}
+              onChange={(v) =>
+                persistSettings({ ...settings, persona: v as ChatSettings["persona"] })
+              }
+              options={[
+                { v: "caloroso", label: "Caloroso" },
+                { v: "direto", label: "Direto" },
+                { v: "tecnico", label: "Técnico" },
+              ]}
+            />
+            <SegGroup
+              label="TAMANHO DAS RESPOSTAS"
+              value={settings.response_length}
+              onChange={(v) =>
+                persistSettings({
+                  ...settings,
+                  response_length: v as ChatSettings["response_length"],
+                })
+              }
+              options={[
+                { v: "curtas", label: "Curtas" },
+                { v: "equilibrado", label: "Médio" },
+                { v: "detalhadas", label: "Detalhadas" },
+              ]}
+            />
+            <SegGroup
+              label="FOCO"
+              value={settings.focus}
+              onChange={(v) => persistSettings({ ...settings, focus: v as ChatSettings["focus"] })}
+              options={[
+                { v: "geral", label: "Geral" },
+                { v: "treino", label: "Treino" },
+                { v: "nutricao", label: "Nutrição" },
+                { v: "mente", label: "Mente" },
+              ]}
+            />
+            <div>
+              <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+                INSTRUÇÕES PERSONALIZADAS
+              </p>
+              <textarea
+                value={settings.custom_instructions}
+                onChange={(e) =>
+                  setSettings({ ...settings, custom_instructions: e.target.value.slice(0, 500) })
+                }
+                onBlur={() => persistSettings(settings)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ex.: sou vegetariano, me chame de coach, evito lactose…"
+                className="w-full resize-none rounded-lg border border-border bg-charcoal-900 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-ember/60 focus:outline-none"
+              />
+              <p className="mt-1 text-right text-[10px] text-muted-foreground">
+                {savingCfg ? "salvando…" : `${settings.custom_instructions.length}/500`}
+              </p>
+            </div>
+            <p className="rounded-lg border border-border bg-charcoal-800/40 p-2.5 text-[11px] text-muted-foreground">
+              A IA sempre analisa seu progresso no app (streak, calorias do dia, treinos, hábitos,
+              dieta) pra personalizar as respostas.
+            </p>
+          </div>
+        </SheetContent>
+      </Sheet>
     </MobileShell>
+  );
+}
+
+function SegGroup({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { v: string; label: string }[];
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="flex gap-1.5 rounded-lg border border-border p-1">
+        {options.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={
+              "flex-1 rounded-md py-2 font-display text-[10px] tracking-[0.12em] transition-colors " +
+              (value === o.v
+                ? "bg-ember text-charcoal-900"
+                : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            {o.label.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
 /* ---------- Card de proposta (editável em tempo real) ---------- */
 function ProposalCard({
-  msg, onChange, onConfirm, onCancel, onUndo,
+  msg,
+  onChange,
+  onConfirm,
+  onCancel,
+  onUndo,
 }: {
   msg: ProposalMsg;
   onChange: (d: Proposal["data"]) => void;
@@ -327,25 +924,50 @@ function ProposalCard({
   onUndo: () => void;
 }) {
   const p = msg.proposal;
-  const label = p.kind === "habito" ? "HÁBITO" : p.kind === "compromisso" ? "COMPROMISSO" : p.kind === "treino" ? "TREINO" : "DIETA";
+  const label =
+    p.kind === "habito"
+      ? "HÁBITO"
+      : p.kind === "compromisso"
+        ? "COMPROMISSO"
+        : p.kind === "treino"
+          ? "TREINO"
+          : "DIETA";
 
   return (
     <div className="flex justify-start">
       <div className="forge-raised w-full max-w-[92%] rounded-2xl border border-ember/30 bg-charcoal-800 p-3.5">
-        <p className="mb-2 font-display text-[10px] tracking-[0.3em] text-ember">PROPOSTA · {label}</p>
+        <p className="mb-2 font-display text-[10px] tracking-[0.3em] text-ember">
+          PROPOSTA · {label}
+        </p>
 
         {msg.status === "pending" ? (
           <>
-            {p.kind === "habito" && <HabitEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />}
-            {p.kind === "compromisso" && <CommitmentEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />}
-            {p.kind === "treino" && <TreinoEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />}
-            {p.kind === "dieta" && <DietEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />}
+            {p.kind === "habito" && (
+              <HabitEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />
+            )}
+            {p.kind === "compromisso" && (
+              <CommitmentEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />
+            )}
+            {p.kind === "treino" && (
+              <TreinoEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />
+            )}
+            {p.kind === "dieta" && (
+              <DietEditor data={p.data} onChange={onChange as (d: typeof p.data) => void} />
+            )}
 
             <div className="mt-3 flex gap-2">
-              <button type="button" onClick={onConfirm} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ember py-2.5 font-display text-sm tracking-wide text-charcoal-900 active:scale-[0.99]">
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ember py-2.5 font-display text-sm tracking-wide text-charcoal-900 active:scale-[0.99]"
+              >
                 <Check className="h-4 w-4" strokeWidth={3} /> Confirmar
               </button>
-              <button type="button" onClick={onCancel} className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-charcoal-900 px-3.5 py-2.5 font-display text-sm text-muted-foreground active:scale-[0.99]">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-charcoal-900 px-3.5 py-2.5 font-display text-sm text-muted-foreground active:scale-[0.99]"
+              >
                 <X className="h-4 w-4" /> Cancelar
               </button>
             </div>
@@ -355,42 +977,82 @@ function ProposalCard({
             <div className="flex items-center gap-2">
               <span className="font-display text-[11px] tracking-[0.2em] text-ember">✓ CRIADO</span>
               {msg.cta && (
-                <Link to={msg.cta.to} className="inline-flex items-center gap-1 font-display text-[11px] tracking-[0.15em] text-muted-foreground">
+                <Link
+                  to={msg.cta.to}
+                  className="inline-flex items-center gap-1 font-display text-[11px] tracking-[0.15em] text-muted-foreground"
+                >
                   {msg.cta.label.toUpperCase()} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               )}
             </div>
-            <button type="button" onClick={onUndo} className="flex items-center gap-1 text-[11px] tracking-[0.2em] text-muted-foreground active:text-destructive">
+            <button
+              type="button"
+              onClick={onUndo}
+              className="flex items-center gap-1 text-[11px] tracking-[0.2em] text-muted-foreground active:text-destructive"
+            >
               <RotateCcw className="h-3.5 w-3.5" /> DESFAZER
             </button>
           </div>
         ) : (
-          <p className="font-display text-[11px] tracking-[0.2em] text-muted-foreground">CANCELADO</p>
+          <p className="font-display text-[11px] tracking-[0.2em] text-muted-foreground">
+            CANCELADO
+          </p>
         )}
       </div>
     </div>
   );
 }
 
-const fieldCls = "w-full rounded-lg border border-border bg-charcoal-900 px-2.5 py-2 text-sm text-foreground focus:border-ember/60 focus:outline-none";
+const fieldCls =
+  "w-full rounded-lg border border-border bg-charcoal-900 px-2.5 py-2 text-sm text-foreground focus:border-ember/60 focus:outline-none";
 
-function HabitEditor({ data, onChange }: { data: Extract<Proposal, { kind: "habito" }>["data"]; onChange: (d: Extract<Proposal, { kind: "habito" }>["data"]) => void }) {
+function HabitEditor({
+  data,
+  onChange,
+}: {
+  data: Extract<Proposal, { kind: "habito" }>["data"];
+  onChange: (d: Extract<Proposal, { kind: "habito" }>["data"]) => void;
+}) {
   return (
     <div className="space-y-2">
-      <input className={fieldCls} value={data.titulo} onChange={(e) => onChange({ ...data, titulo: e.target.value })} placeholder="Título do hábito" />
+      <input
+        className={fieldCls}
+        value={data.titulo}
+        onChange={(e) => onChange({ ...data, titulo: e.target.value })}
+        placeholder="Título do hábito"
+      />
       <div className="flex gap-2">
-        <select className={fieldCls} value={data.frequencia} onChange={(e) => onChange({ ...data, frequencia: e.target.value as typeof data.frequencia })}>
+        <select
+          className={fieldCls}
+          value={data.frequencia}
+          onChange={(e) =>
+            onChange({ ...data, frequencia: e.target.value as typeof data.frequencia })
+          }
+        >
           <option value="diario">Diário</option>
           <option value="semanal">Semanal</option>
           <option value="mensal">Mensal</option>
         </select>
-        <input type="number" min={1} className={fieldCls + " w-24"} value={data.meta ?? 1} onChange={(e) => onChange({ ...data, meta: Number(e.target.value) || 1 })} aria-label="meta" />
+        <input
+          type="number"
+          min={1}
+          className={fieldCls + " w-24"}
+          value={data.meta ?? 1}
+          onChange={(e) => onChange({ ...data, meta: Number(e.target.value) || 1 })}
+          aria-label="meta"
+        />
       </div>
     </div>
   );
 }
 
-function CommitmentEditor({ data, onChange }: { data: Extract<Proposal, { kind: "compromisso" }>["data"]; onChange: (d: Extract<Proposal, { kind: "compromisso" }>["data"]) => void }) {
+function CommitmentEditor({
+  data,
+  onChange,
+}: {
+  data: Extract<Proposal, { kind: "compromisso" }>["data"];
+  onChange: (d: Extract<Proposal, { kind: "compromisso" }>["data"]) => void;
+}) {
   const dias = data.dias_semana ?? [];
   const toggle = (i: number) => {
     const next = dias.includes(i) ? dias.filter((d) => d !== i) : [...dias, i].sort();
@@ -398,39 +1060,136 @@ function CommitmentEditor({ data, onChange }: { data: Extract<Proposal, { kind: 
   };
   return (
     <div className="space-y-2">
-      <input className={fieldCls} value={data.titulo} onChange={(e) => onChange({ ...data, titulo: e.target.value })} placeholder="Título" />
+      <input
+        className={fieldCls}
+        value={data.titulo}
+        onChange={(e) => onChange({ ...data, titulo: e.target.value })}
+        placeholder="Título"
+      />
       <div className="flex gap-1">
         {DIAS.map((d, i) => (
-          <button key={i} type="button" onClick={() => toggle(i)}
-            className={"grid h-8 flex-1 place-items-center rounded-lg border font-display text-xs " + (dias.includes(i) ? "border-ember bg-ember/15 text-ember" : "border-border text-muted-foreground")}>
+          <button
+            key={i}
+            type="button"
+            onClick={() => toggle(i)}
+            className={
+              "grid h-8 flex-1 place-items-center rounded-lg border font-display text-xs " +
+              (dias.includes(i)
+                ? "border-ember bg-ember/15 text-ember"
+                : "border-border text-muted-foreground")
+            }
+          >
             {d}
           </button>
         ))}
       </div>
       <div className="flex gap-2">
-        <input type="time" className={fieldCls} value={data.horario_inicio ?? ""} onChange={(e) => onChange({ ...data, horario_inicio: e.target.value })} aria-label="início" />
-        <input type="time" className={fieldCls} value={data.horario_fim ?? ""} onChange={(e) => onChange({ ...data, horario_fim: e.target.value })} aria-label="fim" />
+        <input
+          type="time"
+          className={fieldCls}
+          value={data.horario_inicio ?? ""}
+          onChange={(e) => onChange({ ...data, horario_inicio: e.target.value })}
+          aria-label="início"
+        />
+        <input
+          type="time"
+          className={fieldCls}
+          value={data.horario_fim ?? ""}
+          onChange={(e) => onChange({ ...data, horario_fim: e.target.value })}
+          aria-label="fim"
+        />
       </div>
     </div>
   );
 }
 
-function TreinoEditor({ data, onChange }: { data: Extract<Proposal, { kind: "treino" }>["data"]; onChange: (d: Extract<Proposal, { kind: "treino" }>["data"]) => void }) {
+function TreinoEditor({
+  data,
+  onChange,
+}: {
+  data: Extract<Proposal, { kind: "treino" }>["data"];
+  onChange: (d: Extract<Proposal, { kind: "treino" }>["data"]) => void;
+}) {
   return (
     <div className="space-y-2">
-      <input className={fieldCls} value={data.nome} onChange={(e) => onChange({ ...data, nome: e.target.value })} placeholder="Nome do treino" />
+      <input
+        className={fieldCls}
+        value={data.nome}
+        onChange={(e) => onChange({ ...data, nome: e.target.value })}
+        placeholder="Nome do treino"
+      />
       {data.dias.map((dia, di) => (
         <div key={di} className="rounded-lg border border-border bg-charcoal-900 p-2">
           <div className="mb-1 flex gap-2">
-            <input className={fieldCls + " w-20"} value={dia.dia} onChange={(e) => { const dias = [...data.dias]; dias[di] = { ...dia, dia: e.target.value }; onChange({ ...data, dias }); }} />
-            <input className={fieldCls} value={dia.foco ?? ""} placeholder="foco" onChange={(e) => { const dias = [...data.dias]; dias[di] = { ...dia, foco: e.target.value }; onChange({ ...data, dias }); }} />
+            <input
+              className={fieldCls + " w-20"}
+              value={dia.dia}
+              onChange={(e) => {
+                const dias = [...data.dias];
+                dias[di] = { ...dia, dia: e.target.value };
+                onChange({ ...data, dias });
+              }}
+            />
+            <input
+              className={fieldCls}
+              value={dia.foco ?? ""}
+              placeholder="foco"
+              onChange={(e) => {
+                const dias = [...data.dias];
+                dias[di] = { ...dia, foco: e.target.value };
+                onChange({ ...data, dias });
+              }}
+            />
           </div>
           {dia.exercicios.map((ex, ei) => (
             <div key={ei} className="mt-1 flex gap-1">
-              <input className={fieldCls} value={ex.nome} onChange={(e) => { const dias = [...data.dias]; const exs = [...dia.exercicios]; exs[ei] = { ...ex, nome: e.target.value }; dias[di] = { ...dia, exercicios: exs }; onChange({ ...data, dias }); }} />
-              <input type="number" className={fieldCls + " w-12"} value={ex.series ?? 3} onChange={(e) => { const dias = [...data.dias]; const exs = [...dia.exercicios]; exs[ei] = { ...ex, series: Number(e.target.value) || 0 }; dias[di] = { ...dia, exercicios: exs }; onChange({ ...data, dias }); }} aria-label="séries" />
-              <input className={fieldCls + " w-16"} value={ex.reps ?? ""} placeholder="reps" onChange={(e) => { const dias = [...data.dias]; const exs = [...dia.exercicios]; exs[ei] = { ...ex, reps: e.target.value }; dias[di] = { ...dia, exercicios: exs }; onChange({ ...data, dias }); }} />
-              <button type="button" onClick={() => { const dias = [...data.dias]; dias[di] = { ...dia, exercicios: dia.exercicios.filter((_, x) => x !== ei) }; onChange({ ...data, dias }); }} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground"><X className="h-3.5 w-3.5" /></button>
+              <input
+                className={fieldCls}
+                value={ex.nome}
+                onChange={(e) => {
+                  const dias = [...data.dias];
+                  const exs = [...dia.exercicios];
+                  exs[ei] = { ...ex, nome: e.target.value };
+                  dias[di] = { ...dia, exercicios: exs };
+                  onChange({ ...data, dias });
+                }}
+              />
+              <input
+                type="number"
+                className={fieldCls + " w-12"}
+                value={ex.series ?? 3}
+                onChange={(e) => {
+                  const dias = [...data.dias];
+                  const exs = [...dia.exercicios];
+                  exs[ei] = { ...ex, series: Number(e.target.value) || 0 };
+                  dias[di] = { ...dia, exercicios: exs };
+                  onChange({ ...data, dias });
+                }}
+                aria-label="séries"
+              />
+              <input
+                className={fieldCls + " w-16"}
+                value={ex.reps ?? ""}
+                placeholder="reps"
+                onChange={(e) => {
+                  const dias = [...data.dias];
+                  const exs = [...dia.exercicios];
+                  exs[ei] = { ...ex, reps: e.target.value };
+                  dias[di] = { ...dia, exercicios: exs };
+                  onChange({ ...data, dias });
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const dias = [...data.dias];
+                  dias[di] = { ...dia, exercicios: dia.exercicios.filter((_, x) => x !== ei) };
+                  onChange({ ...data, dias });
+                }}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
           ))}
         </div>
@@ -439,25 +1198,70 @@ function TreinoEditor({ data, onChange }: { data: Extract<Proposal, { kind: "tre
   );
 }
 
-function DietEditor({ data, onChange }: { data: Extract<Proposal, { kind: "dieta" }>["data"]; onChange: (d: Extract<Proposal, { kind: "dieta" }>["data"]) => void }) {
+function DietEditor({
+  data,
+  onChange,
+}: {
+  data: Extract<Proposal, { kind: "dieta" }>["data"];
+  onChange: (d: Extract<Proposal, { kind: "dieta" }>["data"]) => void;
+}) {
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        <input className={fieldCls} value={data.nome ?? ""} placeholder="Nome da dieta" onChange={(e) => onChange({ ...data, nome: e.target.value })} />
-        <input type="number" className={fieldCls + " w-28"} value={data.hidratacao_ml ?? 0} placeholder="água (ml)" onChange={(e) => onChange({ ...data, hidratacao_ml: Number(e.target.value) || 0 })} aria-label="hidratação ml" />
+        <input
+          className={fieldCls}
+          value={data.nome ?? ""}
+          placeholder="Nome da dieta"
+          onChange={(e) => onChange({ ...data, nome: e.target.value })}
+        />
+        <input
+          type="number"
+          className={fieldCls + " w-28"}
+          value={data.hidratacao_ml ?? 0}
+          placeholder="água (ml)"
+          onChange={(e) => onChange({ ...data, hidratacao_ml: Number(e.target.value) || 0 })}
+          aria-label="hidratação ml"
+        />
       </div>
       {data.refeicoes.map((r, ri) => (
         <div key={ri} className="rounded-lg border border-border bg-charcoal-900 p-2">
           <div className="mb-1 flex gap-2">
-            <input className={fieldCls + " w-20"} value={r.horario ?? ""} placeholder="hora" onChange={(e) => { const rs = [...data.refeicoes]; rs[ri] = { ...r, horario: e.target.value }; onChange({ ...data, refeicoes: rs }); }} />
-            <input className={fieldCls} value={r.nome} onChange={(e) => { const rs = [...data.refeicoes]; rs[ri] = { ...r, nome: e.target.value }; onChange({ ...data, refeicoes: rs }); }} />
+            <input
+              className={fieldCls + " w-20"}
+              value={r.horario ?? ""}
+              placeholder="hora"
+              onChange={(e) => {
+                const rs = [...data.refeicoes];
+                rs[ri] = { ...r, horario: e.target.value };
+                onChange({ ...data, refeicoes: rs });
+              }}
+            />
+            <input
+              className={fieldCls}
+              value={r.nome}
+              onChange={(e) => {
+                const rs = [...data.refeicoes];
+                rs[ri] = { ...r, nome: e.target.value };
+                onChange({ ...data, refeicoes: rs });
+              }}
+            />
           </div>
           <textarea
             className={fieldCls}
             rows={2}
             value={r.itens.join(", ")}
             placeholder="itens separados por vírgula"
-            onChange={(e) => { const rs = [...data.refeicoes]; rs[ri] = { ...r, itens: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }; onChange({ ...data, refeicoes: rs }); }}
+            onChange={(e) => {
+              const rs = [...data.refeicoes];
+              rs[ri] = {
+                ...r,
+                itens: e.target.value
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              };
+              onChange({ ...data, refeicoes: rs });
+            }}
           />
         </div>
       ))}

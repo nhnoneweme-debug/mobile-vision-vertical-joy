@@ -70,7 +70,7 @@ export function AppBottomBar() {
   return (
     <nav
       className={
-        "fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)] transition-transform duration-300 ease-out " +
+        "fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[var(--shell-max)] transition-transform duration-300 ease-out lg:hidden " +
         (hidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0")
       }
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
