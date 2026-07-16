@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage } from "ai";
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { assistantName } from "@/lib/assistant-name";
 import type { Database } from "@/integrations/supabase/types";
 import {
   CRISIS_CLAUSE,
@@ -17,9 +18,7 @@ function truncateUserMessage(m: UIMessage): UIMessage {
   if (m.role !== "user") return m;
   return {
     ...m,
-    parts: m.parts.map((p) =>
-      p.type === "text" ? { ...p, text: truncateUserText(p.text) } : p,
-    ),
+    parts: m.parts.map((p) => (p.type === "text" ? { ...p, text: truncateUserText(p.text) } : p)),
   };
 }
 
@@ -32,7 +31,8 @@ export const Route = createFileRoute("/api/sleep-chat")({
         const token = auth.slice(7);
 
         const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-        if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY) return new Response("Missing AI key", { status: 500 });
+        if (!process.env.OPENAI_API_KEY && !LOVABLE_API_KEY)
+          return new Response("Missing AI key", { status: 500 });
 
         const supabase = createClient<Database>(
           process.env.SUPABASE_URL!,
@@ -55,30 +55,39 @@ export const Route = createFileRoute("/api/sleep-chat")({
         const safeMessages = body.messages.map(truncateUserMessage);
         const today = new Date().toISOString().slice(0, 10);
 
-        const [{ data: profile }, { data: blocks }, { data: sleep }] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("display_name,behavioral_class,goal,streak")
-            .eq("id", userId)
-            .maybeSingle(),
-          supabase
-            .from("day_blocks")
-            .select("kind,completed,started_at")
-            .eq("user_id", userId)
-            .eq("date", today)
-            .order("started_at"),
-          supabase
-            .from("sleep_logs")
-            .select("*")
-            .eq("user_id", userId)
-            .eq("date", today)
-            .maybeSingle(),
-        ]);
+        const [{ data: profile }, { data: blocks }, { data: sleep }, { data: cfg }] =
+          await Promise.all([
+            supabase
+              .from("profiles")
+              .select("display_name,behavioral_class,goal,streak")
+              .eq("id", userId)
+              .maybeSingle(),
+            supabase
+              .from("day_blocks")
+              .select("kind,completed,started_at")
+              .eq("user_id", userId)
+              .eq("date", today)
+              .order("started_at"),
+            supabase
+              .from("sleep_logs")
+              .select("*")
+              .eq("user_id", userId)
+              .eq("date", today)
+              .maybeSingle(),
+            supabase
+              .from("chat_settings")
+              .select("assistant_name")
+              .eq("user_id", userId)
+              .maybeSingle(),
+          ]);
+
+        // O nome da IA é do usuário e vale em todas as telas, não só no chat principal.
+        const nome = assistantName(cfg);
 
         const ritualSteps =
           mode === "morning"
             ? [
-                "Você é a Companheira do Despertar — voz quente, calma, sem pressa.",
+                `Seu nome é ${nome} — a inteligência digital do Weme. Aqui você conduz o despertar: voz quente, calma, sem pressa.`,
                 "Conduza o ritual da manhã: o sonho escapa rápido, então PRIMEIRO capture o sonho cru,",
                 "só depois organize. O usuário faz o DUMP (muitas vezes falando, torto e sem ordem), você organiza.",
                 "Sequência sugerida: 1) O que lembra do sonho? 2) Puxe detalhes que estejam escapando",
@@ -89,7 +98,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
                 "Ao interpretar um sonho, seja sóbria — hipótese ligada à vida real da pessoa, nunca misticismo ou determinismo.",
               ]
             : [
-                "Você é a Companheira do Sono — voz quente, calma, presente.",
+                `Seu nome é ${nome} — a inteligência digital do Weme. Aqui você conduz a noite: voz quente, calma, presente.`,
                 "Conduza o ritual da noite: escute como foi o dia, faça perguntas curtas pra extrair fatos,",
                 "e organize os dados no banco usando as ferramentas. O usuário faz o DUMP, você organiza.",
                 "Sequência sugerida: 1) Como foi o dia? 2) O que ficou pesado? 3) O que foi vitória?",
@@ -124,7 +133,10 @@ export const Route = createFileRoute("/api/sleep-chat")({
               raw_text: z.string().min(1).describe("Relato cru do sonho, como a pessoa contou"),
               mood: z.string().optional().describe("Sensação predominante (ex.: ansioso, leve)"),
               lucidity: z.number().int().min(0).max(10).optional(),
-              symbols: z.array(z.string()).optional().describe("Elementos concretos: água, casa, cobra…"),
+              symbols: z
+                .array(z.string())
+                .optional()
+                .describe("Elementos concretos: água, casa, cobra…"),
               themes: z.array(z.string()).optional().describe("Temas: perseguição, reencontro…"),
               ai_summary: z.string().optional().describe("Resumo em 1-2 linhas"),
               ai_interpretation: z
@@ -178,7 +190,8 @@ export const Route = createFileRoute("/api/sleep-chat")({
             },
           }),
           logWake: tool({
-            description: "Registra como a pessoa acordou hoje (hora e qualidade percebida do sono).",
+            description:
+              "Registra como a pessoa acordou hoje (hora e qualidade percebida do sono).",
             inputSchema: z.object({
               wake_at: z.string().optional().describe("ISO datetime de quando acordou"),
               quality: z.number().int().min(1).max(5).optional(),
@@ -339,8 +352,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
             }),
             execute: async ({ title, scheduled_date }) => {
               const d =
-                scheduled_date ??
-                new Date(Date.now() + 24 * 3600_000).toISOString().slice(0, 10);
+                scheduled_date ?? new Date(Date.now() + 24 * 3600_000).toISOString().slice(0, 10);
               const { error } = await supabase.from("scheduled_quests").insert({
                 user_id: userId,
                 title,

@@ -521,6 +521,7 @@ export type Database = {
       }
       chat_settings: {
         Row: {
+          assistant_name: string
           custom_instructions: string
           focus: string
           persona: string
@@ -529,6 +530,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assistant_name?: string
           custom_instructions?: string
           focus?: string
           persona?: string
@@ -537,6 +539,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assistant_name?: string
           custom_instructions?: string
           focus?: string
           persona?: string

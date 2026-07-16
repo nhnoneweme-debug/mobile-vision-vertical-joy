@@ -10,6 +10,7 @@ import {
   rateLimitResponse,
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
+import { assistantName } from "@/lib/assistant-name";
 
 type ImageAttachment = { base64: string; mediaType: string };
 type InMsg = { role: "user" | "assistant"; text: string; images?: ImageAttachment[] };
@@ -20,12 +21,14 @@ type ChatSettings = {
   response_length: string;
   focus: string;
   custom_instructions: string;
+  assistant_name: string;
 };
 const DEFAULT_SETTINGS: ChatSettings = {
   persona: "caloroso",
   response_length: "equilibrado",
   focus: "geral",
   custom_instructions: "",
+  assistant_name: "",
 };
 
 // Propostas que o agente monta (NÃO grava nada — o usuário confirma no app).
@@ -95,7 +98,8 @@ function buildPersona(s: ChatSettings): string {
   const lines = [
     CRISIS_CLAUSE,
     "",
-    `Você é a Inteligência Digital do Weme — ${TOM[s.persona] ?? TOM.caloroso}, em português do Brasil.`,
+    `Seu nome é ${assistantName(s)}. Você é a inteligência digital do Weme — ${TOM[s.persona] ?? TOM.caloroso}, em português do Brasil.`,
+    `Ao se apresentar, diga que é ${assistantName(s)}, uma inteligência digital. Nunca use outro nome.`,
     "Converse naturalmente, SEM roteiro fixo. Entenda o pedido e só aja quando o usuário pedir algo concreto.",
     "Se o usuário enviar uma IMAGEM, analise-a e responda sobre o que vê. Se for alimento, estime calorias; se for exercício/postura, dê feedback; em qualquer outro caso, descreva/comente.",
     "",
@@ -205,7 +209,7 @@ export const Route = createFileRoute("/api/assistant")({
                 .maybeSingle(),
               supabase
                 .from("chat_settings")
-                .select("persona,response_length,focus,custom_instructions")
+                .select("persona,response_length,focus,custom_instructions,assistant_name")
                 .eq("user_id", userId)
                 .maybeSingle(),
               supabase
@@ -250,7 +254,10 @@ export const Route = createFileRoute("/api/assistant")({
           }
         }
 
-        // Conversa: usa a informada ou cria uma nova (título = 1ª msg do usuário).
+        // Conversa: usa a informada ou cria uma nova. O título aqui é provisório —
+        // a tool `nomear_conversa` o substitui por um nome descritivo dentro da
+        // MESMA chamada de IA (uma chamada separada só pro título gastaria
+        // crédito Run por conversa).
         let conversationId: string | null = body.conversation_id ?? null;
         let conversationTitle: string | null = null;
         if (supabase && userId && !conversationId) {
@@ -272,6 +279,28 @@ export const Route = createFileRoute("/api/assistant")({
         const uid = () => globalThis.crypto.randomUUID();
 
         const tools = {
+          nomear_conversa: tool({
+            description:
+              "Dá um nome curto e descritivo a ESTA conversa. Chame UMA vez, logo na primeira " +
+              "resposta, assim que entender o assunto. Ex.: 'Treino de força 3x na semana', " +
+              "'Ajuste de dieta pra cutting'. Não use a mensagem crua do usuário nem aspas.",
+            inputSchema: z.object({ titulo: z.string().min(3).max(60) }),
+            execute: async ({ titulo }) => {
+              const limpo = titulo.trim().slice(0, 60);
+              if (!supabase || !userId || !conversationId || !limpo) return { ok: false };
+              // Rename manual do usuário nunca é sobrescrito: só renomeia
+              // enquanto o título ainda for o provisório.
+              const { error } = await supabase
+                .from("chat_conversations")
+                .update({ title: limpo })
+                .eq("id", conversationId)
+                .eq("user_id", userId)
+                .eq("title", conversationTitle ?? "");
+              if (error) return { ok: false };
+              conversationTitle = limpo;
+              return { ok: true };
+            },
+          }),
           propor_habito: tool({
             description: "Propõe (NÃO cria) um hábito. Chame só quando tiver título e frequência.",
             inputSchema: z.object({

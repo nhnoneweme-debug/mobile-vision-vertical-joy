@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { ASSISTANT_NAME_MAX } from "./assistant-name";
 
 export type AssistantMessage = { role: "user" | "assistant"; content: string; created_at: string };
 export type Conversation = { id: string; title: string; updated_at: string };
@@ -9,13 +10,23 @@ export type ChatSettings = {
   response_length: "curtas" | "equilibrado" | "detalhadas";
   focus: "geral" | "treino" | "nutricao" | "mente";
   custom_instructions: string;
+  /** Vazio = usar ASSISTANT_NAME_FALLBACK. */
+  assistant_name: string;
 };
+
+export {
+  ASSISTANT_NAME_FALLBACK,
+  ASSISTANT_NAME_MAX,
+  assistantName,
+  assistantGreeting,
+} from "./assistant-name";
 
 export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   persona: "caloroso",
   response_length: "equilibrado",
   focus: "geral",
   custom_instructions: "",
+  assistant_name: "",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +95,7 @@ export const getChatSettings = createServerFn({ method: "GET" })
     const db = context.supabase as Db;
     const { data } = await db
       .from("chat_settings")
-      .select("persona, response_length, focus, custom_instructions")
+      .select("persona, response_length, focus, custom_instructions, assistant_name")
       .eq("user_id", context.userId)
       .maybeSingle();
     return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
@@ -99,6 +110,8 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         response_length: z.enum(["curtas", "equilibrado", "detalhadas"]),
         focus: z.enum(["geral", "treino", "nutricao", "mente"]),
         custom_instructions: z.string().max(500),
+        // trim + max: "  " vira "" e cai no fallback (Weme).
+        assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
       })
       .parse(d),
   )

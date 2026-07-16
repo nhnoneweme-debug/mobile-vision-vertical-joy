@@ -12,6 +12,7 @@ import {
   History,
   SlidersHorizontal,
   Trash2,
+  Pencil,
   Camera,
   Mic,
   MicOff,
@@ -35,13 +36,19 @@ import {
   getChatSettings,
   saveChatSettings,
   CHAT_SETTINGS_DEFAULT,
+  ASSISTANT_NAME_FALLBACK,
+  ASSISTANT_NAME_MAX,
+  assistantName,
+  assistantGreeting,
+  renameConversation,
   type Conversation,
   type ChatSettings,
 } from "@/lib/assistant.functions";
 import type { Proposal } from "@/routes/api/assistant";
 
-const GREETING =
-  "Oi! Sou sua Inteligência Digital. Me conta o que você quer — treino, dieta, um hábito ou um compromisso. Eu pergunto o que faltar e monto uma proposta pra você confirmar.";
+// Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
+// que carregam (o fallback é "Weme").
+const GREETING = assistantGreeting(ASSISTANT_NAME_FALLBACK);
 
 export const Route = createFileRoute("/_authenticated/assistente")({
   head: () => ({ meta: [{ title: "Inteligência Digital — Weme" }] }),
@@ -88,6 +95,7 @@ function AssistantPage() {
   const fnListConversations = useServerFn(listConversations);
   const fnGetConversation = useServerFn(getConversationMessages);
   const fnDeleteConversation = useServerFn(deleteConversation);
+  const fnRenameConversation = useServerFn(renameConversation);
   const fnGetSettings = useServerFn(getChatSettings);
   const fnSaveSettings = useServerFn(saveChatSettings);
 
@@ -103,6 +111,7 @@ function AssistantPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convOpen, setConvOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [cfgOpen, setCfgOpen] = useState(false);
   const [settings, setSettings] = useState<ChatSettings>(CHAT_SETTINGS_DEFAULT);
   const [savingCfg, setSavingCfg] = useState(false);
@@ -201,6 +210,21 @@ function AssistantPage() {
     window.speechSynthesis.speak(utter);
   }
 
+  /** Rename manual — a IA nunca sobrescreve isto depois (ver nomear_conversa). */
+  async function commitRename(id: string, titulo: string) {
+    const limpo = titulo.trim().slice(0, 80);
+    setRenamingId(null);
+    const atual = conversations.find((c) => c.id === id)?.title;
+    if (!limpo || limpo === atual) return;
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title: limpo } : c)));
+    try {
+      await fnRenameConversation({ data: { id, title: limpo } });
+    } catch {
+      toast.error("Não consegui renomear.");
+      void refreshConversations();
+    }
+  }
+
   async function refreshConversations() {
     try {
       setConversations(await fnListConversations());
@@ -213,34 +237,34 @@ function AssistantPage() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
     (async () => {
+      // Abrir a IA SEMPRE começa uma sessão nova — retomar a última fazia a tela
+      // abrir no meio de um assunto velho. O histórico fica no drawer.
       try {
-        const convs = await fnListConversations();
-        setConversations(convs);
-        // Retoma a conversa mais recente, se houver.
-        if (convs.length) {
-          const latest = convs[0];
-          setConversationId(latest.id);
-          const hist = await fnGetConversation({ data: { conversation_id: latest.id } });
-          if (hist.length)
-            setMsgs(hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg));
-        }
+        setConversations(await fnListConversations());
       } catch {
         /* sem histórico */
       }
       try {
-        setSettings(await fnGetSettings());
+        const s = await fnGetSettings();
+        setSettings(s);
+        // A saudação carrega o nome escolhido; só troca se ninguém falou ainda.
+        setMsgs((prev) =>
+          prev.length === 1 && prev[0].role === "assistant"
+            ? [{ id: nid(), role: "assistant", text: assistantGreeting(assistantName(s)) }]
+            : prev,
+        );
       } catch {
         /* usa defaults */
       }
     })();
-  }, [fnListConversations, fnGetConversation, fnGetSettings]);
+  }, [fnListConversations, fnGetSettings]);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, thinking]);
 
   function startNewConversation() {
     setConversationId(null);
-    setMsgs([{ id: nid(), role: "assistant", text: GREETING }]);
+    setMsgs([{ id: nid(), role: "assistant", text: assistantGreeting(assistantName(settings)) }]);
     setConvOpen(false);
   }
 
@@ -729,20 +753,43 @@ function AssistantPage() {
                       : "border-border bg-charcoal-900/50")
                   }
                 >
+                  {renamingId === c.id ? (
+                    <input
+                      autoFocus
+                      defaultValue={c.title}
+                      onBlur={(e) => commitRename(c.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename(c.id, e.currentTarget.value);
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      maxLength={80}
+                      aria-label="Novo nome da conversa"
+                      className="min-w-0 flex-1 rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-sm text-foreground outline-none"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => loadConversation(c.id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="block truncate text-sm text-foreground">{c.title}</span>
+                      <span className="block text-[10px] text-muted-foreground">
+                        {new Date(c.updated_at).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => loadConversation(c.id)}
-                    className="min-w-0 flex-1 text-left"
+                    onClick={() => setRenamingId(c.id)}
+                    aria-label={`Renomear ${c.title}`}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:text-ember"
                   >
-                    <span className="block truncate text-sm text-foreground">{c.title}</span>
-                    <span className="block text-[10px] text-muted-foreground">
-                      {new Date(c.updated_at).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                    <Pencil className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
@@ -771,6 +818,28 @@ function AssistantPage() {
             </SheetTitle>
           </SheetHeader>
           <div className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto pb-4" data-lenis-prevent>
+            <div>
+              <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+                NOME DA IA
+              </p>
+              <input
+                value={settings.assistant_name}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    assistant_name: e.target.value.slice(0, ASSISTANT_NAME_MAX),
+                  })
+                }
+                onBlur={() => persistSettings(settings)}
+                maxLength={ASSISTANT_NAME_MAX}
+                placeholder={ASSISTANT_NAME_FALLBACK}
+                aria-label="Nome da inteligência digital"
+                className="w-full rounded-lg border border-border bg-charcoal-900 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-ember/60 focus:outline-none"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Como sua inteligência digital se chama. Em branco, ela é {ASSISTANT_NAME_FALLBACK}.
+              </p>
+            </div>
             <SegGroup
               label="PERSONALIDADE"
               value={settings.persona}
