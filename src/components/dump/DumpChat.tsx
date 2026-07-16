@@ -5,7 +5,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import { Moon, Send, BedDouble, Sunrise, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/lib/auth-headers";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import type { RitualType } from "@/lib/ritual";
 
@@ -63,13 +63,8 @@ const MODES = {
 export function DumpChat({ mode }: { mode: RitualType }) {
   const cfg = MODES[mode];
   const navigate = useNavigate();
-  const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
-  }, []);
 
   // A fala vai caindo no campo de texto; a pessoa revisa e envia.
   const { listening, supported, toggle } = useSpeechToText((text) => {
@@ -78,7 +73,7 @@ export function DumpChat({ mode }: { mode: RitualType }) {
 
   const transport = new DefaultChatTransport({
     api: "/api/sleep-chat",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: authHeaders,
     body: { mode },
   });
 
@@ -181,7 +176,7 @@ export function DumpChat({ mode }: { mode: RitualType }) {
               <button
                 key={q}
                 onClick={() => send(q)}
-                disabled={busy || !token}
+                disabled={busy}
                 className="shrink-0 rounded-full border border-border bg-charcoal-800/60 px-3 py-1 text-[11px] text-muted-foreground disabled:opacity-40"
               >
                 {q}
@@ -217,7 +212,7 @@ export function DumpChat({ mode }: { mode: RitualType }) {
             />
             <button
               onClick={() => send(input)}
-              disabled={busy || !token || !input.trim()}
+              disabled={busy || !input.trim()}
               className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl text-charcoal-900 disabled:opacity-40 ${cfg.accent.send}`}
             >
               <Send className="h-4 w-4" />

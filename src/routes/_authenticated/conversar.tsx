@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/lib/auth-headers";
 import { MobileShell } from "@/components/shell/MobileShell";
 
 export const Route = createFileRoute("/_authenticated/conversar")({
@@ -12,21 +12,13 @@ export const Route = createFileRoute("/_authenticated/conversar")({
   component: ConversarPage,
 });
 
-// Em dev:mock o /api/chat roda em modo local (sem exigir token).
-const IS_MOCK = import.meta.env.VITE_USE_MOCKS === "true";
-
 function ConversarPage() {
-  const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
-  }, []);
-
   const transport = new DefaultChatTransport({
     api: "/api/chat",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: authHeaders,
   });
 
   const { messages, sendMessage, status } = useChat({
@@ -51,12 +43,10 @@ function ConversarPage() {
   }, [messages, status]);
 
   const busy = status === "submitted" || status === "streaming";
-  // No modo mock não precisamos de token; online, sim.
-  const canSend = IS_MOCK || !!token;
 
   function submit() {
     const t = input.trim();
-    if (!t || busy || !canSend) return;
+    if (!t || busy) return;
     sendMessage({ text: t });
     setInput("");
   }
@@ -115,11 +105,6 @@ function ConversarPage() {
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2.5 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        {!canSend && (
-          <p className="mb-2 text-center text-[11px] text-muted-foreground">
-            Faça login para conversar.
-          </p>
-        )}
         <div className="flex items-end gap-2">
           <textarea
             value={input}
@@ -137,7 +122,7 @@ function ConversarPage() {
           <button
             type="button"
             onClick={submit}
-            disabled={busy || !canSend || !input.trim()}
+            disabled={busy || !input.trim()}
             aria-label="Enviar"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ember text-charcoal-900 disabled:opacity-40 active:scale-95"
           >
