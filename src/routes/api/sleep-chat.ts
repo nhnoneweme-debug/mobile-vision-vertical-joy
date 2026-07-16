@@ -49,8 +49,10 @@ export const Route = createFileRoute("/api/sleep-chat")({
         const rl = checkRateLimit(userId);
         if (!rl.ok) return rateLimitResponse(rl.message);
 
-        const { messages } = (await request.json()) as { messages: UIMessage[] };
-        const safeMessages = messages.map(truncateUserMessage);
+        const body = (await request.json()) as { messages: UIMessage[]; mode?: string };
+        // Mesmo ritual, dois lados do sono: manhã organiza o sonho, noite o dia.
+        const mode: "morning" | "night" = body.mode === "morning" ? "morning" : "night";
+        const safeMessages = body.messages.map(truncateUserMessage);
         const today = new Date().toISOString().slice(0, 10);
 
         const [{ data: profile }, { data: blocks }, { data: sleep }] = await Promise.all([
@@ -73,27 +75,133 @@ export const Route = createFileRoute("/api/sleep-chat")({
             .maybeSingle(),
         ]);
 
+        const ritualSteps =
+          mode === "morning"
+            ? [
+                "Você é a Companheira do Despertar — voz quente, calma, sem pressa.",
+                "Conduza o ritual da manhã: o sonho escapa rápido, então PRIMEIRO capture o sonho cru,",
+                "só depois organize. O usuário faz o DUMP (muitas vezes falando, torto e sem ordem), você organiza.",
+                "Sequência sugerida: 1) O que lembra do sonho? 2) Puxe detalhes que estejam escapando",
+                "(pessoas, lugares, sensação) — perguntas curtas, uma de cada vez. 3) Chame logDream com o",
+                "texto cru + símbolos/temas/sensação que você extraiu. 4) Como acordou (use logWake).",
+                "5) Intenção do dia (use saveMorningRitual).",
+                "Se disser que não lembra do sonho, não insista: siga pro resto do ritual.",
+                "Ao interpretar um sonho, seja sóbria — hipótese ligada à vida real da pessoa, nunca misticismo ou determinismo.",
+              ]
+            : [
+                "Você é a Companheira do Sono — voz quente, calma, presente.",
+                "Conduza o ritual da noite: escute como foi o dia, faça perguntas curtas pra extrair fatos,",
+                "e organize os dados no banco usando as ferramentas. O usuário faz o DUMP, você organiza.",
+                "Sequência sugerida: 1) Como foi o dia? 2) O que ficou pesado? 3) O que foi vitória?",
+                "4) Algo pra registrar (hábito feito, ideia, gratidão)? 5) Intenção/reflexão da noite (use saveNightRitual).",
+                "6) Hora de dormir prevista (use logSleep).",
+              ];
+
         const sys = [
           CRISIS_CLAUSE,
           "",
-          "Você é a Companheira do Sono — voz quente, calma, presente.",
-          "Conduza o ritual da noite: escute como foi o dia, faça perguntas curtas pra extrair fatos,",
-          "e organize os dados no banco usando as ferramentas. O usuário faz o DUMP, você organiza.",
-          "Sequência sugerida: 1) Como foi o dia? 2) O que ficou pesado? 3) O que foi vitória?",
-          "4) Algo pra registrar (hábito feito, ideia, gratidão)? 5) Intenção/reflexão da noite (use saveNightRitual).",
-          "6) Hora de dormir prevista (use logSleep).",
+          ...ritualSteps,
           "Sempre que detectar algo registrável (hábito completado, missão futura, meta, ideia), chame a tool correspondente — sem pedir confirmação pra cada item, só resuma no fim.",
+          "O texto pode vir de transcrição de voz: tolere frases quebradas, repetição e erro de reconhecimento — entenda a intenção e não corrija a pessoa.",
           "Respostas curtas (1-3 linhas), pt-BR, markdown leve, tom mentor próximo.",
           "",
           DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"} | Classe: ${profile?.behavioral_class ?? "—"} | Streak: ${profile?.streak ?? 0}`,
           `Blocos do dia hoje: ${(blocks ?? []).map((b) => `${b.kind}${b.completed ? "✓" : "·"}`).join(", ") || "nenhum"}`,
-          sleep ? `Sleep log de hoje: bed=${sleep.bed_at ?? "—"} quality=${sleep.quality ?? "—"}` : "Ainda sem sleep log hoje.",
+          sleep
+            ? `Sleep log de hoje: bed=${sleep.bed_at ?? "—"} wake=${sleep.wake_at ?? "—"} quality=${sleep.quality ?? "—"}`
+            : "Ainda sem sleep log hoje.",
         ].join("\n");
 
         const model = createChatModelWithFallback(LOVABLE_API_KEY);
 
-        const tools = {
+        const morningTools = {
+          logDream: tool({
+            description:
+              "Registra o sonho da noite. Chame assim que tiver o relato cru — não espere a pessoa lembrar de tudo. " +
+              "Extraia símbolos/temas/sensação do próprio relato; raw_text é o dump como a pessoa contou.",
+            inputSchema: z.object({
+              raw_text: z.string().min(1).describe("Relato cru do sonho, como a pessoa contou"),
+              mood: z.string().optional().describe("Sensação predominante (ex.: ansioso, leve)"),
+              lucidity: z.number().int().min(0).max(10).optional(),
+              symbols: z.array(z.string()).optional().describe("Elementos concretos: água, casa, cobra…"),
+              themes: z.array(z.string()).optional().describe("Temas: perseguição, reencontro…"),
+              ai_summary: z.string().optional().describe("Resumo em 1-2 linhas"),
+              ai_interpretation: z
+                .string()
+                .optional()
+                .describe("Hipótese sóbria ligada à vida real da pessoa, sem misticismo"),
+            }),
+            execute: async (input) => {
+              const { error } = await supabase.from("dream_logs").insert({
+                user_id: userId,
+                raw_text: input.raw_text,
+                mood: input.mood ?? null,
+                lucidity: input.lucidity ?? null,
+                symbols: input.symbols ?? [],
+                themes: input.themes ?? [],
+                ai_summary: input.ai_summary ?? null,
+                ai_interpretation: input.ai_interpretation ?? null,
+              });
+              if (error) return { ok: false, error: error.message };
+              return { ok: true };
+            },
+          }),
+          saveMorningRitual: tool({
+            description: "Salva o ritual da manhã: intenção do dia e o que veio do dump.",
+            inputSchema: z.object({
+              intention: z.string().optional(),
+              reflections: z
+                .object({
+                  dream: z.string().optional(),
+                  mood: z.string().optional(),
+                  energy: z.string().optional(),
+                  focus: z.string().optional(),
+                  note: z.string().optional(),
+                })
+                .partial()
+                .default({}),
+            }),
+            execute: async ({ intention, reflections }) => {
+              const { error } = await supabase.from("ritual_logs").upsert(
+                {
+                  user_id: userId,
+                  ritual_date: today,
+                  ritual_type: "morning",
+                  intention: intention ?? null,
+                  reflections: reflections ?? {},
+                },
+                { onConflict: "user_id,ritual_date,ritual_type" },
+              );
+              if (error) return { ok: false, error: error.message };
+              return { ok: true };
+            },
+          }),
+          logWake: tool({
+            description: "Registra como a pessoa acordou hoje (hora e qualidade percebida do sono).",
+            inputSchema: z.object({
+              wake_at: z.string().optional().describe("ISO datetime de quando acordou"),
+              quality: z.number().int().min(1).max(5).optional(),
+              notes: z.string().optional(),
+            }),
+            execute: async (input) => {
+              const { error } = await supabase.from("sleep_logs").upsert(
+                {
+                  user_id: userId,
+                  date: today,
+                  wake_at: input.wake_at ?? new Date().toISOString(),
+                  quality: input.quality ?? null,
+                  notes: input.notes ?? null,
+                },
+                { onConflict: "user_id,date" },
+              );
+              if (error) return { ok: false, error: error.message };
+              return { ok: true };
+            },
+          }),
+        } as const;
+
+        const nightTools = {
           saveNightRitual: tool({
             description:
               "Salva o ritual da noite com a reflexão/dump do dia organizada. Use após escutar como foi o dia.",
@@ -151,10 +259,23 @@ export const Route = createFileRoute("/api/sleep-chat")({
               return { ok: true };
             },
           }),
+        } as const;
+
+        const sharedTools = {
           createDayBlock: tool({
-            description: "Marca um bloco — útil para wind_down (preparação) ou sleep (encerramento).",
+            description:
+              "Marca um bloco do dia — wake/dream de manhã, wind_down (preparação) ou sleep (encerramento) à noite.",
             inputSchema: z.object({
-              kind: z.enum(["wind_down", "sleep"]),
+              kind: z.enum([
+                "wake",
+                "dream",
+                "kitchen",
+                "move",
+                "deep_work",
+                "family",
+                "wind_down",
+                "sleep",
+              ]),
               notes: z.string().optional(),
             }),
             execute: async ({ kind, notes }) => {
@@ -162,7 +283,8 @@ export const Route = createFileRoute("/api/sleep-chat")({
                 user_id: userId,
                 kind,
                 started_at: new Date().toISOString(),
-                completed: kind === "sleep" ? false : true,
+                // "sleep" abre em aberto (a pessoa ainda vai dormir); o resto já aconteceu.
+                completed: kind !== "sleep",
                 notes: notes ?? null,
               });
               if (error) return { ok: false, error: error.message };
@@ -208,8 +330,9 @@ export const Route = createFileRoute("/api/sleep-chat")({
               return { ok: true };
             },
           }),
-          scheduleTomorrowQuest: tool({
-            description: "Agenda uma missão pra amanhã (ou data específica).",
+          scheduleQuest: tool({
+            description:
+              "Agenda uma missão. Sem data, cai em amanhã — no ritual da manhã, passe a data de hoje para tarefas do próprio dia.",
             inputSchema: z.object({
               title: z.string().min(1),
               scheduled_date: z.string().optional(),
@@ -248,6 +371,13 @@ export const Route = createFileRoute("/api/sleep-chat")({
             },
           }),
         } as const;
+
+        // Só expõe as tools do ritual em questão — evita a IA da manhã salvar
+        // um ritual da noite (e vice-versa).
+        const tools =
+          mode === "morning"
+            ? { ...morningTools, ...sharedTools }
+            : { ...nightTools, ...sharedTools };
 
         const result = streamText({
           model,

@@ -1308,6 +1308,7 @@ export type Database = {
           push_enabled: boolean
           quiet_end: number
           quiet_start: number
+          timezone: string
           updated_at: string
           user_id: string
         }
@@ -1323,6 +1324,7 @@ export type Database = {
           push_enabled?: boolean
           quiet_end?: number
           quiet_start?: number
+          timezone?: string
           updated_at?: string
           user_id: string
         }
@@ -1338,6 +1340,7 @@ export type Database = {
           push_enabled?: boolean
           quiet_end?: number
           quiet_start?: number
+          timezone?: string
           updated_at?: string
           user_id?: string
         }

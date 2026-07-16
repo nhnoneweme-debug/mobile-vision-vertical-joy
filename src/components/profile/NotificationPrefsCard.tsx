@@ -45,21 +45,25 @@ export function NotificationPrefsCard({ userId }: { userId: string | null }) {
         </p>
       </div>
       <p className="mt-2 text-sm text-foreground">
-        Horários sugeridos para abrir e fechar o dia.
+        Quando você acorda e quando vai dormir. Nesses horários o dump aparece na home:
+        de manhã pra registrar o sonho, à noite pra fechar o dia.
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <HourPicker
-          label="MANHÃ"
+          label="ACORDO ÀS"
           value={prefs.morning_hour}
           onChange={(v) => update({ morning_hour: v })}
         />
         <HourPicker
-          label="NOITE"
+          label="DURMO ÀS"
           value={prefs.night_hour}
           onChange={(v) => update({ night_hour: v })}
         />
       </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Fuso: {prefs.timezone}
+      </p>
 
       <label className="mt-4 flex items-center justify-between rounded-xl border border-border bg-charcoal-900 px-4 py-3">
         <span className="font-display text-[11px] tracking-[0.25em] text-foreground">
@@ -74,8 +78,8 @@ export function NotificationPrefsCard({ userId }: { userId: string | null }) {
       </label>
       {prefs.push_enabled && (
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Notificações push exigem o app publicado e permissão do navegador. Por enquanto,
-          os horários ficam salvos para quando ativarmos.
+          Push depende da permissão do navegador. Sem ela, o dump ainda aparece como
+          faixa na home nos seus horários.
         </p>
       )}
       {saving && (

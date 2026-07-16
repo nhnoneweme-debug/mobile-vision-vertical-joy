@@ -6,7 +6,19 @@ export type NotificationPrefs = {
   morning_hour: number;
   night_hour: number;
   push_enabled: boolean;
+  /** IANA — as janelas de dump são calculadas no servidor, que precisa saber o fuso. */
+  timezone: string;
 };
+
+export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+
+export function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE;
+  } catch {
+    return DEFAULT_TIMEZONE;
+  }
+}
 
 export type RitualLog = {
   id: string;
@@ -23,7 +35,7 @@ function todayISO() {
 export async function getNotificationPrefs(userId: string): Promise<NotificationPrefs> {
   const { data } = await supabase
     .from("notification_prefs")
-    .select("morning_hour, night_hour, push_enabled")
+    .select("morning_hour, night_hour, push_enabled, timezone")
     .eq("user_id", userId)
     .maybeSingle();
   return (
@@ -31,8 +43,25 @@ export async function getNotificationPrefs(userId: string): Promise<Notification
       morning_hour: 7,
       night_hour: 22,
       push_enabled: false,
+      timezone: browserTimezone(),
     }
   );
+}
+
+/**
+ * Mantém o fuso salvo em dia — quem gera o push é o servidor, então um fuso
+ * errado manda o "bom dia" na hora errada. Silencioso: nunca bloqueia a tela.
+ */
+export async function syncTimezone(userId: string, saved: string | null | undefined) {
+  const tz = browserTimezone();
+  if (!tz || tz === saved) return;
+  try {
+    await supabase
+      .from("notification_prefs")
+      .upsert({ user_id: userId, timezone: tz }, { onConflict: "user_id" });
+  } catch {
+    /* fuso desatualizado não justifica quebrar a home */
+  }
 }
 
 export async function saveNotificationPrefs(

@@ -43,6 +43,7 @@ import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
 import { Route as AuthenticatedDormirRouteImport } from './routes/_authenticated/dormir'
+import { Route as AuthenticatedDespertarRouteImport } from './routes/_authenticated/despertar'
 import { Route as AuthenticatedDesafiosRouteImport } from './routes/_authenticated/desafios'
 import { Route as AuthenticatedConversarRouteImport } from './routes/_authenticated/conversar'
 import { Route as AuthenticatedConquistasRouteImport } from './routes/_authenticated/conquistas'
@@ -234,6 +235,11 @@ const AuthenticatedDormirRoute = AuthenticatedDormirRouteImport.update({
   path: '/dormir',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDespertarRoute = AuthenticatedDespertarRouteImport.update({
+  id: '/despertar',
+  path: '/despertar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDesafiosRoute = AuthenticatedDesafiosRouteImport.update({
   id: '/desafios',
   path: '/desafios',
@@ -336,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
+  '/despertar': typeof AuthenticatedDespertarRoute
   '/dormir': typeof AuthenticatedDormirRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -387,6 +394,7 @@ export interface FileRoutesByTo {
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
+  '/despertar': typeof AuthenticatedDespertarRoute
   '/dormir': typeof AuthenticatedDormirRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -440,6 +448,7 @@ export interface FileRoutesById {
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/conversar': typeof AuthenticatedConversarRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
+  '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
   '/_authenticated/dormir': typeof AuthenticatedDormirRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
@@ -493,6 +502,7 @@ export interface FileRouteTypes {
     | '/conquistas'
     | '/conversar'
     | '/desafios'
+    | '/despertar'
     | '/dormir'
     | '/habitos'
     | '/home'
@@ -544,6 +554,7 @@ export interface FileRouteTypes {
     | '/conquistas'
     | '/conversar'
     | '/desafios'
+    | '/despertar'
     | '/dormir'
     | '/habitos'
     | '/home'
@@ -596,6 +607,7 @@ export interface FileRouteTypes {
     | '/_authenticated/conquistas'
     | '/_authenticated/conversar'
     | '/_authenticated/desafios'
+    | '/_authenticated/despertar'
     | '/_authenticated/dormir'
     | '/_authenticated/habitos'
     | '/_authenticated/home'
@@ -896,6 +908,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDormirRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/despertar': {
+      id: '/_authenticated/despertar'
+      path: '/despertar'
+      fullPath: '/despertar'
+      preLoaderRoute: typeof AuthenticatedDespertarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/desafios': {
       id: '/_authenticated/desafios'
       path: '/desafios'
@@ -1042,6 +1061,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedConversarRoute: typeof AuthenticatedConversarRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
+  AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
   AuthenticatedDormirRoute: typeof AuthenticatedDormirRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
@@ -1074,6 +1094,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedConversarRoute: AuthenticatedConversarRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
+  AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
   AuthenticatedDormirRoute: AuthenticatedDormirRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,

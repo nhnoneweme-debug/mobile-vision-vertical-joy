@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { HUD } from "@/components/map/HUD";
 import { MonthGlance } from "@/components/home/MonthGlance";
+import { DumpBanner } from "@/components/home/DumpBanner";
 import { HabitTrackerStrip } from "@/components/home/HabitTrackerStrip";
 import { TrackingShortcuts } from "@/components/home/TrackingShortcuts";
 import { getTrack, rankFor } from "@/lib/level-tracks";
@@ -111,6 +112,8 @@ function HomePage() {
         brasas={profile?.brasas ?? 0}
         rankName={rankName}
       />
+
+      <DumpBanner />
 
       <MonthGlance marked={marked} activitiesByWeekday={activitiesByWeekday} />
 

@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createHabit, archiveHabit, type HabitFrequency } from "@/lib/habits";
 import { createMission, archiveMission, type MissionType } from "@/lib/missions";
@@ -107,11 +108,15 @@ function AssistantPage() {
 
   const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
-  const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const imgInputRef = useRef<HTMLInputElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+
+  const {
+    listening,
+    supported: sttSupported,
+    start: startListening,
+    stop: stopListening,
+  } = useSpeechToText((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
 
   async function handleImageSelect(files: FileList | null) {
     if (!files?.length) return;
@@ -141,57 +146,12 @@ function AssistantPage() {
       setVoiceMode(false);
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
+    if (!sttSupported) {
       toast.error("Seu navegador não suporta reconhecimento de voz.");
       return;
     }
     setVoiceMode(true);
-    startListening(SR);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function startListening(SR: any) {
-    const rec = new SR();
-    rec.lang = "pt-BR";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onstart = () => setListening(true);
-    rec.onend = () => {
-      setListening(false);
-      if (voiceMode) rec.start();
-    };
-    rec.onerror = () => setListening(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rec.onresult = (ev: any) => {
-      let transcript = "";
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript;
-      }
-      if (transcript.trim()) {
-        setInput((prev) => (prev + " " + transcript.trim()).trim());
-      }
-    };
-    try {
-      rec.start();
-      recognitionRef.current = rec;
-    } catch {
-      toast.error("Não consegui iniciar o microfone.");
-    }
-  }
-
-  function stopListening() {
-    const rec = recognitionRef.current;
-    if (rec) {
-      try {
-        rec.abort();
-      } catch {
-        /* noop */
-      }
-      recognitionRef.current = null;
-    }
-    setListening(false);
+    startListening();
   }
 
   async function speakText(text: string) {
