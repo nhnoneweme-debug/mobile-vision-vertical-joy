@@ -39,8 +39,9 @@ export function MonthGlance({
   ];
 
   // Altura da grade mensal — para que SEM e DIA tenham o MESMO tamanho, com scroll interno.
+  // Deriva de --mg-cell/--mg-gap (que mudam no desktop) pra não dessincronizar das células.
   const monthRows = Math.ceil(cells.length / 7);
-  const monthHeight = monthRows * 46 + (monthRows - 1) * 4 + 18; // linhas + gaps + cabeçalho
+  const monthHeight = `calc(${monthRows} * var(--mg-cell) + ${monthRows - 1} * var(--mg-gap) + 18px)`;
 
   // Semana atual (segunda a domingo)
   const weekStart = new Date(y, m, todayDate - mondayIndex(today.getDay()));
@@ -84,17 +85,17 @@ export function MonthGlance({
 
         {view === "mes" && (
           <>
-            <div className="mb-1 grid grid-cols-7 gap-1">
+            <div className="mb-1 grid grid-cols-7 gap-[var(--mg-gap)]">
               {WEEKDAYS.map((d, i) => (
                 <span
                   key={i}
-                  className="text-center font-display text-[10px] tracking-widest text-muted-foreground"
+                  className="text-center font-display text-[10px] tracking-widest text-muted-foreground lg:text-xs"
                 >
                   {d}
                 </span>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-[var(--mg-gap)]">
               {cells.map((day, i) => {
                 if (day === null) return <span key={i} />;
                 const isToday = day === todayDate;
@@ -104,11 +105,11 @@ export function MonthGlance({
                   <div
                     key={i}
                     className={
-                      "flex min-h-[46px] flex-col rounded-lg p-1 " +
+                      "flex min-h-[var(--mg-cell)] flex-col rounded-lg p-1 lg:p-1.5 " +
                       (isToday ? "bg-ember text-charcoal-900" : "bg-charcoal-800/40 text-foreground/80")
                     }
                   >
-                    <span className="flex items-center gap-1 font-display text-[11px] leading-none">
+                    <span className="flex items-center gap-1 font-display text-[11px] leading-none lg:text-sm">
                       {day}
                       {isMarked && (
                         <span
@@ -121,7 +122,7 @@ export function MonthGlance({
                     {acts.length > 0 && (
                       <span
                         className={
-                          "mt-0.5 truncate text-[7px] leading-tight " +
+                          "mt-0.5 truncate text-[7px] leading-tight lg:mt-1 lg:text-[10px] " +
                           (isToday ? "text-charcoal-900/80" : "text-ember")
                         }
                       >
