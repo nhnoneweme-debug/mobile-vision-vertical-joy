@@ -17,7 +17,13 @@ import {
   Mic,
   MicOff,
   Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  Loader2,
+  ChevronLeft,
 } from "lucide-react";
+import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
