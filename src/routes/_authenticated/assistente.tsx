@@ -689,17 +689,6 @@ function AssistantPage() {
               </div>
             );
           }
-          if (false) {
-            return (
-              <button
-                type="button"
-                aria-label="Ouvir resposta"
-                className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground active:scale-95"
-              >
-                <Volume2 className="h-3.5 w-3.5" />
-              </div>
-            );
-          }
           return (
             <ProposalCard
               key={m.id}
