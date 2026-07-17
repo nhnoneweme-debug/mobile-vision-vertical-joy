@@ -748,25 +748,31 @@ function AssistantPage() {
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        {/* Preview ao vivo da transcrição: 2 linhas, corta pela direita, mostra
-            sempre a palavra mais recente. Só aparece quando o mic está aberto
-            (item 4). */}
-        {listening && sttInterim ? (
+        {/* Preview ao vivo da transcrição enquanto o mic está aberto: mostra o
+            parcial da fala em curso pra o usuário auditar. O texto final já cai
+            no textarea abaixo — a soma dos dois é o que será enviado. */}
+        {listening ? (
           <div
             aria-live="polite"
-            className="mb-2 rounded-lg border border-ember/30 bg-ember/5 px-3 py-1.5 font-mono text-[11px] leading-snug text-ember"
-            style={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              direction: "rtl",
-              textAlign: "left",
-            }}
+            className="mb-2 flex items-start gap-2 rounded-lg border border-ember/30 bg-ember/5 px-3 py-2"
           >
-            <span style={{ direction: "ltr", unicodeBidi: "plaintext" }}>{sttInterim}</span>
+            <span className="mt-1 h-2 w-2 shrink-0 animate-pulse rounded-full bg-ember" />
+            <div className="flex-1 min-w-0">
+              <div className="font-display text-[9px] tracking-[0.18em] text-ember/80">
+                OUVINDO — AUDITE A TRANSCRIÇÃO
+              </div>
+              <div
+                className="mt-0.5 max-h-16 overflow-y-auto font-mono text-[12px] leading-snug text-foreground/90"
+                style={{ overflowWrap: "anywhere" }}
+              >
+                {sttInterim || (
+                  <span className="italic text-muted-foreground">fale que eu transcrevo…</span>
+                )}
+              </div>
+            </div>
           </div>
         ) : null}
+
         {/* Barra de controles: voltar + nova + histórico + config + autoplay.
             Voltar movido pra cá pra ficar ao alcance do polegar (item 2). */}
         <div className="mb-2 flex items-center justify-center gap-1.5">
