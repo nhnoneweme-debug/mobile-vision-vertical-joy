@@ -551,9 +551,8 @@ function AssistantPage() {
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        {/* A barra inferior some aqui (o composer ocupa o rodapé), então a
-            saída fica no header. No desktop quem traz o voltar é a sidebar. */}
-        <HeaderBackButton onlyMobile />
+        {/* Voltar movido pra barra inferior (ao alcance do polegar direito).
+            No desktop a sidebar cuida da navegação. */}
         <span className="ember-glow grid h-10 w-10 place-items-center rounded-2xl bg-charcoal-800 text-ember">
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
