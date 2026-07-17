@@ -17,12 +17,20 @@ import {
   Mic,
   MicOff,
   Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  Loader2,
+  ChevronLeft,
 } from "lucide-react";
+import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
-import { HeaderBackButton } from "@/components/shell/HeaderBackButton";
+// Nota: o voltar sai do header (item 2). No desktop a sidebar já leva de
+// volta; no mobile ele vira o primeiro botão da barra inferior do composer,
+// ao alcance do polegar direito.
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createHabit, archiveHabit, type HabitFrequency } from "@/lib/habits";
@@ -120,11 +128,34 @@ function AssistantPage() {
   const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  // Autoplay do TTS: quando ligado, toca a resposta assim que fica pronta.
+  // Guardado em localStorage — decisão do usuário no dispositivo, sem migration.
+  const [autoplay, setAutoplay] = useState(false);
+  // Estado do TTS por mensagem: idle | loading | playing | paused | error.
+  // Apenas UMA mensagem toca por vez; ao trocar, aborta a anterior.
+  type TtsState = "loading" | "playing" | "paused";
+  const [ttsMsgId, setTtsMsgId] = useState<number | null>(null);
+  const [ttsState, setTtsState] = useState<TtsState>("loading");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
+  const { canGoBack, goBack } = useGoBack();
+
+  // Restaura preferência de autoplay do dispositivo (item 3).
+  useEffect(() => {
+    try {
+      setAutoplay(localStorage.getItem("wimi.tts.autoplay") === "1");
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   const {
     listening,
     supported: sttSupported,
+    muted: micMuted,
+    interim: sttInterim,
+    toggleMute: toggleMicMute,
     start: startListening,
     stop: stopListening,
   } = useSpeechToText((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
@@ -165,8 +196,49 @@ function AssistantPage() {
     startListening();
   }
 
-  async function speakText(text: string) {
+  function stopCurrentTts() {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch {
+        /* noop */
+      }
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeaking(false);
+    setTtsMsgId(null);
+  }
+
+  /**
+   * Toca o TTS da mensagem `msgId` com estado ao vivo (loading → playing).
+   * Se a mesma mensagem já está tocando, pausa; se está pausada, retoma;
+   * se outra está tocando, aborta e recomeça.
+   */
+  async function playMessageTts(msgId: number, text: string) {
     if (!text.trim()) return;
+    // Se já é a mensagem ativa, alterna play/pause.
+    if (ttsMsgId === msgId && audioRef.current) {
+      if (ttsState === "playing") {
+        audioRef.current.pause();
+        setTtsState("paused");
+      } else if (ttsState === "paused") {
+        audioRef.current.play().catch(() => stopCurrentTts());
+        setTtsState("playing");
+      }
+      return;
+    }
+    // Nova mensagem — cancela a anterior.
+    stopCurrentTts();
+    setTtsMsgId(msgId);
+    setTtsState("loading");
     try {
       const r = await fetch("/api/assistant-tts", {
         method: "POST",
@@ -176,27 +248,32 @@ function AssistantPage() {
         },
         body: JSON.stringify({ text, gender: settings.voice_gender }),
       });
-      if (r.ok) {
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onplay = () => setSpeaking(true);
-        audio.onended = () => {
-          setSpeaking(false);
-          URL.revokeObjectURL(url);
-        };
-        audio.onerror = () => {
-          setSpeaking(false);
-          URL.revokeObjectURL(url);
-          speakFallback(text);
-        };
-        audio.play().catch(() => speakFallback(text));
-        return;
-      }
+      if (!r.ok) throw new Error(String(r.status));
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onplay = () => {
+        setSpeaking(true);
+        setTtsState("playing");
+      };
+      audio.onpause = () => {
+        // `pause` também dispara ao terminar em alguns navegadores; `ended` cobre.
+        if (!audio.ended) setTtsState("paused");
+      };
+      audio.onended = () => {
+        setSpeaking(false);
+        stopCurrentTts();
+      };
+      audio.onerror = () => {
+        stopCurrentTts();
+        speakFallback(text, msgId);
+      };
+      await audio.play();
     } catch {
-      /* fallback abaixo */
+      speakFallback(text, msgId);
     }
-    speakFallback(text);
   }
 
   function pickPtBrVoice(gender: "feminina" | "masculina"): SpeechSynthesisVoice | null {
@@ -204,7 +281,6 @@ function AssistantPage() {
     const voices = window.speechSynthesis.getVoices();
     const ptbr = voices.filter((v) => /pt(-|_)?BR/i.test(v.lang) || /pt(-|_)?PT/i.test(v.lang));
     if (!ptbr.length) return null;
-    // Heurística por nome (browsers não expõem gênero na API).
     const femHints = /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
     const maleHints = /(male|homem|felipe|ricardo|daniel|paulo|joão|joao|diego|thiago|antonio)/i;
     const wanted = gender === "feminina" ? femHints : maleHints;
@@ -216,17 +292,32 @@ function AssistantPage() {
     );
   }
 
-  function speakFallback(text: string) {
-    if (!("speechSynthesis" in window)) return;
+  function speakFallback(text: string, msgId?: number) {
+    if (!("speechSynthesis" in window)) {
+      setTtsMsgId(null);
+      return;
+    }
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
     utter.rate = 1;
     const v = pickPtBrVoice(settings.voice_gender);
     if (v) utter.voice = v;
-    utter.onstart = () => setSpeaking(true);
-    utter.onend = () => setSpeaking(false);
-    utter.onerror = () => setSpeaking(false);
+    utter.onstart = () => {
+      setSpeaking(true);
+      if (msgId != null) {
+        setTtsMsgId(msgId);
+        setTtsState("playing");
+      }
+    };
+    utter.onend = () => {
+      setSpeaking(false);
+      setTtsMsgId(null);
+    };
+    utter.onerror = () => {
+      setSpeaking(false);
+      setTtsMsgId(null);
+    };
     window.speechSynthesis.speak(utter);
   }
 
@@ -438,7 +529,8 @@ function AssistantPage() {
       if (sawError && assistantId == null) {
         appendDelta("Tive um problema pra responder agora. Tenta de novo?");
       }
-      if (voiceMode && full.trim()) speakText(full.trim());
+      const shouldSpeak = (voiceMode || autoplay) && full.trim() && assistantId != null;
+      if (shouldSpeak) void playMessageTts(assistantId!, full.trim());
       if (isNewConversation) void refreshConversations();
     } catch {
       if (assistantId == null) appendDelta("Tive um problema pra responder agora. Tenta de novo?");
@@ -543,9 +635,8 @@ function AssistantPage() {
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        {/* A barra inferior some aqui (o composer ocupa o rodapé), então a
-            saída fica no header. No desktop quem traz o voltar é a sidebar. */}
-        <HeaderBackButton onlyMobile />
+        {/* Voltar movido pra barra inferior (ao alcance do polegar direito).
+            No desktop a sidebar cuida da navegação. */}
         <span className="ember-glow grid h-10 w-10 place-items-center rounded-2xl bg-charcoal-800 text-ember">
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
         </span>
@@ -600,14 +691,35 @@ function AssistantPage() {
                     <ReactMarkdown>{m.text}</ReactMarkdown>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => speakText(m.text)}
-                  aria-label="Ouvir resposta"
-                  className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground active:scale-95"
-                >
-                  <Volume2 className="h-3.5 w-3.5" />
-                </button>
+                {(() => {
+                  const active = ttsMsgId === m.id;
+                  const st = active ? ttsState : "idle";
+                  const Icon = st === "loading" ? Loader2 : st === "playing" ? Pause : Play;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => playMessageTts(m.id, m.text)}
+                      aria-label={
+                        st === "loading"
+                          ? "Carregando áudio"
+                          : st === "playing"
+                            ? "Pausar leitura"
+                            : "Ouvir resposta"
+                      }
+                      aria-pressed={active}
+                      className={
+                        "mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg border active:scale-95 " +
+                        (active
+                          ? "border-ember bg-ember/10 text-ember"
+                          : "border-border text-muted-foreground hover:text-foreground")
+                      }
+                    >
+                      <Icon
+                        className={"h-3.5 w-3.5 " + (st === "loading" ? "animate-spin" : "")}
+                      />
+                    </button>
+                  );
+                })()}
               </div>
             );
           }
@@ -638,28 +750,84 @@ function AssistantPage() {
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        {/* Controles ao alcance do polegar (item 3): nova, histórico, config. */}
-        <div className="mb-2 flex items-center justify-center gap-2">
+        {/* Preview ao vivo da transcrição: 2 linhas, corta pela direita, mostra
+            sempre a palavra mais recente. Só aparece quando o mic está aberto
+            (item 4). */}
+        {listening && sttInterim ? (
+          <div
+            aria-live="polite"
+            className="mb-2 rounded-lg border border-ember/30 bg-ember/5 px-3 py-1.5 font-mono text-[11px] leading-snug text-ember"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              direction: "rtl",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ direction: "ltr", unicodeBidi: "plaintext" }}>{sttInterim}</span>
+          </div>
+        ) : null}
+        {/* Barra de controles: voltar + nova + histórico + config + autoplay.
+            Voltar movido pra cá pra ficar ao alcance do polegar (item 2). */}
+        <div className="mb-2 flex items-center justify-center gap-1.5">
+          {canGoBack ? (
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="Voltar"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-charcoal-900/60 text-muted-foreground hover:text-foreground active:scale-95"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={startNewConversation}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
           >
             <MessageSquarePlus className="h-3.5 w-3.5" /> NOVA
           </button>
           <button
             type="button"
             onClick={() => setConvOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
           >
-            <History className="h-3.5 w-3.5" /> HISTÓRICO
+            <History className="h-3.5 w-3.5" /> HIST.
           </button>
           <button
             type="button"
             onClick={() => setCfgOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" /> AJUSTAR
+          </button>
+          {/* Autoplay do TTS (item 3): fluidez pra quem quer conversar por voz,
+              opcional pra quem precisa manter só texto. */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !autoplay;
+              setAutoplay(next);
+              try {
+                localStorage.setItem("wimi.tts.autoplay", next ? "1" : "0");
+              } catch {
+                /* noop */
+              }
+              if (!next) stopCurrentTts();
+            }}
+            aria-pressed={autoplay}
+            aria-label={autoplay ? "Desligar autoplay da voz" : "Ligar autoplay da voz"}
+            className={
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] active:scale-95 " +
+              (autoplay
+                ? "border-ember bg-ember/15 text-ember"
+                : "border-border bg-charcoal-900/60 text-muted-foreground hover:text-foreground")
+            }
+          >
+            {autoplay ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            AUTO
           </button>
         </div>
         {pendingImages.length ? (
@@ -717,6 +885,25 @@ function AssistantPage() {
           >
             {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </button>
+          {/* Mute do mic (item 4): pausa a captura sem encerrar a sessão. Só
+              aparece quando o mic está ativo — evita ruído visual. */}
+          {listening || micMuted ? (
+            <button
+              type="button"
+              onClick={toggleMicMute}
+              disabled={thinking}
+              aria-pressed={micMuted}
+              aria-label={micMuted ? "Retomar gravação" : "Silenciar temporariamente"}
+              className={
+                "grid h-11 w-11 shrink-0 place-items-center rounded-xl border active:scale-95 " +
+                (micMuted
+                  ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                  : "border-border text-muted-foreground hover:text-foreground")
+              }
+            >
+              {micMuted ? <VolumeX className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+            </button>
+          ) : null}
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
