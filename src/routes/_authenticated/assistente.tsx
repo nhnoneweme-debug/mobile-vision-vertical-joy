@@ -519,7 +519,8 @@ function AssistantPage() {
       if (sawError && assistantId == null) {
         appendDelta("Tive um problema pra responder agora. Tenta de novo?");
       }
-      if (voiceMode && full.trim()) speakText(full.trim());
+      const shouldSpeak = (voiceMode || autoplay) && full.trim() && assistantId != null;
+      if (shouldSpeak) void playMessageTts(assistantId!, full.trim());
       if (isNewConversation) void refreshConversations();
     } catch {
       if (assistantId == null) appendDelta("Tive um problema pra responder agora. Tenta de novo?");
