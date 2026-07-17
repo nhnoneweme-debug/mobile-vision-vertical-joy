@@ -681,11 +681,35 @@ function AssistantPage() {
                     <ReactMarkdown>{m.text}</ReactMarkdown>
                   </div>
                 </div>
-                <TtsButton
-                  active={ttsMsgId === m.id}
-                  state={ttsMsgId === m.id ? ttsState : "idle"}
-                  onClick={() => playMessageTts(m.id, m.text)}
-                />
+                {(() => {
+                  const active = ttsMsgId === m.id;
+                  const st = active ? ttsState : "idle";
+                  const Icon = st === "loading" ? Loader2 : st === "playing" ? Pause : Play;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => playMessageTts(m.id, m.text)}
+                      aria-label={
+                        st === "loading"
+                          ? "Carregando áudio"
+                          : st === "playing"
+                            ? "Pausar leitura"
+                            : "Ouvir resposta"
+                      }
+                      aria-pressed={active}
+                      className={
+                        "mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg border active:scale-95 " +
+                        (active
+                          ? "border-ember bg-ember/10 text-ember"
+                          : "border-border text-muted-foreground hover:text-foreground")
+                      }
+                    >
+                      <Icon
+                        className={"h-3.5 w-3.5 " + (st === "loading" ? "animate-spin" : "")}
+                      />
+                    </button>
+                  );
+                })()}
               </div>
             );
           }
