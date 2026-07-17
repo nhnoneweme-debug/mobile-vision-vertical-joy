@@ -139,6 +139,16 @@ function AssistantPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
+  const { canGoBack, goBack } = useGoBack();
+
+  // Restaura preferência de autoplay do dispositivo (item 3).
+  useEffect(() => {
+    try {
+      setAutoplay(localStorage.getItem("wimi.tts.autoplay") === "1");
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   const {
     listening,
