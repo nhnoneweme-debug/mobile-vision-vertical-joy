@@ -716,28 +716,75 @@ function AssistantPage() {
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        {/* Controles ao alcance do polegar (item 3): nova, histórico, config. */}
-        <div className="mb-2 flex items-center justify-center gap-2">
+        {/* Preview ao vivo da transcrição: 2 linhas, corta pela direita, mostra
+            sempre a palavra mais recente. Só aparece quando o mic está aberto
+            (item 4). */}
+        {listening && sttInterim ? (
+          <div
+            aria-live="polite"
+            className="mb-2 rounded-lg border border-ember/30 bg-ember/5 px-3 py-1.5 font-mono text-[11px] leading-snug text-ember"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              direction: "rtl",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ direction: "ltr", unicodeBidi: "plaintext" }}>{sttInterim}</span>
+          </div>
+        ) : null}
+        {/* Barra de controles: voltar + nova + histórico + config + autoplay.
+            Voltar movido pra cá pra ficar ao alcance do polegar (item 2). */}
+        <div className="mb-2 flex items-center justify-center gap-1.5">
+          <BackChip />
           <button
             type="button"
             onClick={startNewConversation}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
           >
             <MessageSquarePlus className="h-3.5 w-3.5" /> NOVA
           </button>
           <button
             type="button"
             onClick={() => setConvOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
           >
-            <History className="h-3.5 w-3.5" /> HISTÓRICO
+            <History className="h-3.5 w-3.5" /> HIST.
           </button>
           <button
             type="button"
             onClick={() => setCfgOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-3 py-1.5 font-display text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground active:scale-95"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" /> AJUSTAR
+          </button>
+          {/* Autoplay do TTS (item 3): fluidez pra quem quer conversar por voz,
+              opcional pra quem precisa manter só texto. */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !autoplay;
+              setAutoplay(next);
+              try {
+                localStorage.setItem("wimi.tts.autoplay", next ? "1" : "0");
+              } catch {
+                /* noop */
+              }
+              if (!next) stopCurrentTts();
+            }}
+            aria-pressed={autoplay}
+            aria-label={autoplay ? "Desligar autoplay da voz" : "Ligar autoplay da voz"}
+            className={
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] active:scale-95 " +
+              (autoplay
+                ? "border-ember bg-ember/15 text-ember"
+                : "border-border bg-charcoal-900/60 text-muted-foreground hover:text-foreground")
+            }
+          >
+            {autoplay ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            AUTO
           </button>
         </div>
         {pendingImages.length ? (
