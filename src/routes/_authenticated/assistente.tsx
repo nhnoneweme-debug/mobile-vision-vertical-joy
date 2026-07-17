@@ -186,8 +186,49 @@ function AssistantPage() {
     startListening();
   }
 
-  async function speakText(text: string) {
+  function stopCurrentTts() {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch {
+        /* noop */
+      }
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeaking(false);
+    setTtsMsgId(null);
+  }
+
+  /**
+   * Toca o TTS da mensagem `msgId` com estado ao vivo (loading → playing).
+   * Se a mesma mensagem já está tocando, pausa; se está pausada, retoma;
+   * se outra está tocando, aborta e recomeça.
+   */
+  async function playMessageTts(msgId: number, text: string) {
     if (!text.trim()) return;
+    // Se já é a mensagem ativa, alterna play/pause.
+    if (ttsMsgId === msgId && audioRef.current) {
+      if (ttsState === "playing") {
+        audioRef.current.pause();
+        setTtsState("paused");
+      } else if (ttsState === "paused") {
+        audioRef.current.play().catch(() => stopCurrentTts());
+        setTtsState("playing");
+      }
+      return;
+    }
+    // Nova mensagem — cancela a anterior.
+    stopCurrentTts();
+    setTtsMsgId(msgId);
+    setTtsState("loading");
     try {
       const r = await fetch("/api/assistant-tts", {
         method: "POST",
@@ -197,27 +238,32 @@ function AssistantPage() {
         },
         body: JSON.stringify({ text, gender: settings.voice_gender }),
       });
-      if (r.ok) {
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onplay = () => setSpeaking(true);
-        audio.onended = () => {
-          setSpeaking(false);
-          URL.revokeObjectURL(url);
-        };
-        audio.onerror = () => {
-          setSpeaking(false);
-          URL.revokeObjectURL(url);
-          speakFallback(text);
-        };
-        audio.play().catch(() => speakFallback(text));
-        return;
-      }
+      if (!r.ok) throw new Error(String(r.status));
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onplay = () => {
+        setSpeaking(true);
+        setTtsState("playing");
+      };
+      audio.onpause = () => {
+        // `pause` também dispara ao terminar em alguns navegadores; `ended` cobre.
+        if (!audio.ended) setTtsState("paused");
+      };
+      audio.onended = () => {
+        setSpeaking(false);
+        stopCurrentTts();
+      };
+      audio.onerror = () => {
+        stopCurrentTts();
+        speakFallback(text, msgId);
+      };
+      await audio.play();
     } catch {
-      /* fallback abaixo */
+      speakFallback(text, msgId);
     }
-    speakFallback(text);
   }
 
   function pickPtBrVoice(gender: "feminina" | "masculina"): SpeechSynthesisVoice | null {
@@ -225,7 +271,6 @@ function AssistantPage() {
     const voices = window.speechSynthesis.getVoices();
     const ptbr = voices.filter((v) => /pt(-|_)?BR/i.test(v.lang) || /pt(-|_)?PT/i.test(v.lang));
     if (!ptbr.length) return null;
-    // Heurística por nome (browsers não expõem gênero na API).
     const femHints = /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
     const maleHints = /(male|homem|felipe|ricardo|daniel|paulo|joão|joao|diego|thiago|antonio)/i;
     const wanted = gender === "feminina" ? femHints : maleHints;
@@ -237,17 +282,32 @@ function AssistantPage() {
     );
   }
 
-  function speakFallback(text: string) {
-    if (!("speechSynthesis" in window)) return;
+  function speakFallback(text: string, msgId?: number) {
+    if (!("speechSynthesis" in window)) {
+      setTtsMsgId(null);
+      return;
+    }
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
     utter.rate = 1;
     const v = pickPtBrVoice(settings.voice_gender);
     if (v) utter.voice = v;
-    utter.onstart = () => setSpeaking(true);
-    utter.onend = () => setSpeaking(false);
-    utter.onerror = () => setSpeaking(false);
+    utter.onstart = () => {
+      setSpeaking(true);
+      if (msgId != null) {
+        setTtsMsgId(msgId);
+        setTtsState("playing");
+      }
+    };
+    utter.onend = () => {
+      setSpeaking(false);
+      setTtsMsgId(null);
+    };
+    utter.onerror = () => {
+      setSpeaking(false);
+      setTtsMsgId(null);
+    };
     window.speechSynthesis.speak(utter);
   }
 
