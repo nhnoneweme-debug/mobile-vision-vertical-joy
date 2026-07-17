@@ -3,9 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // Reconhecimento de fala (Web Speech API) em pt-BR, contínuo — a pessoa fala e
 // o texto final vai caindo no callback. Usado pelo chat da IA e pelos dumps.
 //
-// O navegador encerra a sessão sozinho depois de um tempo de silêncio; o
-// `wantedRef` guarda a intenção do usuário pra religar sem depender de closure
-// (ler o state dentro do onend pegaria o valor do render em que ligamos).
+// `mute()` pausa a captura sem encerrar a "sessão" lógica: o usuário pode
+// silenciar pra atender alguém e retomar sem perder o que já foi transcrito.
+// `interim` expõe o texto parcial pra UI mostrar o acompanhamento ao vivo.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Recognition = any;
@@ -20,18 +20,19 @@ function getSpeechRecognition(): Recognition | null {
 export function useSpeechToText(onFinalText: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [interim, setInterim] = useState("");
   const recRef = useRef<Recognition>(null);
   const wantedRef = useRef(false);
+  const mutedRef = useRef(false);
   const onFinalRef = useRef(onFinalText);
   onFinalRef.current = onFinalText;
 
-  // Só dá pra checar suporte no cliente (SSR não tem window).
   useEffect(() => {
     setSupported(!!getSpeechRecognition());
   }, []);
 
-  const stop = useCallback(() => {
-    wantedRef.current = false;
+  const stopRec = useCallback(() => {
     const rec = recRef.current;
     if (rec) {
       try {
@@ -41,10 +42,9 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
       }
       recRef.current = null;
     }
-    setListening(false);
   }, []);
 
-  const start = useCallback(() => {
+  const startRec = useCallback(() => {
     const SR = getSpeechRecognition();
     if (!SR || recRef.current) return false;
     const rec = new SR();
@@ -55,8 +55,9 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     rec.onend = () => {
       setListening(false);
       recRef.current = null;
-      // Religa se o usuário não mandou parar (silêncio encerra a sessão).
-      if (wantedRef.current) {
+      setInterim("");
+      // Religa se o usuário não mandou parar nem mutou (silêncio encerra a sessão).
+      if (wantedRef.current && !mutedRef.current) {
         try {
           rec.start();
           recRef.current = rec;
@@ -68,30 +69,67 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     rec.onerror = () => setListening(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (ev: any) => {
-      let transcript = "";
+      let finalText = "";
+      let interimText = "";
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript;
+        const r = ev.results[i];
+        if (r.isFinal) finalText += r[0].transcript;
+        else interimText += r[0].transcript;
       }
-      if (transcript.trim()) onFinalRef.current(transcript.trim());
+      setInterim(interimText.trim());
+      if (finalText.trim()) onFinalRef.current(finalText.trim());
     };
     try {
-      wantedRef.current = true;
       rec.start();
       recRef.current = rec;
       return true;
     } catch {
-      wantedRef.current = false;
       return false;
     }
   }, []);
+
+  const stop = useCallback(() => {
+    wantedRef.current = false;
+    mutedRef.current = false;
+    setMuted(false);
+    setInterim("");
+    stopRec();
+    setListening(false);
+  }, [stopRec]);
+
+  const start = useCallback(() => {
+    wantedRef.current = true;
+    mutedRef.current = false;
+    setMuted(false);
+    return startRec();
+  }, [startRec]);
+
+  const mute = useCallback(() => {
+    if (!wantedRef.current) return;
+    mutedRef.current = true;
+    setMuted(true);
+    setInterim("");
+    stopRec(); // pausa a captura; wantedRef segue true pra retomar
+  }, [stopRec]);
+
+  const unmute = useCallback(() => {
+    if (!wantedRef.current) return;
+    mutedRef.current = false;
+    setMuted(false);
+    startRec();
+  }, [startRec]);
 
   const toggle = useCallback(() => {
     if (wantedRef.current) stop();
     else start();
   }, [start, stop]);
 
-  // Não deixa o microfone aberto ao sair da tela.
+  const toggleMute = useCallback(() => {
+    if (mutedRef.current) unmute();
+    else mute();
+  }, [mute, unmute]);
+
   useEffect(() => stop, [stop]);
 
-  return { listening, supported, start, stop, toggle };
+  return { listening, supported, muted, interim, start, stop, toggle, mute, unmute, toggleMute };
 }
