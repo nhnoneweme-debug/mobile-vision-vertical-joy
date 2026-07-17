@@ -153,9 +153,7 @@ function AssistantPage() {
   const {
     listening,
     supported: sttSupported,
-    muted: micMuted,
     interim: sttInterim,
-    toggleMute: toggleMicMute,
     start: startListening,
     stop: stopListening,
   } = useSpeechToText((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
