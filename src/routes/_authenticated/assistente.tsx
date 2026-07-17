@@ -772,7 +772,16 @@ function AssistantPage() {
         {/* Barra de controles: voltar + nova + histórico + config + autoplay.
             Voltar movido pra cá pra ficar ao alcance do polegar (item 2). */}
         <div className="mb-2 flex items-center justify-center gap-1.5">
-          <BackChip />
+          {canGoBack ? (
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="Voltar"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-charcoal-900/60 text-muted-foreground hover:text-foreground active:scale-95"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={startNewConversation}
