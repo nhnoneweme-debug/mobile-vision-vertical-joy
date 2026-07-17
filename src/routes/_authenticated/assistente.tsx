@@ -885,6 +885,25 @@ function AssistantPage() {
           >
             {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </button>
+          {/* Mute do mic (item 4): pausa a captura sem encerrar a sessão. Só
+              aparece quando o mic está ativo — evita ruído visual. */}
+          {listening || micMuted ? (
+            <button
+              type="button"
+              onClick={toggleMicMute}
+              disabled={thinking}
+              aria-pressed={micMuted}
+              aria-label={micMuted ? "Retomar gravação" : "Silenciar temporariamente"}
+              className={
+                "grid h-11 w-11 shrink-0 place-items-center rounded-xl border active:scale-95 " +
+                (micMuted
+                  ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                  : "border-border text-muted-foreground hover:text-foreground")
+              }
+            >
+              {micMuted ? <VolumeX className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+            </button>
+          ) : null}
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
