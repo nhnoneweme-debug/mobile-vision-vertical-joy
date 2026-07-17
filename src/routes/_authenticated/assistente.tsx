@@ -128,11 +128,24 @@ function AssistantPage() {
   const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  // Autoplay do TTS: quando ligado, toca a resposta assim que fica pronta.
+  // Guardado em localStorage — decisão do usuário no dispositivo, sem migration.
+  const [autoplay, setAutoplay] = useState(false);
+  // Estado do TTS por mensagem: idle | loading | playing | paused | error.
+  // Apenas UMA mensagem toca por vez; ao trocar, aborta a anterior.
+  type TtsState = "loading" | "playing" | "paused";
+  const [ttsMsgId, setTtsMsgId] = useState<number | null>(null);
+  const [ttsState, setTtsState] = useState<TtsState>("loading");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
 
   const {
     listening,
     supported: sttSupported,
+    muted: micMuted,
+    interim: sttInterim,
+    toggleMute: toggleMicMute,
     start: startListening,
     stop: stopListening,
   } = useSpeechToText((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
