@@ -712,8 +712,17 @@ function AssistantPage() {
           <h1 className="truncate font-display text-xl leading-none tracking-wide text-foreground">
             {assistantName(settings).toUpperCase()}
           </h1>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            Inteligência Digital
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+            <span className="truncate">Inteligência Digital</span>
+            {moment ? (
+              <span
+                title={`Fuso: ${moment.timezone}`}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-charcoal-800/70 px-1.5 py-0.5 text-[9px] font-display uppercase tracking-[0.15em] text-muted-foreground"
+              >
+                <span aria-hidden>⏱</span>
+                <span>{formatMomentLabel(moment)}</span>
+              </span>
+            ) : null}
             {voiceMode ? (
               <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-ember/15 px-1.5 py-0.5 text-[9px] font-display tracking-[0.15em] text-ember">
                 {listening ? "🎙 OUVINDO" : speaking ? "🔊 FALANDO" : "🎤 VOZ"}
