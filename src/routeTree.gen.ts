@@ -42,6 +42,7 @@ import { Route as AuthenticatedJornadaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedHabitosRouteImport } from './routes/_authenticated/habitos'
+import { Route as AuthenticatedExecutarRouteImport } from './routes/_authenticated/executar'
 import { Route as AuthenticatedDormirRouteImport } from './routes/_authenticated/dormir'
 import { Route as AuthenticatedDespertarRouteImport } from './routes/_authenticated/despertar'
 import { Route as AuthenticatedDesafiosRouteImport } from './routes/_authenticated/desafios'
@@ -230,6 +231,11 @@ const AuthenticatedHabitosRoute = AuthenticatedHabitosRouteImport.update({
   path: '/habitos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedExecutarRoute = AuthenticatedExecutarRouteImport.update({
+  id: '/executar',
+  path: '/executar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDormirRoute = AuthenticatedDormirRouteImport.update({
   id: '/dormir',
   path: '/dormir',
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/desafios': typeof AuthenticatedDesafiosRoute
   '/despertar': typeof AuthenticatedDespertarRoute
   '/dormir': typeof AuthenticatedDormirRoute
+  '/executar': typeof AuthenticatedExecutarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/home': typeof AuthenticatedHomeRoute
   '/ia': typeof AuthenticatedIaRoute
@@ -396,6 +403,7 @@ export interface FileRoutesByTo {
   '/desafios': typeof AuthenticatedDesafiosRoute
   '/despertar': typeof AuthenticatedDespertarRoute
   '/dormir': typeof AuthenticatedDormirRoute
+  '/executar': typeof AuthenticatedExecutarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
   '/home': typeof AuthenticatedHomeRoute
   '/ia': typeof AuthenticatedIaRoute
@@ -450,6 +458,7 @@ export interface FileRoutesById {
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
   '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
   '/_authenticated/dormir': typeof AuthenticatedDormirRoute
+  '/_authenticated/executar': typeof AuthenticatedExecutarRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
@@ -504,6 +513,7 @@ export interface FileRouteTypes {
     | '/desafios'
     | '/despertar'
     | '/dormir'
+    | '/executar'
     | '/habitos'
     | '/home'
     | '/ia'
@@ -556,6 +566,7 @@ export interface FileRouteTypes {
     | '/desafios'
     | '/despertar'
     | '/dormir'
+    | '/executar'
     | '/habitos'
     | '/home'
     | '/ia'
@@ -609,6 +620,7 @@ export interface FileRouteTypes {
     | '/_authenticated/desafios'
     | '/_authenticated/despertar'
     | '/_authenticated/dormir'
+    | '/_authenticated/executar'
     | '/_authenticated/habitos'
     | '/_authenticated/home'
     | '/_authenticated/ia'
@@ -901,6 +913,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHabitosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/executar': {
+      id: '/_authenticated/executar'
+      path: '/executar'
+      fullPath: '/executar'
+      preLoaderRoute: typeof AuthenticatedExecutarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dormir': {
       id: '/_authenticated/dormir'
       path: '/dormir'
@@ -1063,6 +1082,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
   AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
   AuthenticatedDormirRoute: typeof AuthenticatedDormirRoute
+  AuthenticatedExecutarRoute: typeof AuthenticatedExecutarRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
@@ -1096,6 +1116,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
   AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
   AuthenticatedDormirRoute: AuthenticatedDormirRoute,
+  AuthenticatedExecutarRoute: AuthenticatedExecutarRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,

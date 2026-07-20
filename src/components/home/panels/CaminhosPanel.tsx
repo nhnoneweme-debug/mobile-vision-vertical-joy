@@ -32,10 +32,9 @@ export function CaminhosPanel({ onOpenAgenda }: { onOpenAgenda: () => void }) {
     {
       key: "executar",
       label: "Executar",
-      hint: "Foque no que importa hoje",
+      hint: "Kanban do dia com a WiMi",
       icon: ListChecks,
-      to: "/assistente",
-      search: { seed: "executar" },
+      to: "/executar",
     },
     {
       key: "refletir",
