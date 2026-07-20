@@ -12,10 +12,11 @@ import {
 } from "@/lib/ai-guardrails.server";
 import { assistantName } from "@/lib/assistant-name";
 import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
+import { effortProviderOptions, validateEffort } from "@/lib/ai-effort";
 
 type ImageAttachment = { base64: string; mediaType: string };
 type InMsg = { role: "user" | "assistant"; text: string; images?: ImageAttachment[] };
-type Body = { messages?: InMsg[]; conversation_id?: string };
+type Body = { messages?: InMsg[]; conversation_id?: string; effort?: unknown };
 
 type ChatSettings = {
   persona: string;
