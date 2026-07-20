@@ -117,6 +117,7 @@ export const Route = createFileRoute("/api/chat")({
 
         const body = (await request.json()) as Body;
         const incoming = body.messages ?? [];
+        const effort = validateEffort(body.effort);
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
         const lastUserTrunc = lastUser ? truncateUserMessage(lastUser) : undefined;
 
