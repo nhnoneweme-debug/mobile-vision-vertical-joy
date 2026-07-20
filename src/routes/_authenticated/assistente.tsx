@@ -66,6 +66,8 @@ import type { Proposal } from "@/routes/api/assistant";
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
 // que carregam (o fallback é "WiMi").
 const GREETING = assistantGreeting(ASSISTANT_NAME_FALLBACK);
+const SILENT_AUDIO_SRC =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQQAAAAAAA==";
 
 export const Route = createFileRoute("/_authenticated/assistente")({
   head: () => ({ meta: [{ title: `${ASSISTANT_NAME_FALLBACK} — Inteligência Digital` }] }),
@@ -313,6 +315,26 @@ function AssistantPage() {
     setTtsMsgId(null);
   }
 
+  async function unlockAudioPlayback() {
+    const audio = hiddenAudioRef.current;
+    if (!audio) return;
+    try {
+      const previousSrc = audio.currentSrc || audio.src;
+      audio.muted = true;
+      audio.volume = 0;
+      audio.src = SILENT_AUDIO_SRC;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+      audio.volume = 1;
+      if (previousSrc && previousSrc !== SILENT_AUDIO_SRC) audio.src = previousSrc;
+    } catch {
+      audio.muted = false;
+      audio.volume = 1;
+    }
+  }
+
   /**
    * Prepara texto para leitura em voz: remove blocos/inlines de código,
    * links markdown, URLs cruas e símbolos de markdown. Sem isso o TTS lê
@@ -343,11 +365,13 @@ function AssistantPage() {
         audioRef.current.pause();
         setTtsState("paused");
       } else if (ttsState === "paused") {
+        void unlockAudioPlayback();
         audioRef.current.play().catch(() => stopCurrentTts());
         setTtsState("playing");
       }
       return;
     }
+    void unlockAudioPlayback();
     stopCurrentTts();
     const gen = ++ttsGenRef.current;
     const cleaned = sanitizeForTts(text);
@@ -977,15 +1001,7 @@ function AssistantPage() {
                 // Destrava a política de autoplay do navegador tocando um MP3
                 // vazio dentro do gesture. Sem isso, quando o `send` termina
                 // segundos depois, `audio.play()` é rejeitada silenciosamente.
-                try {
-                  const a = new Audio(
-                    "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOFwAg8XYQAIAEJhACIAgEAAg",
-                  );
-                  a.volume = 0;
-                  void a.play().catch(() => {});
-                } catch {
-                  /* noop */
-                }
+                void unlockAudioPlayback();
                 toast.success("Autoplay ligado — vou ler as respostas em voz.");
               }
             }}
