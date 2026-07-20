@@ -5,7 +5,7 @@ import { MobileShell } from "@/components/shell/MobileShell";
 import { SessionCard } from "@/components/treino/HistoryList";
 import { getWorkoutHistory, type HistoryEntry } from "@/lib/workouts.functions";
 
-export const Route = createFileRoute("/_authenticated/treino/historico/$sessionId")({
+export const Route = createFileRoute("/_authenticated/historico/$sessionId")({
   component: SessionDetailPage,
   errorComponent: ({ error }) => (
     <MobileShell>
