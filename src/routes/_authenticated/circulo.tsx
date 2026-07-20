@@ -504,7 +504,7 @@ function ChallengeList({
         {items.map((c) => (
           <Link
             key={c.id}
-            to="/circulo/desafio/$id"
+            to="/desafio/$id"
             params={{ id: c.id }}
             className={
               "flex items-center gap-3 rounded-2xl border p-3 " +

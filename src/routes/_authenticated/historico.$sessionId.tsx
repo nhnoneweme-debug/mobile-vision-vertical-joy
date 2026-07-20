@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/historico/$sessionId")({
 });
 
 function SessionDetailPage() {
-  const { sessionId } = useParams({ from: "/_authenticated/treino/historico/$sessionId" });
+  const { sessionId } = useParams({ from: "/_authenticated/historico/$sessionId" });
   const fn = useServerFn(getWorkoutHistory);
   const [entry, setEntry] = useState<HistoryEntry | null | undefined>(undefined);
 
