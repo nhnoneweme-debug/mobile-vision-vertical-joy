@@ -16,9 +16,11 @@ export type AvatarData = {
 type Props = {
   value: AvatarData;
   onChange: (next: AvatarData) => void;
+  phoneError?: string | null;
 };
 
-export function AvatarStep({ value, onChange }: Props) {
+export function AvatarStep({ value, onChange, phoneError }: Props) {
+
   const set = <K extends keyof AvatarData>(k: K, v: AvatarData[K]) =>
     onChange({ ...value, [k]: v });
 
