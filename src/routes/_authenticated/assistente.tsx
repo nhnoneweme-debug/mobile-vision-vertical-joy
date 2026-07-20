@@ -533,6 +533,7 @@ function AssistantPage() {
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...clientMomentHeaders(),
         },
         body: JSON.stringify({
           messages: [...convo, { role: "user", text: t, ...(imgs.length ? { images: imgs } : {}) }],
