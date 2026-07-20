@@ -69,8 +69,24 @@ const GREETING = assistantGreeting(ASSISTANT_NAME_FALLBACK);
 
 export const Route = createFileRoute("/_authenticated/assistente")({
   head: () => ({ meta: [{ title: `${ASSISTANT_NAME_FALLBACK} — Inteligência Digital` }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    seed: typeof s.seed === "string" ? s.seed : undefined,
+  }),
   component: AssistantPage,
 });
+
+// Prompts iniciais para cada "caminho" do estúdio da Home. Cada seed gera um
+// texto pronto no composer para que o usuário só ajuste e envie.
+const SEED_PROMPTS: Record<string, string> = {
+  planejar:
+    "Vamos planejar juntos. Quero estruturar minha vida de forma holística — comece me perguntando qual área devo priorizar hoje (trabalho, emocional, espiritual, físico ou relacionamentos) e me guie passo a passo.",
+  executar:
+    "Preciso executar. Olhe minhas metas e missões agendadas de hoje, monte um plano focado para as próximas horas e me diga por onde começar.",
+  refletir:
+    "Quero refletir. Use meu diário, sonhos e registros recentes como base e conduza uma reflexão profunda sobre quem sou, onde estou e para onde quero ir.",
+  descansar:
+    "Quero descansar melhor. Primeiro me ajude a mapear o que é descanso pra mim, depois monte rituais e pausas que caibam na minha rotina.",
+};
 
 type ImageAttachment = { base64: string; mediaType: string };
 type ProposalMsg = {
