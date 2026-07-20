@@ -638,10 +638,7 @@ function AgendaPage() {
                         <button
                           key={m.id}
                           type="button"
-                          onClick={() => {
-                            setAnchor(d);
-                            setView("dia");
-                          }}
+                          onClick={() => setDetailMission(m)}
                           className={
                             "absolute left-0.5 right-0.5 overflow-hidden rounded-md px-1 py-0.5 text-left active:scale-[0.98] " +
                             (m.done_today
