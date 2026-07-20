@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { HUD } from "@/components/map/HUD";
-import { MonthGlance } from "@/components/home/MonthGlance";
+import { HomeStudio } from "@/components/home/HomeStudio";
 import { DumpBanner } from "@/components/home/DumpBanner";
 import { HabitTrackerStrip } from "@/components/home/HabitTrackerStrip";
 import { TrackingShortcuts } from "@/components/home/TrackingShortcuts";
@@ -115,7 +115,7 @@ function HomePage() {
 
       <DumpBanner />
 
-      <MonthGlance marked={marked} activitiesByWeekday={activitiesByWeekday} />
+      <HomeStudio marked={marked} activitiesByWeekday={activitiesByWeekday} />
 
       {userId && <HabitTrackerStrip userId={userId} />}
 
