@@ -137,10 +137,21 @@ function PerfilPage() {
             <div className="ember-glow grid h-16 w-16 place-items-center rounded-2xl bg-charcoal-900">
               <span className="text-3xl">{meta.emblem}</span>
             </div>
-            <div className="min-w-0">
-              <h2 className="truncate font-display text-2xl leading-none tracking-wide text-foreground">
-                {profile?.display_name ?? "Viajante"}
-              </h2>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="truncate font-display text-2xl leading-none tracking-wide text-foreground">
+                  {profile?.display_name ?? "Viajante"}
+                </h2>
+                <EditNameDialog
+                  userId={userId}
+                  currentName={profile?.display_name ?? ""}
+                  onSaved={(newName) =>
+                    setProfile((prev) =>
+                      prev ? { ...prev, display_name: newName } : prev,
+                    )
+                  }
+                />
+              </div>
               <p className="mt-1 font-display text-[10px] tracking-[0.3em] text-ember">
                 CLASSE · {meta.name.toUpperCase()}
               </p>
