@@ -13,7 +13,21 @@ import {
 } from "@/lib/ai-guardrails.server";
 import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
-type Body = { messages?: UIMessage[] };
+type Effort = "low" | "medium" | "high";
+type Body = { messages?: UIMessage[]; effort?: unknown };
+
+function validateEffort(v: unknown): Effort {
+  return v === "low" || v === "medium" || v === "high" ? v : "medium";
+}
+
+function effortProviderOptions(effort: Effort) {
+  // O provider é openai-compatible ("openai" direto ou "lovable" gateway).
+  // Enviar em ambos garante que o parâmetro chega ao backend correto.
+  return {
+    openai: { reasoningEffort: effort },
+    lovable: { reasoningEffort: effort },
+  } as const;
+}
 
 function uiMessageToText(m: UIMessage): string {
   return m.parts
@@ -50,6 +64,7 @@ export const Route = createFileRoute("/api/chat")({
           }
           const devBody = (await request.json()) as Body;
           const devIncoming = devBody.messages ?? [];
+          const devEffort = validateEffort(devBody.effort);
           const devMoment = readClientMoment(request);
           const devSys = [
             CRISIS_CLAUSE,
@@ -68,6 +83,7 @@ export const Route = createFileRoute("/api/chat")({
             system: devSys,
             messages: await convertToModelMessages(devIncoming.map(truncateUserMessage)),
             maxOutputTokens: MAX_OUTPUT_TOKENS,
+            providerOptions: effortProviderOptions(devEffort),
           });
           return devResult.toUIMessageStreamResponse({ originalMessages: devIncoming });
         }
@@ -101,6 +117,7 @@ export const Route = createFileRoute("/api/chat")({
 
         const body = (await request.json()) as Body;
         const incoming = body.messages ?? [];
+        const effort = validateEffort(body.effort);
         const lastUser = [...incoming].reverse().find((m) => m.role === "user");
         const lastUserTrunc = lastUser ? truncateUserMessage(lastUser) : undefined;
 
@@ -320,6 +337,7 @@ export const Route = createFileRoute("/api/chat")({
           system: sys,
           messages: await convertToModelMessages(merged),
           maxOutputTokens: MAX_OUTPUT_TOKENS,
+          providerOptions: effortProviderOptions(effort),
         });
 
         return result.toUIMessageStreamResponse({
