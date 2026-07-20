@@ -383,6 +383,7 @@ function AgendaPage() {
   const [view, setView] = useState<View>("dia");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [showForm, setShowForm] = useState(false);
+  const [detailMission, setDetailMission] = useState<UserMissionWithMeta | null>(null);
 
   const reload = useCallback(async (uid: string) => {
     try {
