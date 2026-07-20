@@ -1038,6 +1038,44 @@ function AssistantPage() {
             AUTO
           </button>
         </div>
+        {/* Nível de raciocínio da IA — vale para a PRÓXIMA mensagem. */}
+        <div
+          role="radiogroup"
+          aria-label="Nível de raciocínio"
+          className="mb-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-charcoal-800/60 p-1"
+        >
+          {(
+            [
+              { id: "low", label: "Rápido", Icon: Zap },
+              { id: "medium", label: "Equilibrado", Icon: Scale },
+              { id: "high", label: "Profundo", Icon: Brain },
+            ] as Array<{ id: Effort; label: string; Icon: typeof Zap }>
+          ).map(({ id, label, Icon }) => {
+            const active = effort === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => {
+                  setEffort(id);
+                  effortRef.current = id;
+                  saveEffort(id);
+                }}
+                className={
+                  "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition " +
+                  (active
+                    ? "bg-ember text-charcoal-900 shadow"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
         {pendingImages.length ? (
           <div className="mb-2 flex gap-2 overflow-x-auto">
             {pendingImages.map((img, i) => (
