@@ -1119,6 +1119,25 @@ function AssistantPage() {
                 { v: "masculina", label: "Masculina" },
               ]}
             />
+            <SegGroup
+              label="EXPANSÃO DO CAMPO"
+              value={expandMode}
+              onChange={(v) => {
+                const next = v === "auto" ? "auto" : "manual";
+                setExpandMode(next);
+                try {
+                  localStorage.setItem("wimi.composer.expandMode", next);
+                } catch {
+                  /* noop */
+                }
+                // No modo manual, recolhe imediatamente se estava aberto por foco.
+                if (next === "manual") setComposerExpanded(false);
+              }}
+              options={[
+                { v: "manual", label: "Manual" },
+                { v: "auto", label: "Automática" },
+              ]}
+            />
             <div>
               <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
                 INSTRUÇÕES PERSONALIZADAS
