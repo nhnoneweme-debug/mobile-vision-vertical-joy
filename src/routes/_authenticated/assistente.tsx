@@ -346,7 +346,7 @@ function AssistantPage() {
       return;
     }
     window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
+    const utter = new SpeechSynthesisUtterance(sanitizeForTts(text));
     utter.lang = "pt-BR";
     utter.rate = 1;
     const v = pickPtBrVoice(settings.voice_gender);
