@@ -107,6 +107,7 @@ export const Route = createFileRoute("/api/sleep-chat")({
                 "6) Hora de dormir prevista (use logSleep).",
               ];
 
+        const sleepMoment = readClientMoment(request);
         const sys = [
           CRISIS_CLAUSE,
           "",
@@ -114,6 +115,8 @@ export const Route = createFileRoute("/api/sleep-chat")({
           "Sempre que detectar algo registrável (hábito completado, missão futura, meta, ideia), chame a tool correspondente — sem pedir confirmação pra cada item, só resuma no fim.",
           "O texto pode vir de transcrição de voz: tolere frases quebradas, repetição e erro de reconhecimento — entenda a intenção e não corrija a pessoa.",
           "Respostas curtas (1-3 linhas), pt-BR, markdown leve, tom mentor próximo.",
+          "",
+          formatMomentBlock(sleepMoment),
           "",
           DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"} | Classe: ${profile?.behavioral_class ?? "—"} | Streak: ${profile?.streak ?? 0}`,
