@@ -97,6 +97,7 @@ type ProposalMsg = {
   proposal: Proposal;
   status: "pending" | "done" | "cancel";
   cta?: { to: string; label: string };
+  ctas?: { to: string; label: string }[];
 };
 type Msg =
   | { id: number; role: "assistant"; text: string }
@@ -734,7 +735,13 @@ function AssistantPage() {
         undoRef.current[msg.id] = async () => {
           await archiveMission(m.id);
         };
-        patchProposal(msg.id, { status: "done", cta: { to: "/agenda", label: "Ver na Agenda" } });
+        patchProposal(msg.id, {
+          status: "done",
+          ctas: [
+            { to: "/agenda", label: "Ver na Agenda" },
+            { to: "/executar", label: "Executar agora" },
+          ],
+        });
       } else if (p.kind === "treino") {
         const days = p.data.dias.map((d) => ({
           id: uid(),
@@ -1448,17 +1455,18 @@ function ProposalCard({
             </div>
           </>
         ) : msg.status === "done" ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <span className="font-display text-[11px] tracking-[0.2em] text-ember">✓ CRIADO</span>
-              {msg.cta && (
+              {(msg.ctas ?? (msg.cta ? [msg.cta] : [])).map((cta) => (
                 <Link
-                  to={msg.cta.to}
+                  key={`${cta.to}:${cta.label}`}
+                  to={cta.to}
                   className="inline-flex items-center gap-1 font-display text-[11px] tracking-[0.15em] text-muted-foreground"
                 >
-                  {msg.cta.label.toUpperCase()} <ArrowRight className="h-3.5 w-3.5" />
+                  {cta.label.toUpperCase()} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
-              )}
+              ))}
             </div>
             <button
               type="button"

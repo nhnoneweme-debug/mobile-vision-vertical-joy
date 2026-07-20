@@ -22,7 +22,9 @@ export type UserMission = {
 
 export type UserMissionWithMeta = UserMission & {
   done_today: boolean;
+  skipped_today: boolean;
   log_id: string | null;
+  skipped_log_id: string | null;
   week_done: number;
 };
 
@@ -81,36 +83,64 @@ export async function listMissions(userId: string): Promise<UserMissionWithMeta[
     .gte("log_date", wstart);
 
   return missions.map((m) => {
-    const mlogs = (logs ?? []).filter((l) => l.mission_id === m.id && l.done);
+    const allLogs = (logs ?? []).filter((l) => l.mission_id === m.id);
+    const mlogs = allLogs.filter((l) => l.done);
     const todayLog = mlogs.find((l) => l.log_date === today);
+    const todaySkipped = allLogs.find((l) => l.log_date === today && !l.done);
     return {
       ...m,
       done_today: Boolean(todayLog),
+      skipped_today: Boolean(todaySkipped),
       log_id: todayLog?.id ?? null,
+      skipped_log_id: todaySkipped?.id ?? null,
       week_done: mlogs.length,
     };
   });
+}
+
+export async function clearMissionToday(m: UserMissionWithMeta, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("user_mission_logs")
+    .delete()
+    .eq("user_id", userId)
+    .eq("mission_id", m.id)
+    .eq("log_date", todayISO());
+  if (error) throw error;
+}
+
+export async function markMissionToday(
+  m: UserMissionWithMeta,
+  userId: string,
+  done: boolean,
+): Promise<void> {
+  await supabase
+    .from("user_mission_logs")
+    .delete()
+    .eq("user_id", userId)
+    .eq("mission_id", m.id)
+    .eq("log_date", todayISO());
+
+  const { error } = await supabase.from("user_mission_logs").insert({
+    user_id: userId,
+    mission_id: m.id,
+    log_date: todayISO(),
+    done,
+  });
+  if (error && error.code !== "23505") throw error;
+  if (done) supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
 }
 
 export async function toggleMissionToday(
   m: UserMissionWithMeta,
   userId: string,
 ): Promise<void> {
-  if (m.done_today && m.log_id) {
-    const { error } = await supabase.from("user_mission_logs").delete().eq("id", m.log_id);
-    if (error) throw error;
+  if (m.done_today || m.skipped_today) {
+    await clearMissionToday(m, userId);
     // Roll back XP awarded by the trigger
     await supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
     return;
   }
-  const { error } = await supabase.from("user_mission_logs").insert({
-    user_id: userId,
-    mission_id: m.id,
-    log_date: todayISO(),
-    done: true,
-  });
-  if (error) throw error;
-  supabase.rpc("check_perk_unlocks").then(() => {}, () => {});
+  await markMissionToday(m, userId, true);
 }
 
 export async function createMission(userId: string, input: MissionInput): Promise<UserMission> {
