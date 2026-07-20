@@ -919,8 +919,8 @@ function AssistantPage() {
               placeholder={listening ? "Estou ouvindo…" : "Fala comigo…"}
               className={
                 composerExpanded
-                  ? "absolute bottom-0 left-0 right-0 z-10 max-h-[40vh] w-full resize-none rounded-xl border border-ember/60 bg-charcoal-800 px-3 py-2.5 pr-10 text-foreground shadow-2xl outline-none placeholder:text-muted-foreground focus:border-ember/60"
-                  : "max-h-28 w-full resize-none rounded-xl border border-input bg-charcoal-800 px-3 py-2.5 pr-10 text-foreground outline-none placeholder:text-muted-foreground focus:border-ember/60"
+                  ? "absolute bottom-0 left-0 right-0 z-10 max-h-[40vh] w-full resize-none rounded-xl border border-ember/60 bg-charcoal-800 px-3 py-2.5 pl-10 text-foreground shadow-2xl outline-none placeholder:text-muted-foreground focus:border-ember/60"
+                  : "max-h-28 w-full resize-none rounded-xl border border-input bg-charcoal-800 px-3 py-2.5 pl-10 text-foreground outline-none placeholder:text-muted-foreground focus:border-ember/60"
               }
             />
             <button
@@ -928,7 +928,7 @@ function AssistantPage() {
               onClick={() => setComposerExpanded((v) => !v)}
               aria-pressed={composerExpanded}
               aria-label={composerExpanded ? "Reduzir campo de texto" : "Expandir campo de texto"}
-              className="absolute right-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-charcoal-700 hover:text-foreground active:scale-95"
+              className="absolute left-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-charcoal-700 hover:text-foreground active:scale-95"
             >
               {composerExpanded ? (
                 <Minimize2 className="h-3.5 w-3.5" />
