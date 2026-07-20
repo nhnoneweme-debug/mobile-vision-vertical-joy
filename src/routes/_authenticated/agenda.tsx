@@ -841,6 +841,7 @@ function AgendaPage() {
       </Link>
 
       <div className="h-24" />
+      <MissionDetailSheet mission={detailMission} onClose={() => setDetailMission(null)} />
     </MobileShell>
   );
 }
