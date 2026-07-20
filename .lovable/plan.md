@@ -1,64 +1,82 @@
-# Home Studio — Painel "Caminhos do Mentor"
+# Despertar Inteligente + Ponte para Execução
 
-## Visão
+Fluxo unificado que a WiMi conduz do alarme até o painel de execução:
 
-Transformar a Home em uma superfície configurável ("Estúdio Interno") onde o usuário escolhe qual painel central quer ver. Primeiro painel entregue: **Caminhos**, um guia com 6 rotas que orientam a jornada holística com a WiMi como mentora.
+```text
+[Alarme dispara] → [Ringing UI + áudio + vibração]
+      ↓ snooze (5/10/15) ─── volta a tocar
+      ↓ "acordei"
+[Registro rápido de sonho/pesadelo] (pode pular)
+      ↓
+[Planejamento do dia]
+   ├── já existe plano → confirma e vai p/ execução
+   └── vazio → WiMi propõe (usa /assistente seed=planejar)
+      ↓
+[/executar em modo painel]
+   Colunas: A Fazer • Agora • Concluído
+   Cada card mostra planejado × executado (hora real, notas)
+```
 
-Os caminhos:
-- **Planejar** — abre a IA com prompt-seed de planejamento holístico
-- **Executar** — kanban simples dos planos ativos, puxando das metas/scheduled quests
-- **Refletir** — abre reflexão guiada com base em journal, dreams e logs
-- **Descansar** — mapeia + registra descanso pessoal (rituais, sono, pausas)
-- **Agenda** — mostra a agenda/calendário atual embutido no painel
-- **Grupos** — família, amigos, relacionamentos com análise cruzada
+## Escopo (só o que falta / novo)
 
-## Escopo desta entrega (v1)
+Muito da base já existe (`wake_alarms`, `wake_sessions`, `dream_logs`, `day_blocks`, `scheduled_quests`, `user_missions`, rotas `/despertar` e `/dormir`, server fns em `wake.functions.ts`, `/executar`). Vamos **conectar** e adicionar o que estiver faltando.
 
-1. **Fundação de Estúdio** (mínima, extensível)
-   - Novo componente `HomeStudio.tsx` que substitui o bloco fixo do meio da Home.
-   - Persistência local por enquanto (localStorage `wimi:home:panel`) — evita migration pesada; um segundo turno pode promover pra `profiles.home_layout` quando validarmos.
-   - API interna simples: `type HomePanel = "caminhos" | "agenda" | "habitos"`. Só "caminhos" e "agenda" ficam disponíveis nesta versão; a arquitetura já aceita novos painéis.
-   - Botão discreto "Estúdio" (ícone Settings2) no header do painel abre Sheet com as opções.
+### 1. Alarme em foreground (client-side)
+Novo hook `useWakeAlarmScheduler` no `MobileShell`:
+- Lê `wake_alarms` habilitados do usuário logado.
+- Timer verifica a cada 30s se `time_local` do dia atual bateu (respeita `days_of_week` e TZ do device).
+- Ao bater: chama `startWakeSession` e navega para `/despertar/ringing`.
+- Guardas: só dispara 1x por alarme/dia (marca em `localStorage: wimi:alarm-fired:{id}:{yyyy-mm-dd}`).
 
-2. **Painel "Caminhos"** (default)
-   - Grid 2×3 de tiles grandes, mesma linguagem visual do `TrackingShortcuts` (forge-card, ember icon).
-   - Ícones: Compass (Planejar), ListChecks (Executar), Sparkles (Refletir), Moon (Descansar), CalendarDays (Agenda), Users2 (Grupos).
-   - Cada tile abre um destino:
-     - Planejar → `/assistente?seed=planejar`
-     - Executar → `/assistente?seed=executar` (v1) — evolui pra kanban dedicado depois
-     - Refletir → `/mental` (já existe journal/dreams)
-     - Descansar → `/dormir` (já existe rituais/sono)
-     - Agenda → troca o painel local pra "agenda" (sem sair da Home)
-     - Grupos → `/circulo`
-   - Prompt-seed: `/assistente` já consome `event ia:seed` — adicionamos leitura de `?seed=` como fallback e mapeamos cada seed pra um texto inicial ("Vamos planejar juntos. Comece me contando qual área da sua vida você quer estruturar hoje: trabalho, emocional, espiritual, físico ou relacionamentos?" etc.).
+Observação honesta: alarme confiável com app fechado exige push nativo/background — fora do escopo web. Aqui funciona com o app aberto/PWA em foreground (mesmo comportamento de outros alarmes web).
 
-3. **Painel "Agenda" embutido**
-   - Quando selecionado, o meio da Home mostra o `MonthGlance` em versão expandida + próximos 3 compromissos (`listScheduled` da semana). Sem duplicar código da rota `/agenda`.
+### 2. Rota `/despertar/ringing` (nova)
+Tela cheia com:
+- Hora grande + label do alarme.
+- Áudio em loop (arquivo em `/public/sounds/wake-gentle.mp3` — arquivo pequeno gerado).
+- `navigator.vibrate([600, 300, 600, 300, 800])` em loop (best-effort).
+- Botões: **Voltar em 5 / 10 / 15 min** (chama `recordSnooze` e agenda re-toque via `setTimeout` local) e **Acordei** (chama `markAwake` e navega para `/despertar/sonho`).
+- Fala da WiMi (TTS existente): saudação curta + "posso voltar em 10 minutos ou já começar seu dia".
 
-4. **Substituições na Home**
-   - `TrackingShortcuts` continua abaixo (Treino/Plano Alimentar são atalhos de execução).
-   - `HabitTrackerStrip` continua.
-   - O `MonthGlance` sai da posição fixa: passa a ser conteúdo do painel "agenda". Enquanto o painel ativo for "caminhos", ele não aparece — o grid de Caminhos ocupa o espaço.
+### 3. Rota `/despertar/sonho` (nova, curta)
+- Textarea rápido "o que sonhou?" + chips (bom / neutro / pesadelo / não lembro).
+- Botão salvar → `logDream` → segue para `/despertar/planejar`.
+- Botão pular → segue direto.
+
+### 4. Rota `/despertar/planejar` (nova, roteador)
+- Chama `scheduled_quests + user_missions` para hoje.
+- Se **há plano** → mostra resumo compacto + CTA "Ir executar".
+- Se **vazio** → CTA "Planejar com a WiMi" (`/assistente?seed=planejar-dia`) e "Pular".
+- Redireciona para `/executar` ao fim.
+
+### 5. `/executar` — planejado × executado
+Ajuste na rota existente:
+- Cada card já mostra hora prevista; adicionar linha "✓ feito às HH:MM" quando `user_mission_logs`/`day_blocks` tiverem execução real.
+- Coluna "Agora" = itens cuja janela horária engloba `now()`.
+- Manter Kanban atual (A Fazer • Agora • Concluído).
+
+### 6. Ajustes menores
+- Painel "Caminhos" já tem entrada "Descansar" — adicionar "Despertar" apontando para `/despertar` (config de alarmes).
+- Rota `/_authenticated/despertar` atual (DumpChat morning) vira **configuração** de alarmes + entrada manual "acordar agora".
 
 ## Detalhes técnicos
 
 Arquivos novos:
-- `src/components/home/HomeStudio.tsx` — orquestrador (lê localStorage, renderiza painel ativo, botão estúdio)
-- `src/components/home/panels/CaminhosPanel.tsx` — grid 2×3
-- `src/components/home/panels/AgendaPanel.tsx` — MonthGlance + próximos eventos
-- `src/components/home/StudioSheet.tsx` — Sheet com escolha de painel
+- `src/hooks/useWakeAlarmScheduler.ts`
+- `src/routes/_authenticated/despertar.ringing.tsx`
+- `src/routes/_authenticated/despertar.sonho.tsx`
+- `src/routes/_authenticated/despertar.planejar.tsx`
+- `public/sounds/wake-gentle.mp3` (tom suave curto, ~200KB, gerado)
 
 Arquivos alterados:
-- `src/routes/_authenticated/home.tsx` — substitui `<MonthGlance />` por `<HomeStudio />`
-- `src/routes/_authenticated/assistente.tsx` — lê `search.seed` e injeta prompt inicial no composer
+- `src/components/shell/MobileShell.tsx` — monta o scheduler.
+- `src/routes/_authenticated/despertar.tsx` — troca DumpChat por gestor de alarmes (lista + toggle + novo, usando `listAlarms/upsertAlarm/deleteAlarm`).
+- `src/routes/_authenticated/executar.tsx` — badge "planejado × executado".
+- `src/components/home/panels/CaminhosPanel.tsx` — tile "Despertar".
+- `src/routes/api/assistant.ts` — aceitar `seed=planejar-dia` no system prompt (já existe seed handler).
 
-Tokens/estilo: reutiliza `forge-card`, `forge-press`, `text-ember`, `font-display`. Sem novas cores.
+Sem migração de banco: todas as tabelas já existem (`wake_alarms`, `wake_sessions`, `wake_events`, `dream_logs`, `day_blocks`, `scheduled_quests`, `user_missions`, `user_mission_logs`).
 
-Sem mudanças de banco. Sem migrations. Sem novos secrets. Sem alteração de RLS.
+Nenhum secret novo. Nenhum custo de IA extra além do TTS já usado.
 
-## Fora do escopo (próximos turnos)
-- Kanban real de execução com colunas Backlog/Hoje/Feito puxando `scheduled_quests` + `strategic_goals`.
-- Módulo "Descansar" dedicado (mapeamento + práticas) — v1 reusa `/dormir`.
-- Grupos "família" com análise cruzada — v1 reusa `/circulo`.
-- Persistência de layout em `profiles.home_layout` + drag-and-drop de painéis.
-- Múltiplos painéis empilhados / ordem customizável.
+Ao aprovar, implemento na ordem: gestor de alarmes → scheduler → ringing → sonho → planejar → ajustes em /executar e Caminhos.
