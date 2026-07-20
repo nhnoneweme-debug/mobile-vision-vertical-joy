@@ -201,6 +201,16 @@ function AssistantPage() {
     setPendingImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  // Captura o momento local (fuso + hora agora) na montagem e revalida a
+  // cada 30s para o chip do topo espelhar o horário sem lag perceptível.
+  useEffect(() => {
+    setMoment(getClientMoment());
+    const id = window.setInterval(() => setMoment(getClientMoment()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+
+
   function toggleVoice() {
     if (voiceMode) {
       stopListening();
