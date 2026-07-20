@@ -11,6 +11,7 @@ import {
   rateLimitResponse,
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
 type Body = { messages?: UIMessage[] };
 
