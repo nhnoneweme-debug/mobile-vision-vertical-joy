@@ -115,7 +115,7 @@ function HomePage() {
 
       <DumpBanner />
 
-      <MonthGlance marked={marked} activitiesByWeekday={activitiesByWeekday} />
+      <HomeStudio marked={marked} activitiesByWeekday={activitiesByWeekday} />
 
       {userId && <HabitTrackerStrip userId={userId} />}
 
