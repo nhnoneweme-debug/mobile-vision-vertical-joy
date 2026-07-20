@@ -173,6 +173,13 @@ function AssistantPage() {
   // Sem isso, um MP3 antigo que erra depois de tocar aciona speakFallback e
   // dispara uma segunda voz (Web Speech) por cima do novo áudio.
   const ttsGenRef = useRef(0);
+  // Espelham voiceMode/autoplay para closures assíncronas (o `send` termina
+  // segundos depois do gesture; ler direto do state pega o valor da render
+  // que iniciou o envio e o autoplay recém-ligado pode não ser visto).
+  const autoplayRef = useRef(false);
+  const voiceModeRef = useRef(false);
+  // Referência ao wrapper do composer p/ colapsar em auto-mode ao clicar fora.
+  const composerWrapRef = useRef<HTMLDivElement | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const { canGoBack, goBack } = useGoBack();
 
@@ -238,6 +245,31 @@ function AssistantPage() {
   }, []);
 
 
+
+  // Sincroniza refs com state — closure fresca em qualquer async.
+  useEffect(() => {
+    autoplayRef.current = autoplay;
+  }, [autoplay]);
+  useEffect(() => {
+    voiceModeRef.current = voiceMode;
+  }, [voiceMode]);
+
+  // Auto-mode: recolhe o composer quando o usuário clica fora dele.
+  useEffect(() => {
+    if (!composerExpanded || expandMode !== "auto") return;
+    function onDown(ev: MouseEvent | TouchEvent) {
+      const el = composerWrapRef.current;
+      if (!el) return;
+      const t = ev.target as Node | null;
+      if (t && !el.contains(t)) setComposerExpanded(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [composerExpanded, expandMode]);
 
   function toggleVoice() {
     if (voiceMode) {
@@ -625,7 +657,8 @@ function AssistantPage() {
       if (sawError && assistantId == null) {
         appendDelta("Tive um problema pra responder agora. Tenta de novo?");
       }
-      const shouldSpeak = (voiceMode || autoplay) && full.trim() && assistantId != null;
+      const shouldSpeak =
+        (voiceModeRef.current || autoplayRef.current) && full.trim() && assistantId != null;
       if (shouldSpeak) void playMessageTts(assistantId!, full.trim());
       if (isNewConversation) void refreshConversations();
     } catch {
@@ -921,12 +954,28 @@ function AssistantPage() {
             onClick={() => {
               const next = !autoplay;
               setAutoplay(next);
+              autoplayRef.current = next;
               try {
                 localStorage.setItem("wimi.tts.autoplay", next ? "1" : "0");
               } catch {
                 /* noop */
               }
               if (!next) stopCurrentTts();
+              else {
+                // Destrava a política de autoplay do navegador tocando um MP3
+                // vazio dentro do gesture. Sem isso, quando o `send` termina
+                // segundos depois, `audio.play()` é rejeitada silenciosamente.
+                try {
+                  const a = new Audio(
+                    "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOFwAg8XYQAIAEJhACIAgEAAg",
+                  );
+                  a.volume = 0;
+                  void a.play().catch(() => {});
+                } catch {
+                  /* noop */
+                }
+                toast.success("Autoplay ligado — vou ler as respostas em voz.");
+              }
             }}
             aria-pressed={autoplay}
             aria-label={autoplay ? "Desligar autoplay da voz" : "Ligar autoplay da voz"}
@@ -1001,7 +1050,7 @@ function AssistantPage() {
               expandido — o textarea vira overlay ancorado no rodapé e cresce
               pra cima, sobrepondo a barra de controles (voltar/nova/histórico
               /config/autoplay) sem empurrar o composer. */}
-          <div className="relative min-w-0 flex-1">
+          <div ref={composerWrapRef} className="relative min-w-0 flex-1">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
