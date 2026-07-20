@@ -20,7 +20,9 @@ function ConversarPage() {
 
   const transport = new DefaultChatTransport({
     api: "/api/chat",
-    headers: authHeaders,
+    // authHeaders é resolvido a cada envio; mesclamos o momento local
+    // (fuso + hora agora) para o backend ancorar o system prompt.
+    headers: async () => ({ ...(await authHeaders()), ...clientMomentHeaders() }),
   });
 
   const { messages, sendMessage, status } = useChat({
