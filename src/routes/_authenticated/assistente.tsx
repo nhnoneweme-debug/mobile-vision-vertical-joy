@@ -24,7 +24,11 @@ import {
   ChevronLeft,
   Maximize2,
   Minimize2,
+  Zap,
+  Scale,
+  Brain,
 } from "lucide-react";
+import { loadEffort, saveEffort, type Effort } from "@/lib/ai-effort";
 import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
