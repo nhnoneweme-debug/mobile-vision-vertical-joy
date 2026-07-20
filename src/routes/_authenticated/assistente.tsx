@@ -745,7 +745,7 @@ function AssistantPage() {
             {moment ? (
               <span
                 title={`Fuso: ${moment.timezone}`}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-charcoal-800/70 px-1.5 py-0.5 text-[9px] font-display uppercase tracking-[0.15em] text-muted-foreground"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-charcoal-800/70 px-2 py-1 text-[11px] font-display uppercase tracking-[0.12em] text-muted-foreground"
               >
                 <span aria-hidden>⏱</span>
                 <span>{formatMomentLabel(moment)}</span>
