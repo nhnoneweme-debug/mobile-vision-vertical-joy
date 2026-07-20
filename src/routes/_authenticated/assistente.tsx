@@ -22,6 +22,8 @@ import {
   Play,
   Loader2,
   ChevronLeft,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
