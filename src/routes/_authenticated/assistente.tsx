@@ -168,6 +168,7 @@ function AssistantPage() {
   // exibido como chip de auditoria. Atualiza de minuto em minuto.
   const [moment, setMoment] = useState<ClientMoment | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hiddenAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   // Sequência monotônica: só callbacks do áudio "atual" têm efeito.
   // Sem isso, um MP3 antigo que erra depois de tocar aciona speakFallback e
@@ -367,9 +368,15 @@ function AssistantPage() {
       if (!r.ok) throw new Error(String(r.status));
       const blob = await r.blob();
       if (gen !== ttsGenRef.current) return;
+      if (blob.size === 0) throw new Error("empty-audio");
       const url = URL.createObjectURL(blob);
       audioUrlRef.current = url;
-      const audio = new Audio(url);
+      const audio = hiddenAudioRef.current ?? new Audio();
+      audio.preload = "auto";
+      audio.playsInline = true;
+      audio.volume = 1;
+      audio.muted = false;
+      audio.src = url;
       audioRef.current = audio;
       audio.onplay = () => {
         if (gen !== ttsGenRef.current) return;
@@ -397,9 +404,14 @@ function AssistantPage() {
         speakFallback(cleaned, msgId);
       };
       await audio.play();
-    } catch {
+    } catch (err) {
       if (gen !== ttsGenRef.current) return;
-      if (!started) speakFallback(cleaned, msgId);
+      stopCurrentTts();
+      if (!started) {
+        speakFallback(cleaned, msgId);
+        toast.error("O navegador bloqueou o áudio. Toque no play da resposta para liberar o som.");
+        console.warn("TTS playback failed", err);
+      }
     }
   }
 
@@ -760,6 +772,7 @@ function AssistantPage() {
 
   return (
     <MobileShell>
+      <audio ref={hiddenAudioRef} className="hidden" preload="auto" playsInline />
       <header
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
