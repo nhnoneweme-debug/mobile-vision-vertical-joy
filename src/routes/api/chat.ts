@@ -13,7 +13,21 @@ import {
 } from "@/lib/ai-guardrails.server";
 import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
-type Body = { messages?: UIMessage[] };
+type Effort = "low" | "medium" | "high";
+type Body = { messages?: UIMessage[]; effort?: unknown };
+
+function validateEffort(v: unknown): Effort {
+  return v === "low" || v === "medium" || v === "high" ? v : "medium";
+}
+
+function effortProviderOptions(effort: Effort) {
+  // O provider é openai-compatible ("openai" direto ou "lovable" gateway).
+  // Enviar em ambos garante que o parâmetro chega ao backend correto.
+  return {
+    openai: { reasoningEffort: effort },
+    lovable: { reasoningEffort: effort },
+  } as const;
+}
 
 function uiMessageToText(m: UIMessage): string {
   return m.parts
