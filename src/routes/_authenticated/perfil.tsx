@@ -9,6 +9,7 @@ import { QuestHistory } from "@/components/profile/QuestHistory";
 import { NotificationPrefsCard } from "@/components/profile/NotificationPrefsCard";
 import { OrientadorInbox } from "@/components/profile/OrientadorInbox";
 import { LevelTrackPicker } from "@/components/profile/LevelTrackPicker";
+import { EditNameDialog } from "@/components/profile/EditNameDialog";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
