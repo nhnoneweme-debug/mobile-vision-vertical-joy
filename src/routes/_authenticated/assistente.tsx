@@ -1455,8 +1455,8 @@ function ProposalCard({
             </div>
           </>
         ) : msg.status === "done" ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <span className="font-display text-[11px] tracking-[0.2em] text-ember">✓ CRIADO</span>
               {(msg.ctas ?? (msg.cta ? [msg.cta] : [])).map((cta) => (
                 <Link
