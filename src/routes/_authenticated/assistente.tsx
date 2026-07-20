@@ -970,7 +970,10 @@ function AssistantPage() {
               onClick={() => setComposerExpanded((v) => !v)}
               aria-pressed={composerExpanded}
               aria-label={composerExpanded ? "Reduzir campo de texto" : "Expandir campo de texto"}
-              className="absolute left-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-charcoal-700 hover:text-foreground active:scale-95"
+              className={
+                "absolute left-1.5 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-charcoal-700 hover:text-foreground active:scale-95 " +
+                (composerExpanded ? "bottom-1.5" : "top-1.5")
+              }
             >
               {composerExpanded ? (
                 <Minimize2 className="h-3.5 w-3.5" />

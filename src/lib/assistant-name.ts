@@ -17,5 +17,5 @@ export function assistantName(s: { assistant_name?: string | null } | null | und
  * Saudação da IA. Texto único que aparece na primeira bolha do /assistente.
  */
 export function assistantGreeting(nome: string): string {
-  return `Oi, sou o ${nome}, sua inteligência digital. O que vamos trabalhar hoje?`;
+  return `Oi, sou o ${nome}, uma inteligência digital. O que vamos trabalhar hoje?`;
 }
