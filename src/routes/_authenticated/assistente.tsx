@@ -144,6 +144,10 @@ function AssistantPage() {
   const [ttsState, setTtsState] = useState<TtsState>("loading");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  // Sequência monotônica: só callbacks do áudio "atual" têm efeito.
+  // Sem isso, um MP3 antigo que erra depois de tocar aciona speakFallback e
+  // dispara uma segunda voz (Web Speech) por cima do novo áudio.
+  const ttsGenRef = useRef(0);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const { canGoBack, goBack } = useGoBack();
 
@@ -203,12 +207,18 @@ function AssistantPage() {
   }
 
   function stopCurrentTts() {
+    // Invalida callbacks pendentes do áudio anterior.
+    ttsGenRef.current += 1;
     if (audioRef.current) {
       try {
         audioRef.current.pause();
       } catch {
         /* noop */
       }
+      audioRef.current.onplay = null;
+      audioRef.current.onpause = null;
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
       audioRef.current.src = "";
       audioRef.current = null;
     }
@@ -224,13 +234,30 @@ function AssistantPage() {
   }
 
   /**
+   * Prepara texto para leitura em voz: remove blocos/inlines de código,
+   * links markdown, URLs cruas e símbolos de markdown. Sem isso o TTS lê
+   * "```typescript", nomes de funções e endereços http — soa como uma
+   * segunda voz em inglês no meio da resposta.
+   */
+  function sanitizeForTts(raw: string): string {
+    let t = raw;
+    t = t.replace(/```[\s\S]*?```/g, " ");
+    t = t.replace(/`[^`]*`/g, " ");
+    t = t.replace(/!\[[^\]]*\]\([^)]*\)/g, " ");
+    t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+    t = t.replace(/https?:\/\/\S+/gi, " ");
+    t = t.replace(/[*_>#~`|]+/g, " ");
+    t = t.replace(/\s+/g, " ").trim();
+    return t;
+  }
+
+  /**
    * Toca o TTS da mensagem `msgId` com estado ao vivo (loading → playing).
    * Se a mesma mensagem já está tocando, pausa; se está pausada, retoma;
    * se outra está tocando, aborta e recomeça.
    */
   async function playMessageTts(msgId: number, text: string) {
     if (!text.trim()) return;
-    // Se já é a mensagem ativa, alterna play/pause.
     if (ttsMsgId === msgId && audioRef.current) {
       if (ttsState === "playing") {
         audioRef.current.pause();
@@ -241,10 +268,13 @@ function AssistantPage() {
       }
       return;
     }
-    // Nova mensagem — cancela a anterior.
     stopCurrentTts();
+    const gen = ++ttsGenRef.current;
+    const cleaned = sanitizeForTts(text);
+    if (!cleaned) return;
     setTtsMsgId(msgId);
     setTtsState("loading");
+    let started = false;
     try {
       const r = await fetch("/api/assistant-tts", {
         method: "POST",
@@ -252,33 +282,45 @@ function AssistantPage() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ text, gender: settings.voice_gender }),
+        body: JSON.stringify({ text: cleaned, gender: settings.voice_gender }),
       });
+      if (gen !== ttsGenRef.current) return;
       if (!r.ok) throw new Error(String(r.status));
       const blob = await r.blob();
+      if (gen !== ttsGenRef.current) return;
       const url = URL.createObjectURL(blob);
       audioUrlRef.current = url;
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.onplay = () => {
+        if (gen !== ttsGenRef.current) return;
+        started = true;
         setSpeaking(true);
         setTtsState("playing");
       };
       audio.onpause = () => {
-        // `pause` também dispara ao terminar em alguns navegadores; `ended` cobre.
+        if (gen !== ttsGenRef.current) return;
         if (!audio.ended) setTtsState("paused");
       };
       audio.onended = () => {
+        if (gen !== ttsGenRef.current) return;
         setSpeaking(false);
         stopCurrentTts();
       };
       audio.onerror = () => {
+        if (gen !== ttsGenRef.current) return;
+        // Se o MP3 já começou, NÃO acione o fallback — evita duas vozes.
+        if (started) {
+          stopCurrentTts();
+          return;
+        }
         stopCurrentTts();
-        speakFallback(text, msgId);
+        speakFallback(cleaned, msgId);
       };
       await audio.play();
     } catch {
-      speakFallback(text, msgId);
+      if (gen !== ttsGenRef.current) return;
+      if (!started) speakFallback(cleaned, msgId);
     }
   }
 
@@ -304,7 +346,7 @@ function AssistantPage() {
       return;
     }
     window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
+    const utter = new SpeechSynthesisUtterance(sanitizeForTts(text));
     utter.lang = "pt-BR";
     utter.rate = 1;
     const v = pickPtBrVoice(settings.voice_gender);
