@@ -337,6 +337,7 @@ export const Route = createFileRoute("/api/chat")({
           system: sys,
           messages: await convertToModelMessages(merged),
           maxOutputTokens: MAX_OUTPUT_TOKENS,
+          providerOptions: effortProviderOptions(effort),
         });
 
         return result.toUIMessageStreamResponse({
