@@ -898,19 +898,45 @@ function AssistantPage() {
             {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </button>
 
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send(input);
+          {/* Wrapper relativo: mantém altura de 1 linha no layout mesmo quando
+              expandido — o textarea vira overlay ancorado no rodapé e cresce
+              pra cima, sobrepondo a barra de controles (voltar/nova/histórico
+              /config/autoplay) sem empurrar o composer. */}
+          <div className="relative min-w-0 flex-1">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(input);
+                }
+              }}
+              onFocus={() => {
+                if (expandMode === "auto") setComposerExpanded(true);
+              }}
+              rows={composerExpanded ? 5 : 1}
+              placeholder={listening ? "Estou ouvindo…" : "Fala comigo…"}
+              className={
+                composerExpanded
+                  ? "absolute bottom-0 left-0 right-0 z-10 max-h-[40vh] w-full resize-none rounded-xl border border-ember/60 bg-charcoal-800 px-3 py-2.5 pr-10 text-foreground shadow-2xl outline-none placeholder:text-muted-foreground focus:border-ember/60"
+                  : "max-h-28 w-full resize-none rounded-xl border border-input bg-charcoal-800 px-3 py-2.5 pr-10 text-foreground outline-none placeholder:text-muted-foreground focus:border-ember/60"
               }
-            }}
-            rows={1}
-            placeholder={listening ? "Estou ouvindo…" : "Fala comigo…"}
-            className="max-h-28 flex-1 resize-none rounded-xl border border-input bg-charcoal-800 px-3 py-2.5 text-foreground outline-none placeholder:text-muted-foreground focus:border-ember/60"
-          />
+            />
+            <button
+              type="button"
+              onClick={() => setComposerExpanded((v) => !v)}
+              aria-pressed={composerExpanded}
+              aria-label={composerExpanded ? "Reduzir campo de texto" : "Expandir campo de texto"}
+              className="absolute right-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-charcoal-700 hover:text-foreground active:scale-95"
+            >
+              {composerExpanded ? (
+                <Minimize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => send(input)}
