@@ -205,6 +205,9 @@ function AssistantPage() {
     } catch {
       /* noop */
     }
+    const e = loadEffort();
+    setEffort(e);
+    effortRef.current = e;
   }, []);
 
   // Consome ?seed=... vindo do estúdio da Home e pré-preenche o composer.
