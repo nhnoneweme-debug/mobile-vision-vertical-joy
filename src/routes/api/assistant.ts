@@ -11,6 +11,7 @@ import {
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
 import { assistantName } from "@/lib/assistant-name";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
 type ImageAttachment = { base64: string; mediaType: string };
 type InMsg = { role: "user" | "assistant"; text: string; images?: ImageAttachment[] };
