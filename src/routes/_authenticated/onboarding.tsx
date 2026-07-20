@@ -211,7 +211,19 @@ function OnboardingPage() {
         </button>
       }
     >
-      {step === 0 && <AvatarStep value={avatar} onChange={setAvatar} />}
+      {step === 0 && (
+        <AvatarStep
+          value={avatar}
+          onChange={(next) => {
+            if (next.phone_number !== avatar.phone_number || next.phone_country !== avatar.phone_country) {
+              setPhoneError(null);
+            }
+            setAvatar(next);
+          }}
+          phoneError={phoneError}
+        />
+      )}
+
       {step === 1 && <GoalStep value={goal} onChange={setGoal} />}
       {step === 2 && <BehaviorStep value={answers} onChange={setAnswers} />}
     </OnboardingShell>
