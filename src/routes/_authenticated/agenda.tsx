@@ -79,14 +79,17 @@ function DayTaskBox({
   m,
   userId,
   onChanged,
+  onOpen,
 }: {
   m: UserMissionWithMeta;
   userId: string;
   onChanged: () => void;
+  onOpen: (m: UserMissionWithMeta) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const done = m.done_today;
-  async function toggle() {
+  async function toggle(e: React.MouseEvent) {
+    e.stopPropagation();
     if (busy) return;
     setBusy(true);
     try {
@@ -97,9 +100,11 @@ function DayTaskBox({
     }
   }
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onOpen(m)}
       className={
-        "flex flex-col gap-2 rounded-xl border p-3 transition-colors " +
+        "flex flex-col gap-2 rounded-xl border p-3 text-left transition-colors active:scale-[0.99] " +
         (done ? "border-ember/50 bg-ember/10" : "border-border bg-charcoal-900")
       }
     >
@@ -108,9 +113,16 @@ function DayTaskBox({
           {hhmm(m.scheduled_time)}
           {m.end_time ? `–${hhmm(m.end_time)}` : ""}
         </span>
-        <button
-          type="button"
+        <span
+          role="button"
+          tabIndex={0}
           onClick={toggle}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              void toggle(e as unknown as React.MouseEvent);
+            }
+          }}
           aria-label={done ? "Desmarcar tarefa" : "Concluir tarefa"}
           className={
             "forge-press grid h-7 w-7 shrink-0 place-items-center rounded-md border active:forge-press-active " +
@@ -120,7 +132,7 @@ function DayTaskBox({
           }
         >
           {done && <Check className="h-4 w-4" strokeWidth={3} />}
-        </button>
+        </span>
       </div>
       <p
         className={
@@ -130,6 +142,105 @@ function DayTaskBox({
       >
         {m.title}
       </p>
+    </button>
+  );
+}
+
+function MissionDetailSheet({
+  mission,
+  onClose,
+}: {
+  mission: UserMissionWithMeta | null;
+  onClose: () => void;
+}) {
+  if (!mission) return null;
+  const dias = maskToDays(mission.weekday_mask).map((i) => WEEKDAY_FULL[i]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="forge-card w-full max-w-[var(--shell-max,480px)] rounded-t-2xl p-5 pb-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-display text-[10px] tracking-[0.25em] text-ember">
+              {hhmm(mission.scheduled_time)}
+              {mission.end_time ? ` – ${hhmm(mission.end_time)}` : ""}
+              {mission.area_slug ? ` · ${mission.area_slug.toUpperCase()}` : ""}
+            </p>
+            <h3 className="mt-1 font-display text-lg leading-tight tracking-wide text-foreground">
+              {mission.title}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <dl className="space-y-2 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Repetição</dt>
+            <dd className="text-right text-foreground">
+              {formatMask(mission.weekday_mask, mission.mission_type)}
+            </dd>
+          </div>
+          {dias.length > 0 && dias.length < 7 && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Dias</dt>
+              <dd className="text-right text-foreground">{dias.join(", ")}</dd>
+            </div>
+          )}
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Tipo</dt>
+            <dd className="text-right text-foreground">{mission.mission_type}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">XP</dt>
+            <dd className="text-right text-ember">+{mission.xp_reward}</dd>
+          </div>
+          {mission.remind_before_min > 0 && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Lembrete</dt>
+              <dd className="text-right text-foreground">
+                {mission.remind_before_min} min antes
+              </dd>
+            </div>
+          )}
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Feito hoje</dt>
+            <dd className="text-right text-foreground">{mission.done_today ? "Sim" : "Não"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Concluídas na semana</dt>
+            <dd className="text-right text-foreground">{mission.week_done}</dd>
+          </div>
+        </dl>
+
+        {mission.notes ? (
+          <div className="mt-4 rounded-xl border border-border bg-charcoal-800/50 p-3">
+            <p className="mb-1 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+              NOTAS
+            </p>
+            <p className="whitespace-pre-wrap text-sm text-foreground">{mission.notes}</p>
+          </div>
+        ) : null}
+
+        <Link
+          to="/executar"
+          onClick={onClose}
+          className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-ember px-3 py-2.5 font-display text-xs tracking-[0.15em] text-charcoal-900 active:scale-95"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> IR PARA EXECUÇÃO
+        </Link>
+      </div>
     </div>
   );
 }
