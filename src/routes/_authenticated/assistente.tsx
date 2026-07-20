@@ -35,6 +35,12 @@ import { MobileShell } from "@/components/shell/MobileShell";
 // ao alcance do polegar direito.
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  clientMomentHeaders,
+  formatMomentLabel,
+  getClientMoment,
+  type ClientMoment,
+} from "@/lib/client-moment";
 import { createHabit, archiveHabit, type HabitFrequency } from "@/lib/habits";
 import { createMission, archiveMission, type MissionType } from "@/lib/missions";
 import { createWorkoutPlan, deleteWorkoutPlan } from "@/lib/workouts.functions";
