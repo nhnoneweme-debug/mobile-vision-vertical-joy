@@ -1,10 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, Check, ChevronRight, Clock, Pause, Play, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 import { listScheduled, updateScheduledStatus, type ScheduledQuest } from "@/lib/planning";
+import {
+  clearMissionToday,
+  isScheduledToday,
+  listMissions,
+  markMissionToday,
+  type UserMissionWithMeta,
+} from "@/lib/missions";
 import { formatMomentLabel, getClientMoment } from "@/lib/client-moment";
 
 export const Route = createFileRoute("/_authenticated/executar")({
@@ -18,6 +25,19 @@ export const Route = createFileRoute("/_authenticated/executar")({
 });
 
 type Col = "planejado" | "andamento" | "feito";
+type ExecutionSource = "mission" | "scheduled";
+type ExecutionStatus = "planned" | "done" | "skipped";
+type ExecutionItem = {
+  key: string;
+  source: ExecutionSource;
+  id: string;
+  title: string;
+  subtitle: string | null;
+  time: string | null;
+  status: ExecutionStatus;
+  xp_reward: number;
+  raw: UserMissionWithMeta | ScheduledQuest;
+};
 
 const IN_PROGRESS_KEY = "wimi:executar:andamento";
 const LAST_CHECKIN_KEY = "wimi:executar:lastCheckin";
@@ -42,14 +62,74 @@ function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function normalizeTime(t: string | null | undefined): string | null {
+  if (!t) return null;
+  return t.slice(0, 5);
+}
+
+function missionStatus(m: UserMissionWithMeta): ExecutionStatus {
+  if (m.done_today) return "done";
+  if (m.skipped_today) return "skipped";
+  return "planned";
+}
+
+function toMissionItem(m: UserMissionWithMeta): ExecutionItem {
+  const time = normalizeTime(m.scheduled_time);
+  return {
+    key: `mission:${m.id}`,
+    source: "mission",
+    id: m.id,
+    title: m.title,
+    subtitle: [time ? `${time}${m.end_time ? `–${normalizeTime(m.end_time)}` : ""}` : null, m.notes]
+      .filter(Boolean)
+      .join(" · ") || null,
+    time,
+    status: missionStatus(m),
+    xp_reward: m.xp_reward,
+    raw: m,
+  };
+}
+
+function toScheduledItem(q: ScheduledQuest): ExecutionItem {
+  return {
+    key: `scheduled:${q.id}`,
+    source: "scheduled",
+    id: q.id,
+    title: q.title,
+    subtitle: q.subtitle,
+    time: null,
+    status: q.status === "done" || q.status === "skipped" ? q.status : "planned",
+    xp_reward: q.xp_reward,
+    raw: q,
+  };
+}
+
 function ExecutarPage() {
   const navigate = useNavigate();
   const [uid, setUid] = useState<string | null>(null);
-  const [quests, setQuests] = useState<ScheduledQuest[]>([]);
+  const [items, setItems] = useState<ExecutionItem[]>([]);
   const [inProgress, setInProgress] = useState<Set<string>>(() => readInProgress());
   const [now, setNow] = useState<Date>(() => new Date());
   const [loading, setLoading] = useState(true);
   const promptedRef = useRef<Set<string>>(new Set());
+
+  const loadToday = useCallback(async (userId: string) => {
+    const today = new Date();
+    const [missions, scheduled] = await Promise.all([
+      listMissions(userId),
+      listScheduled(userId, today, today),
+    ]);
+    const missionItems = missions.filter(isScheduledToday).map(toMissionItem);
+    const scheduledItems = scheduled.map(toScheduledItem);
+    setItems(
+      [...missionItems, ...scheduledItems].sort((a, b) => {
+        const at = a.time ?? "99:99";
+        const bt = b.time ?? "99:99";
+        if (at !== bt) return at.localeCompare(bt);
+        return a.title.localeCompare(b.title);
+      }),
+    );
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
@@ -61,12 +141,13 @@ function ExecutarPage() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       const id = data.user?.id;
-      if (!id || !active) return;
+      if (!id || !active) {
+        if (active) setLoading(false);
+        return;
+      }
       setUid(id);
       try {
-        const today = new Date();
-        const list = await listScheduled(id, today, today);
-        if (active) setQuests(list);
+        await loadToday(id);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Erro ao carregar quests");
       } finally {
@@ -76,19 +157,19 @@ function ExecutarPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadToday]);
 
   const columns = useMemo(() => {
-    const planejado: ScheduledQuest[] = [];
-    const andamento: ScheduledQuest[] = [];
-    const feito: ScheduledQuest[] = [];
-    for (const q of quests) {
+    const planejado: ExecutionItem[] = [];
+    const andamento: ExecutionItem[] = [];
+    const feito: ExecutionItem[] = [];
+    for (const q of items) {
       if (q.status === "done" || q.status === "skipped") feito.push(q);
-      else if (inProgress.has(q.id)) andamento.push(q);
+      else if (inProgress.has(q.key) || inProgress.has(q.id)) andamento.push(q);
       else planejado.push(q);
     }
     return { planejado, andamento, feito };
-  }, [quests, inProgress]);
+  }, [items, inProgress]);
 
   // Supervisão ativa — dispara um toast a cada nova hora se houver algo em andamento
   useEffect(() => {
@@ -116,16 +197,17 @@ function ExecutarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, columns.andamento.length, columns.planejado.length]);
 
-  async function moveTo(q: ScheduledQuest, col: Col) {
+  async function moveTo(q: ExecutionItem, col: Col) {
     const nextInProgress = new Set(inProgress);
     if (col === "andamento") {
-      nextInProgress.add(q.id);
+      nextInProgress.add(q.key);
       setInProgress(nextInProgress);
       writeInProgress(nextInProgress);
       if (q.status !== "planned") {
         try {
-          await updateScheduledStatus(q.id, "planned");
-          setQuests((prev) => prev.map((x) => (x.id === q.id ? { ...x, status: "planned" } : x)));
+          if (q.source === "scheduled") await updateScheduledStatus(q.id, "planned");
+          else if (uid) await clearMissionToday(q.raw as UserMissionWithMeta, uid);
+          if (uid) await loadToday(uid);
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Erro");
         }
@@ -133,13 +215,15 @@ function ExecutarPage() {
       return;
     }
     if (col === "planejado") {
+      nextInProgress.delete(q.key);
       nextInProgress.delete(q.id);
       setInProgress(nextInProgress);
       writeInProgress(nextInProgress);
       if (q.status !== "planned") {
         try {
-          await updateScheduledStatus(q.id, "planned");
-          setQuests((prev) => prev.map((x) => (x.id === q.id ? { ...x, status: "planned" } : x)));
+          if (q.source === "scheduled") await updateScheduledStatus(q.id, "planned");
+          else if (uid) await clearMissionToday(q.raw as UserMissionWithMeta, uid);
+          if (uid) await loadToday(uid);
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Erro");
         }
@@ -147,26 +231,30 @@ function ExecutarPage() {
       return;
     }
     // feito
+    nextInProgress.delete(q.key);
     nextInProgress.delete(q.id);
     setInProgress(nextInProgress);
     writeInProgress(nextInProgress);
     try {
-      await updateScheduledStatus(q.id, "done");
-      setQuests((prev) => prev.map((x) => (x.id === q.id ? { ...x, status: "done" } : x)));
+      if (q.source === "scheduled") await updateScheduledStatus(q.id, "done");
+      else if (uid) await markMissionToday(q.raw as UserMissionWithMeta, uid, true);
+      if (uid) await loadToday(uid);
       toast.success("Feito! +XP");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
     }
   }
 
-  async function markSkipped(q: ScheduledQuest) {
+  async function markSkipped(q: ExecutionItem) {
     const next = new Set(inProgress);
+    next.delete(q.key);
     next.delete(q.id);
     setInProgress(next);
     writeInProgress(next);
     try {
-      await updateScheduledStatus(q.id, "skipped");
-      setQuests((prev) => prev.map((x) => (x.id === q.id ? { ...x, status: "skipped" } : x)));
+      if (q.source === "scheduled") await updateScheduledStatus(q.id, "skipped");
+      else if (uid) await markMissionToday(q.raw as UserMissionWithMeta, uid, false);
+      if (uid) await loadToday(uid);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
     }
@@ -210,7 +298,7 @@ function ExecutarPage() {
                 {focus.subtitle ? <span className="text-muted-foreground"> · {focus.subtitle}</span> : null}?
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {!inProgress.has(focus.id) && focus.status === "planned" && (
+                {!inProgress.has(focus.key) && !inProgress.has(focus.id) && focus.status === "planned" && (
                   <button
                     onClick={() => void moveTo(focus, "andamento")}
                     className="flex items-center gap-1 rounded-full bg-ember px-3 py-1.5 text-xs font-medium text-charcoal-900"
@@ -241,7 +329,7 @@ function ExecutarPage() {
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                Sem quests planejadas pra hoje. Peça pra WiMi montar sua execução.
+                Sem compromissos planejados pra hoje. Peça pra WiMi montar sua execução.
               </p>
               <button
                 onClick={() => askWimi("planejar")}
@@ -323,8 +411,8 @@ function KanbanCol({
 }: {
   title: string;
   tone: "muted" | "ember" | "done";
-  items: ScheduledQuest[];
-  renderActions: (q: ScheduledQuest) => React.ReactNode;
+  items: ExecutionItem[];
+  renderActions: (q: ExecutionItem) => React.ReactNode;
 }) {
   const toneCls =
     tone === "ember"
@@ -358,6 +446,9 @@ function KanbanCol({
                   }`}
                 >
                   {q.title}
+                </p>
+                <p className="mt-0.5 font-display text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {q.time ? `${q.time} · ` : ""}{q.source === "mission" ? "Agenda" : "Quest"}{q.status === "skipped" ? " · não rolou" : ""}
                 </p>
                 {q.subtitle ? (
                   <p className="truncate text-[11px] text-muted-foreground">{q.subtitle}</p>
