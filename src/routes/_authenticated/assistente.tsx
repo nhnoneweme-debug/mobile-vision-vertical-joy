@@ -144,6 +144,10 @@ function AssistantPage() {
   const [ttsState, setTtsState] = useState<TtsState>("loading");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  // Sequência monotônica: só callbacks do áudio "atual" têm efeito.
+  // Sem isso, um MP3 antigo que erra depois de tocar aciona speakFallback e
+  // dispara uma segunda voz (Web Speech) por cima do novo áudio.
+  const ttsGenRef = useRef(0);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const { canGoBack, goBack } = useGoBack();
 
