@@ -133,6 +133,10 @@ function AssistantPage() {
   // Autoplay do TTS: quando ligado, toca a resposta assim que fica pronta.
   // Guardado em localStorage — decisão do usuário no dispositivo, sem migration.
   const [autoplay, setAutoplay] = useState(false);
+  // Expansão do campo de texto — "manual" (padrão, botão) ou "auto" (ao focar).
+  // Guardado em localStorage: preferência por dispositivo, sem migration.
+  const [expandMode, setExpandMode] = useState<"manual" | "auto">("manual");
+  const [composerExpanded, setComposerExpanded] = useState(false);
   // Estado do TTS por mensagem: idle | loading | playing | paused | error.
   // Apenas UMA mensagem toca por vez; ao trocar, aborta a anterior.
   type TtsState = "loading" | "playing" | "paused";
