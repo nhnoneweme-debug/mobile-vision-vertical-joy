@@ -373,7 +373,6 @@ function AssistantPage() {
       audioUrlRef.current = url;
       const audio = hiddenAudioRef.current ?? new Audio();
       audio.preload = "auto";
-      audio.playsInline = true;
       audio.volume = 1;
       audio.muted = false;
       audio.src = url;
@@ -772,7 +771,7 @@ function AssistantPage() {
 
   return (
     <MobileShell>
-      <audio ref={hiddenAudioRef} className="hidden" preload="auto" playsInline />
+      <audio ref={hiddenAudioRef} className="hidden" preload="auto" />
       <header
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
