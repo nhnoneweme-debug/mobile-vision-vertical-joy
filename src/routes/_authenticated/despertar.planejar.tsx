@@ -32,20 +32,19 @@ function PlanejarGate() {
       const [{ data: missions }, { data: scheduled }] = await Promise.all([
         supabase
           .from("user_missions")
-          .select("id,title,scheduled_time,days_of_week,active")
+          .select("id,title,scheduled_time,weekday_mask,active")
           .eq("user_id", user.user.id)
           .eq("active", true),
         supabase
           .from("scheduled_quests")
-          .select("id,title,scheduled_for")
+          .select("id,title,scheduled_date")
           .eq("user_id", user.user.id)
-          .gte("scheduled_for", `${day}T00:00:00`)
-          .lte("scheduled_for", `${day}T23:59:59`),
+          .eq("scheduled_date", day),
       ]);
       const missionItems: ItemLite[] = (missions ?? [])
         .filter((m) => {
-          const days = (m.days_of_week as number[] | null) ?? [];
-          return days.length === 0 || days.includes(dow);
+          const mask = (m.weekday_mask as number | null) ?? 0;
+          return mask === 0 || (mask & (1 << dow)) !== 0;
         })
         .map((m) => ({
           id: m.id as string,
@@ -55,7 +54,7 @@ function PlanejarGate() {
       const schedItems: ItemLite[] = (scheduled ?? []).map((s) => ({
         id: s.id as string,
         title: s.title as string,
-        time: new Date(s.scheduled_for as string).toTimeString().slice(0, 5),
+        time: null,
       }));
       const merged = [...missionItems, ...schedItems].sort((a, b) => (a.time ?? "99").localeCompare(b.time ?? "99"));
       setItems(merged);
