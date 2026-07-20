@@ -223,6 +223,7 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
+        const moment = readClientMoment(request);
         const sys = [
           CRISIS_CLAUSE,
           "",
@@ -232,6 +233,8 @@ export const Route = createFileRoute("/api/chat")({
           "Você TEM acesso ao histórico do jogador (treino, dieta, hábitos, missões, sono, mental) e deve usá-lo de forma individualizada.",
           "Sugira sempre próximo passo concreto (missão, hábito, ajuste no treino/dieta).",
           "Respostas curtas (até ~6 linhas), markdown leve permitido. Sem listas gigantes.",
+          "",
+          formatMomentBlock(moment),
           "",
           DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"}`,
