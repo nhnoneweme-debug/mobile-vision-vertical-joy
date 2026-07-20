@@ -166,6 +166,11 @@ function AssistantPage() {
   // Guardado em localStorage: preferência por dispositivo, sem migration.
   const [expandMode, setExpandMode] = useState<"manual" | "auto">("manual");
   const [composerExpanded, setComposerExpanded] = useState(false);
+  // Nível de raciocínio da IA — Rápido / Equilibrado / Profundo.
+  // Persistido no localStorage (compartilhado com /conversar) e lido via ref
+  // no envio pra a troca valer já na PRÓXIMA mensagem, sem congelar.
+  const [effort, setEffort] = useState<Effort>("medium");
+  const effortRef = useRef<Effort>("medium");
   // Estado do TTS por mensagem: idle | loading | playing | paused | error.
   // Apenas UMA mensagem toca por vez; ao trocar, aborta a anterior.
   type TtsState = "loading" | "playing" | "paused";
