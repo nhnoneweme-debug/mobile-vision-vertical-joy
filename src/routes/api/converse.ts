@@ -88,7 +88,7 @@ export const Route = createFileRoute("/api/converse")({
         const rl = checkRateLimit(userId);
         if (!rl.ok) return rateLimitResponse(rl.message);
 
-        return replyFrom(messages);
+        return replyFrom(request, messages);
       },
     },
   },
