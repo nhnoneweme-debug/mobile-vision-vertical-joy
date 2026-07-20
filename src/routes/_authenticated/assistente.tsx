@@ -187,6 +187,18 @@ function AssistantPage() {
     }
   }, []);
 
+  // Consome ?seed=... vindo do estúdio da Home e pré-preenche o composer.
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  useEffect(() => {
+    const seed = search.seed;
+    if (!seed) return;
+    const prompt = SEED_PROMPTS[seed];
+    if (prompt) setInput((prev) => (prev ? prev : prompt));
+    // Limpa a query para não reaplicar em reloads / navegação de volta.
+    void navigate({ search: { seed: undefined }, replace: true });
+  }, [search.seed, navigate]);
+
   const {
     listening,
     supported: sttSupported,
