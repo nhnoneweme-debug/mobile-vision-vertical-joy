@@ -445,6 +445,7 @@ export const Route = createFileRoute("/api/assistant")({
           tools,
           stopWhen: stepCountIs(6),
           maxOutputTokens: MAX_OUTPUT_TOKENS,
+          providerOptions: effortProviderOptions(effort),
         });
 
         const encoder = new TextEncoder();
