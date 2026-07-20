@@ -13,6 +13,7 @@ import {
   rateLimitResponse,
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
 function truncateUserMessage(m: UIMessage): UIMessage {
   if (m.role !== "user") return m;
