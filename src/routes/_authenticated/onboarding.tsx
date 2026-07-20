@@ -32,6 +32,8 @@ function OnboardingPage() {
   const [avatar, setAvatar] = useState<AvatarData>({ display_name: "" });
   const [goal, setGoal] = useState<GoalData>({});
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
 
   // Pré-popula nome/telefone do profile e dos metadados de SSO
   useEffect(() => {
