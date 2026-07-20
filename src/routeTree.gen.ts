@@ -54,6 +54,9 @@ import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedDespertarSonhoRouteImport } from './routes/_authenticated/despertar.sonho'
+import { Route as AuthenticatedDespertarRingingRouteImport } from './routes/_authenticated/despertar.ringing'
+import { Route as AuthenticatedDespertarPlanejarRouteImport } from './routes/_authenticated/despertar.planejar'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -293,6 +296,24 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedDespertarSonhoRoute =
+  AuthenticatedDespertarSonhoRouteImport.update({
+    id: '/sonho',
+    path: '/sonho',
+    getParentRoute: () => AuthenticatedDespertarRoute,
+  } as any)
+const AuthenticatedDespertarRingingRoute =
+  AuthenticatedDespertarRingingRouteImport.update({
+    id: '/ringing',
+    path: '/ringing',
+    getParentRoute: () => AuthenticatedDespertarRoute,
+  } as any)
+const AuthenticatedDespertarPlanejarRoute =
+  AuthenticatedDespertarPlanejarRouteImport.update({
+    id: '/planejar',
+    path: '/planejar',
+    getParentRoute: () => AuthenticatedDespertarRoute,
+  } as any)
 const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   id: '/area/$slug',
   path: '/area/$slug',
@@ -348,7 +369,7 @@ export interface FileRoutesByFullPath {
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
-  '/despertar': typeof AuthenticatedDespertarRoute
+  '/despertar': typeof AuthenticatedDespertarRouteWithChildren
   '/dormir': typeof AuthenticatedDormirRoute
   '/executar': typeof AuthenticatedExecutarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
@@ -382,6 +403,9 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/despertar/planejar': typeof AuthenticatedDespertarPlanejarRoute
+  '/despertar/ringing': typeof AuthenticatedDespertarRingingRoute
+  '/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
   '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
   '/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
@@ -401,7 +425,7 @@ export interface FileRoutesByTo {
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
-  '/despertar': typeof AuthenticatedDespertarRoute
+  '/despertar': typeof AuthenticatedDespertarRouteWithChildren
   '/dormir': typeof AuthenticatedDormirRoute
   '/executar': typeof AuthenticatedExecutarRoute
   '/habitos': typeof AuthenticatedHabitosRoute
@@ -435,6 +459,9 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/despertar/planejar': typeof AuthenticatedDespertarPlanejarRoute
+  '/despertar/ringing': typeof AuthenticatedDespertarRingingRoute
+  '/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
   '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
   '/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
@@ -456,7 +483,7 @@ export interface FileRoutesById {
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/conversar': typeof AuthenticatedConversarRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
-  '/_authenticated/despertar': typeof AuthenticatedDespertarRoute
+  '/_authenticated/despertar': typeof AuthenticatedDespertarRouteWithChildren
   '/_authenticated/dormir': typeof AuthenticatedDormirRoute
   '/_authenticated/executar': typeof AuthenticatedExecutarRoute
   '/_authenticated/habitos': typeof AuthenticatedHabitosRoute
@@ -490,6 +517,9 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/_authenticated/despertar/planejar': typeof AuthenticatedDespertarPlanejarRoute
+  '/_authenticated/despertar/ringing': typeof AuthenticatedDespertarRingingRoute
+  '/_authenticated/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
   '/_authenticated/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
   '/_authenticated/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
@@ -545,6 +575,9 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
+    | '/despertar/planejar'
+    | '/despertar/ringing'
+    | '/despertar/sonho'
     | '/circulo/desafio/$id'
     | '/treino/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
@@ -598,6 +631,9 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
+    | '/despertar/planejar'
+    | '/despertar/ringing'
+    | '/despertar/sonho'
     | '/circulo/desafio/$id'
     | '/treino/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
@@ -652,6 +688,9 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/area/$slug'
+    | '/_authenticated/despertar/planejar'
+    | '/_authenticated/despertar/ringing'
+    | '/_authenticated/despertar/sonho'
     | '/_authenticated/circulo/desafio/$id'
     | '/_authenticated/treino/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
@@ -997,6 +1036,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/despertar/sonho': {
+      id: '/_authenticated/despertar/sonho'
+      path: '/sonho'
+      fullPath: '/despertar/sonho'
+      preLoaderRoute: typeof AuthenticatedDespertarSonhoRouteImport
+      parentRoute: typeof AuthenticatedDespertarRoute
+    }
+    '/_authenticated/despertar/ringing': {
+      id: '/_authenticated/despertar/ringing'
+      path: '/ringing'
+      fullPath: '/despertar/ringing'
+      preLoaderRoute: typeof AuthenticatedDespertarRingingRouteImport
+      parentRoute: typeof AuthenticatedDespertarRoute
+    }
+    '/_authenticated/despertar/planejar': {
+      id: '/_authenticated/despertar/planejar'
+      path: '/planejar'
+      fullPath: '/despertar/planejar'
+      preLoaderRoute: typeof AuthenticatedDespertarPlanejarRouteImport
+      parentRoute: typeof AuthenticatedDespertarRoute
+    }
     '/_authenticated/area/$slug': {
       id: '/_authenticated/area/$slug'
       path: '/area/$slug'
@@ -1060,6 +1120,24 @@ const AuthenticatedCirculoRouteChildren: AuthenticatedCirculoRouteChildren = {
 const AuthenticatedCirculoRouteWithChildren =
   AuthenticatedCirculoRoute._addFileChildren(AuthenticatedCirculoRouteChildren)
 
+interface AuthenticatedDespertarRouteChildren {
+  AuthenticatedDespertarPlanejarRoute: typeof AuthenticatedDespertarPlanejarRoute
+  AuthenticatedDespertarRingingRoute: typeof AuthenticatedDespertarRingingRoute
+  AuthenticatedDespertarSonhoRoute: typeof AuthenticatedDespertarSonhoRoute
+}
+
+const AuthenticatedDespertarRouteChildren: AuthenticatedDespertarRouteChildren =
+  {
+    AuthenticatedDespertarPlanejarRoute: AuthenticatedDespertarPlanejarRoute,
+    AuthenticatedDespertarRingingRoute: AuthenticatedDespertarRingingRoute,
+    AuthenticatedDespertarSonhoRoute: AuthenticatedDespertarSonhoRoute,
+  }
+
+const AuthenticatedDespertarRouteWithChildren =
+  AuthenticatedDespertarRoute._addFileChildren(
+    AuthenticatedDespertarRouteChildren,
+  )
+
 interface AuthenticatedTreinoRouteChildren {
   AuthenticatedTreinoHistoricoSessionIdRoute: typeof AuthenticatedTreinoHistoricoSessionIdRoute
 }
@@ -1080,7 +1158,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedConversarRoute: typeof AuthenticatedConversarRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
-  AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRoute
+  AuthenticatedDespertarRoute: typeof AuthenticatedDespertarRouteWithChildren
   AuthenticatedDormirRoute: typeof AuthenticatedDormirRoute
   AuthenticatedExecutarRoute: typeof AuthenticatedExecutarRoute
   AuthenticatedHabitosRoute: typeof AuthenticatedHabitosRoute
@@ -1114,7 +1192,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedConversarRoute: AuthenticatedConversarRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
-  AuthenticatedDespertarRoute: AuthenticatedDespertarRoute,
+  AuthenticatedDespertarRoute: AuthenticatedDespertarRouteWithChildren,
   AuthenticatedDormirRoute: AuthenticatedDormirRoute,
   AuthenticatedExecutarRoute: AuthenticatedExecutarRoute,
   AuthenticatedHabitosRoute: AuthenticatedHabitosRoute,
