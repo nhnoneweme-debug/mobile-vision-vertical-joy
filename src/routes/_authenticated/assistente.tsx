@@ -148,6 +148,9 @@ function AssistantPage() {
   type TtsState = "loading" | "playing" | "paused";
   const [ttsMsgId, setTtsMsgId] = useState<number | null>(null);
   const [ttsState, setTtsState] = useState<TtsState>("loading");
+  // Momento local do usuário (fuso + hora agora) — enviado nos headers e
+  // exibido como chip de auditoria. Atualiza de minuto em minuto.
+  const [moment, setMoment] = useState<ClientMoment | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   // Sequência monotônica: só callbacks do áudio "atual" têm efeito.
