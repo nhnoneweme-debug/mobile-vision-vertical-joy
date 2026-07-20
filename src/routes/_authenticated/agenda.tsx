@@ -9,7 +9,9 @@ import {
   toggleMissionToday,
   maskToDays,
   toggleDay,
+  formatMask,
   WEEKDAY_LABELS,
+  WEEKDAY_FULL,
   type UserMissionWithMeta,
   type MissionType,
 } from "@/lib/missions";
