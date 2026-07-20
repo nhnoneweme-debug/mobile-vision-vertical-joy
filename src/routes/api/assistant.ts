@@ -132,6 +132,7 @@ export const Route = createFileRoute("/api/assistant")({
 
         const body = (await request.json()) as Body;
         const incoming = body.messages ?? [];
+        const effort = validateEffort(body.effort);
         const isMock = process.env.VITE_USE_MOCKS === "true";
 
         // Auth + supabase (produção). Em dev:mock, roda só o LLM (sem contexto/persistência).
