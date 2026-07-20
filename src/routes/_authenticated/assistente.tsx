@@ -659,6 +659,7 @@ function AssistantPage() {
         body: JSON.stringify({
           messages: [...convo, { role: "user", text: t, ...(imgs.length ? { images: imgs } : {}) }],
           conversation_id: conversationId ?? undefined,
+          effort: effortRef.current,
         }),
       });
       if (!r.ok || !r.body) throw new Error(String(r.status));
