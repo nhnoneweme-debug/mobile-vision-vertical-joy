@@ -32,6 +32,8 @@ function OnboardingPage() {
   const [avatar, setAvatar] = useState<AvatarData>({ display_name: "" });
   const [goal, setGoal] = useState<GoalData>({});
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
 
   // Pré-popula nome/telefone do profile e dos metadados de SSO
   useEffect(() => {
@@ -129,15 +131,27 @@ function OnboardingPage() {
     } catch (err) {
       // Surfaces PostgREST errors (which are plain objects, not Error instances)
       const anyErr = err as { message?: string; details?: string; hint?: string; code?: string } | null;
-      const msg =
+      const raw =
         (err instanceof Error && err.message) ||
         anyErr?.message ||
         anyErr?.details ||
         anyErr?.hint ||
-        "Erro ao salvar.";
-      console.error("[onboarding.finish] failed:", err);
-      toast.error(msg + (anyErr?.code ? ` (${anyErr.code})` : ""));
+        "";
+      const isPhoneConflict =
+        anyErr?.code === "23505" &&
+        /phone/i.test((anyErr?.message ?? "") + " " + (anyErr?.details ?? ""));
+      if (isPhoneConflict) {
+        const conflictMsg =
+          "Este número já está vinculado a outra conta. Informe um número que ainda não esteja em uso — ou deixe o campo em branco para configurar depois.";
+        setPhoneError(conflictMsg);
+        setStep(0);
+        toast.error(conflictMsg);
+      } else {
+        console.error("[onboarding.finish] failed:", err);
+        toast.error((raw || "Erro ao salvar.") + (anyErr?.code ? ` (${anyErr.code})` : ""));
+      }
     } finally {
+
       setSaving(false);
     }
   }
@@ -197,7 +211,19 @@ function OnboardingPage() {
         </button>
       }
     >
-      {step === 0 && <AvatarStep value={avatar} onChange={setAvatar} />}
+      {step === 0 && (
+        <AvatarStep
+          value={avatar}
+          onChange={(next) => {
+            if (next.phone_number !== avatar.phone_number || next.phone_country !== avatar.phone_country) {
+              setPhoneError(null);
+            }
+            setAvatar(next);
+          }}
+          phoneError={phoneError}
+        />
+      )}
+
       {step === 1 && <GoalStep value={goal} onChange={setGoal} />}
       {step === 2 && <BehaviorStep value={answers} onChange={setAnswers} />}
     </OnboardingShell>

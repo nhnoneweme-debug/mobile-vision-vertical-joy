@@ -16,9 +16,11 @@ export type AvatarData = {
 type Props = {
   value: AvatarData;
   onChange: (next: AvatarData) => void;
+  phoneError?: string | null;
 };
 
-export function AvatarStep({ value, onChange }: Props) {
+export function AvatarStep({ value, onChange, phoneError }: Props) {
+
   const set = <K extends keyof AvatarData>(k: K, v: AvatarData[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -47,7 +49,16 @@ export function AvatarStep({ value, onChange }: Props) {
         <p className="mt-1 text-[11px] text-muted-foreground">
           Usaremos para lembretes e login alternativo.
         </p>
+        {phoneError && (
+          <p
+            role="alert"
+            className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12px] leading-snug text-destructive"
+          >
+            {phoneError}
+          </p>
+        )}
       </Block>
+
 
       <Block label="IDADE">
         <NumberStepper
