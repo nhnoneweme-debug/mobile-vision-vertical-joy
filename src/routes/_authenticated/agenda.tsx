@@ -557,6 +557,7 @@ function AgendaPage() {
                       m={m}
                       userId={userId!}
                       onChanged={() => userId && reload(userId)}
+                      onOpen={setDetailMission}
                     />
                   ))}
                 </div>
