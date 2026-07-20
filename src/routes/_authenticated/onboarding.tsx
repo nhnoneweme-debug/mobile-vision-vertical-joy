@@ -131,15 +131,27 @@ function OnboardingPage() {
     } catch (err) {
       // Surfaces PostgREST errors (which are plain objects, not Error instances)
       const anyErr = err as { message?: string; details?: string; hint?: string; code?: string } | null;
-      const msg =
+      const raw =
         (err instanceof Error && err.message) ||
         anyErr?.message ||
         anyErr?.details ||
         anyErr?.hint ||
-        "Erro ao salvar.";
-      console.error("[onboarding.finish] failed:", err);
-      toast.error(msg + (anyErr?.code ? ` (${anyErr.code})` : ""));
+        "";
+      const isPhoneConflict =
+        anyErr?.code === "23505" &&
+        /phone/i.test((anyErr?.message ?? "") + " " + (anyErr?.details ?? ""));
+      if (isPhoneConflict) {
+        const conflictMsg =
+          "Este número já está vinculado a outra conta. Informe um número que ainda não esteja em uso — ou deixe o campo em branco para configurar depois.";
+        setPhoneError(conflictMsg);
+        setStep(0);
+        toast.error(conflictMsg);
+      } else {
+        console.error("[onboarding.finish] failed:", err);
+        toast.error((raw || "Erro ao salvar.") + (anyErr?.code ? ` (${anyErr.code})` : ""));
+      }
     } finally {
+
       setSaving(false);
     }
   }
