@@ -64,6 +64,7 @@ export const Route = createFileRoute("/api/chat")({
           }
           const devBody = (await request.json()) as Body;
           const devIncoming = devBody.messages ?? [];
+          const devEffort = validateEffort(devBody.effort);
           const devMoment = readClientMoment(request);
           const devSys = [
             CRISIS_CLAUSE,
@@ -82,6 +83,7 @@ export const Route = createFileRoute("/api/chat")({
             system: devSys,
             messages: await convertToModelMessages(devIncoming.map(truncateUserMessage)),
             maxOutputTokens: MAX_OUTPUT_TOKENS,
+            providerOptions: effortProviderOptions(devEffort),
           });
           return devResult.toUIMessageStreamResponse({ originalMessages: devIncoming });
         }
