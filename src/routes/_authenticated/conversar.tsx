@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, Send } from "lucide-react";
+import { Sparkles, Send, Zap, Scale, Brain } from "lucide-react";
 import { authHeaders } from "@/lib/auth-headers";
 import { clientMomentHeaders } from "@/lib/client-moment";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -14,20 +14,50 @@ export const Route = createFileRoute("/_authenticated/conversar")({
   component: ConversarPage,
 });
 
+type Effort = "low" | "medium" | "high";
+const EFFORT_KEY = "wimi:chat-effort";
+
+function loadEffort(): Effort {
+  if (typeof window === "undefined") return "medium";
+  const v = window.localStorage.getItem(EFFORT_KEY);
+  return v === "low" || v === "medium" || v === "high" ? v : "medium";
+}
+
 function ConversarPage() {
   const [input, setInput] = useState("");
+  const [effort, setEffort] = useState<Effort>("medium");
+  const effortRef = useRef<Effort>("medium");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const transport = new DefaultChatTransport({
-    api: "/api/chat",
-    // authHeaders é resolvido a cada envio; mesclamos o momento local
-    // (fuso + hora agora) para o backend ancorar o system prompt.
-    headers: async () => ({ ...(await authHeaders()), ...clientMomentHeaders() }),
-  });
+  // Hidrata a preferência salva sem quebrar SSR.
+  useEffect(() => {
+    const e = loadEffort();
+    setEffort(e);
+    effortRef.current = e;
+  }, []);
+
+  // Mantém o ref sempre com o valor atual — o transport lê no envio.
+  useEffect(() => {
+    effortRef.current = effort;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(EFFORT_KEY, effort);
+    }
+  }, [effort]);
+
+  const transportRef = useRef<DefaultChatTransport<UIMessage> | null>(null);
+  if (!transportRef.current) {
+    transportRef.current = new DefaultChatTransport({
+      api: "/api/chat",
+      headers: async () => ({ ...(await authHeaders()), ...clientMomentHeaders() }),
+      prepareSendMessagesRequest: ({ messages, id }) => ({
+        body: { id, messages, effort: effortRef.current },
+      }),
+    });
+  }
 
   const { messages, sendMessage, status } = useChat({
     id: "orientador",
-    transport,
+    transport: transportRef.current,
     messages: [
       {
         id: "intro",
@@ -61,8 +91,6 @@ function ConversarPage() {
         className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-charcoal-900/85 pb-3 pl-4 pr-4 pt-5 backdrop-blur-xl"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1.25rem)" }}
       >
-        {/* A barra inferior some aqui (o composer ocupa o rodapé), então a
-            saída fica no header. No desktop quem traz o voltar é a sidebar. */}
         <HeaderBackButton onlyMobile />
         <span className="ember-glow grid h-10 w-10 place-items-center rounded-2xl bg-charcoal-800 text-ember">
           <Sparkles className="h-5 w-5" strokeWidth={2.2} />
@@ -106,13 +134,14 @@ function ConversarPage() {
         {busy && <div className="text-xs italic text-muted-foreground">pensando…</div>}
       </div>
 
-      <div className="h-28" />
+      <div className="h-32" />
 
       <div
-        className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2.5 backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        <div className="flex items-end gap-2">
+        <EffortSelector value={effort} onChange={setEffort} />
+        <div className="mt-2 flex items-end gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -138,5 +167,49 @@ function ConversarPage() {
         </div>
       </div>
     </MobileShell>
+  );
+}
+
+function EffortSelector({ value, onChange }: { value: Effort; onChange: (v: Effort) => void }) {
+  const opts: Array<{ id: Effort; label: string; Icon: typeof Zap }> = [
+    { id: "low", label: "Rápido", Icon: Zap },
+    { id: "medium", label: "Equilibrado", Icon: Scale },
+    { id: "high", label: "Profundo", Icon: Brain },
+  ];
+  return (
+    <div>
+      <div
+        role="radiogroup"
+        aria-label="Nível de raciocínio"
+        className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-charcoal-800/60 p-1"
+      >
+        {opts.map(({ id, label, Icon }) => {
+          const active = value === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(id)}
+              className={
+                "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition " +
+                (active
+                  ? "bg-ember text-charcoal-900 shadow"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {value === "high" && (
+        <p className="mt-1 px-1 text-[10px] text-muted-foreground">
+          respostas mais lentas e detalhadas
+        </p>
+      )}
+    </div>
   );
 }
