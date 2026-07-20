@@ -68,7 +68,7 @@ export const Route = createFileRoute("/api/converse")({
         if (process.env.VITE_USE_MOCKS === "true") {
           const rl = checkRateLimit("dev:mock");
           if (!rl.ok) return rateLimitResponse(rl.message);
-          return replyFrom(messages);
+          return replyFrom(request, messages);
         }
 
         // Produção: exige token válido (não expõe o modelo a anônimos).
