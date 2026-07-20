@@ -12,10 +12,11 @@ import {
 } from "@/lib/ai-guardrails.server";
 import { assistantName } from "@/lib/assistant-name";
 import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
+import { effortProviderOptions, validateEffort } from "@/lib/ai-effort";
 
 type ImageAttachment = { base64: string; mediaType: string };
 type InMsg = { role: "user" | "assistant"; text: string; images?: ImageAttachment[] };
-type Body = { messages?: InMsg[]; conversation_id?: string };
+type Body = { messages?: InMsg[]; conversation_id?: string; effort?: unknown };
 
 type ChatSettings = {
   persona: string;
@@ -131,6 +132,7 @@ export const Route = createFileRoute("/api/assistant")({
 
         const body = (await request.json()) as Body;
         const incoming = body.messages ?? [];
+        const effort = validateEffort(body.effort);
         const isMock = process.env.VITE_USE_MOCKS === "true";
 
         // Auth + supabase (produção). Em dev:mock, roda só o LLM (sem contexto/persistência).
@@ -443,6 +445,7 @@ export const Route = createFileRoute("/api/assistant")({
           tools,
           stopWhen: stepCountIs(6),
           maxOutputTokens: MAX_OUTPUT_TOKENS,
+          providerOptions: effortProviderOptions(effort),
         });
 
         const encoder = new TextEncoder();

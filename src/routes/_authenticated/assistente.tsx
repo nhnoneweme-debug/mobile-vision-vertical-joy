@@ -24,7 +24,11 @@ import {
   ChevronLeft,
   Maximize2,
   Minimize2,
+  Zap,
+  Scale,
+  Brain,
 } from "lucide-react";
+import { loadEffort, saveEffort, type Effort } from "@/lib/ai-effort";
 import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -162,6 +166,11 @@ function AssistantPage() {
   // Guardado em localStorage: preferência por dispositivo, sem migration.
   const [expandMode, setExpandMode] = useState<"manual" | "auto">("manual");
   const [composerExpanded, setComposerExpanded] = useState(false);
+  // Nível de raciocínio da IA — Rápido / Equilibrado / Profundo.
+  // Persistido no localStorage (compartilhado com /conversar) e lido via ref
+  // no envio pra a troca valer já na PRÓXIMA mensagem, sem congelar.
+  const [effort, setEffort] = useState<Effort>("medium");
+  const effortRef = useRef<Effort>("medium");
   // Estado do TTS por mensagem: idle | loading | playing | paused | error.
   // Apenas UMA mensagem toca por vez; ao trocar, aborta a anterior.
   type TtsState = "loading" | "playing" | "paused";
@@ -196,6 +205,9 @@ function AssistantPage() {
     } catch {
       /* noop */
     }
+    const e = loadEffort();
+    setEffort(e);
+    effortRef.current = e;
   }, []);
 
   // Consome ?seed=... vindo do estúdio da Home e pré-preenche o composer.
@@ -647,6 +659,7 @@ function AssistantPage() {
         body: JSON.stringify({
           messages: [...convo, { role: "user", text: t, ...(imgs.length ? { images: imgs } : {}) }],
           conversation_id: conversationId ?? undefined,
+          effort: effortRef.current,
         }),
       });
       if (!r.ok || !r.body) throw new Error(String(r.status));
@@ -1024,6 +1037,44 @@ function AssistantPage() {
             {autoplay ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             AUTO
           </button>
+        </div>
+        {/* Nível de raciocínio da IA — vale para a PRÓXIMA mensagem. */}
+        <div
+          role="radiogroup"
+          aria-label="Nível de raciocínio"
+          className="mb-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-charcoal-800/60 p-1"
+        >
+          {(
+            [
+              { id: "low", label: "Rápido", Icon: Zap },
+              { id: "medium", label: "Equilibrado", Icon: Scale },
+              { id: "high", label: "Profundo", Icon: Brain },
+            ] as Array<{ id: Effort; label: string; Icon: typeof Zap }>
+          ).map(({ id, label, Icon }) => {
+            const active = effort === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => {
+                  setEffort(id);
+                  effortRef.current = id;
+                  saveEffort(id);
+                }}
+                className={
+                  "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition " +
+                  (active
+                    ? "bg-ember text-charcoal-900 shadow"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                {label}
+              </button>
+            );
+          })}
         </div>
         {pendingImages.length ? (
           <div className="mb-2 flex gap-2 overflow-x-auto">
