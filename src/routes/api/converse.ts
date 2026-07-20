@@ -9,25 +9,31 @@ import {
   rateLimitResponse,
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
 type InMsg = { role: "user" | "assistant"; text: string };
 type Body = { messages?: InMsg[] };
 
-const PERSONA = [
-  CRISIS_CLAUSE,
-  "",
-  "Você é a Inteligência Digital do Weme — um mentor caloroso, direto e humano.",
-  "Fala em português do Brasil, com naturalidade e empatia. Nada de respostas robóticas.",
-  "Converse de verdade: acolha, faça uma pergunta quando fizer sentido, seja breve (até ~5 linhas).",
-  "Você ajuda a pessoa a criar hábitos e compromissos, organizar treino/dieta e manter a rotina.",
-  "Se a pessoa quiser criar algo concreto, oriente-a a dizer no formato: 'criar hábito X' ou 'compromisso treino segunda e quarta às 18h' — que o app monta e pede confirmação.",
-  "Não invente dados que você não tem. Não dê diagnóstico médico. Seja gentil.",
-  "",
-  DATA_HEADER,
-  "(sem dados adicionais nesta rota)",
-].join("\n");
+function buildPersona(request: Request): string {
+  const moment = readClientMoment(request);
+  return [
+    CRISIS_CLAUSE,
+    "",
+    "Você é a Inteligência Digital do Weme — um mentor caloroso, direto e humano.",
+    "Fala em português do Brasil, com naturalidade e empatia. Nada de respostas robóticas.",
+    "Converse de verdade: acolha, faça uma pergunta quando fizer sentido, seja breve (até ~5 linhas).",
+    "Você ajuda a pessoa a criar hábitos e compromissos, organizar treino/dieta e manter a rotina.",
+    "Se a pessoa quiser criar algo concreto, oriente-a a dizer no formato: 'criar hábito X' ou 'compromisso treino segunda e quarta às 18h' — que o app monta e pede confirmação.",
+    "Não invente dados que você não tem. Não dê diagnóstico médico. Seja gentil.",
+    "",
+    formatMomentBlock(moment),
+    "",
+    DATA_HEADER,
+    "(sem dados adicionais nesta rota)",
+  ].join("\n");
+}
 
-async function replyFrom(messages: InMsg[]): Promise<Response> {
+async function replyFrom(request: Request, messages: InMsg[]): Promise<Response> {
   if (!process.env.OPENAI_API_KEY && !process.env.LOVABLE_API_KEY) {
     return Response.json(
       { text: "IA indisponível: configure OPENAI_API_KEY no servidor." },
@@ -43,12 +49,13 @@ async function replyFrom(messages: InMsg[]): Promise<Response> {
     }));
   const { text } = await generateText({
     model,
-    system: PERSONA,
+    system: buildPersona(request),
     messages: modelMessages,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
   });
   return Response.json({ text: text.trim() });
 }
+
 
 export const Route = createFileRoute("/api/converse")({
   server: {
@@ -61,7 +68,7 @@ export const Route = createFileRoute("/api/converse")({
         if (process.env.VITE_USE_MOCKS === "true") {
           const rl = checkRateLimit("dev:mock");
           if (!rl.ok) return rateLimitResponse(rl.message);
-          return replyFrom(messages);
+          return replyFrom(request, messages);
         }
 
         // Produção: exige token válido (não expõe o modelo a anônimos).
@@ -81,7 +88,7 @@ export const Route = createFileRoute("/api/converse")({
         const rl = checkRateLimit(userId);
         if (!rl.ok) return rateLimitResponse(rl.message);
 
-        return replyFrom(messages);
+        return replyFrom(request, messages);
       },
     },
   },

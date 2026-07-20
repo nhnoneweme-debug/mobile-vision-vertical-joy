@@ -5,6 +5,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, Send } from "lucide-react";
 import { authHeaders } from "@/lib/auth-headers";
+import { clientMomentHeaders } from "@/lib/client-moment";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { HeaderBackButton } from "@/components/shell/HeaderBackButton";
 
@@ -19,7 +20,9 @@ function ConversarPage() {
 
   const transport = new DefaultChatTransport({
     api: "/api/chat",
-    headers: authHeaders,
+    // authHeaders é resolvido a cada envio; mesclamos o momento local
+    // (fuso + hora agora) para o backend ancorar o system prompt.
+    headers: async () => ({ ...(await authHeaders()), ...clientMomentHeaders() }),
   });
 
   const { messages, sendMessage, status } = useChat({

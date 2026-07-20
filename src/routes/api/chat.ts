@@ -11,6 +11,7 @@ import {
   rateLimitResponse,
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
 type Body = { messages?: UIMessage[] };
 
@@ -49,6 +50,7 @@ export const Route = createFileRoute("/api/chat")({
           }
           const devBody = (await request.json()) as Body;
           const devIncoming = devBody.messages ?? [];
+          const devMoment = readClientMoment(request);
           const devSys = [
             CRISIS_CLAUSE,
             "",
@@ -57,6 +59,8 @@ export const Route = createFileRoute("/api/chat")({
             "Nunca quebra o personagem. Não menciona ser uma IA, modelo ou tecnologia.",
             "Respostas curtas (até ~6 linhas), markdown leve permitido.",
             "(Ambiente de desenvolvimento: sem acesso ao histórico real do jogador.)",
+            "",
+            formatMomentBlock(devMoment),
           ].join("\n");
           const devModel = createChatModelWithFallback();
           const devResult = streamText({
@@ -219,6 +223,7 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
+        const moment = readClientMoment(request);
         const sys = [
           CRISIS_CLAUSE,
           "",
@@ -228,6 +233,8 @@ export const Route = createFileRoute("/api/chat")({
           "Você TEM acesso ao histórico do jogador (treino, dieta, hábitos, missões, sono, mental) e deve usá-lo de forma individualizada.",
           "Sugira sempre próximo passo concreto (missão, hábito, ajuste no treino/dieta).",
           "Respostas curtas (até ~6 linhas), markdown leve permitido. Sem listas gigantes.",
+          "",
+          formatMomentBlock(moment),
           "",
           DATA_HEADER,
           `Nome: ${profile?.display_name ?? "Viajante"}`,

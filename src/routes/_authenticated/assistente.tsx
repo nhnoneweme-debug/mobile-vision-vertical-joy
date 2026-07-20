@@ -35,6 +35,12 @@ import { MobileShell } from "@/components/shell/MobileShell";
 // ao alcance do polegar direito.
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  clientMomentHeaders,
+  formatMomentLabel,
+  getClientMoment,
+  type ClientMoment,
+} from "@/lib/client-moment";
 import { createHabit, archiveHabit, type HabitFrequency } from "@/lib/habits";
 import { createMission, archiveMission, type MissionType } from "@/lib/missions";
 import { createWorkoutPlan, deleteWorkoutPlan } from "@/lib/workouts.functions";
@@ -142,6 +148,9 @@ function AssistantPage() {
   type TtsState = "loading" | "playing" | "paused";
   const [ttsMsgId, setTtsMsgId] = useState<number | null>(null);
   const [ttsState, setTtsState] = useState<TtsState>("loading");
+  // Momento local do usuário (fuso + hora agora) — enviado nos headers e
+  // exibido como chip de auditoria. Atualiza de minuto em minuto.
+  const [moment, setMoment] = useState<ClientMoment | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   // Sequência monotônica: só callbacks do áudio "atual" têm efeito.
@@ -191,6 +200,16 @@ function AssistantPage() {
   function removePendingImage(idx: number) {
     setPendingImages((prev) => prev.filter((_, i) => i !== idx));
   }
+
+  // Captura o momento local (fuso + hora agora) na montagem e revalida a
+  // cada 30s para o chip do topo espelhar o horário sem lag perceptível.
+  useEffect(() => {
+    setMoment(getClientMoment());
+    const id = window.setInterval(() => setMoment(getClientMoment()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+
 
   function toggleVoice() {
     if (voiceMode) {
@@ -527,6 +546,7 @@ function AssistantPage() {
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...clientMomentHeaders(),
         },
         body: JSON.stringify({
           messages: [...convo, { role: "user", text: t, ...(imgs.length ? { images: imgs } : {}) }],
@@ -692,8 +712,17 @@ function AssistantPage() {
           <h1 className="truncate font-display text-xl leading-none tracking-wide text-foreground">
             {assistantName(settings).toUpperCase()}
           </h1>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            Inteligência Digital
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+            <span className="truncate">Inteligência Digital</span>
+            {moment ? (
+              <span
+                title={`Fuso: ${moment.timezone}`}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-charcoal-800/70 px-1.5 py-0.5 text-[9px] font-display uppercase tracking-[0.15em] text-muted-foreground"
+              >
+                <span aria-hidden>⏱</span>
+                <span>{formatMomentLabel(moment)}</span>
+              </span>
+            ) : null}
             {voiceMode ? (
               <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-ember/15 px-1.5 py-0.5 text-[9px] font-display tracking-[0.15em] text-ember">
                 {listening ? "🎙 OUVINDO" : speaking ? "🔊 FALANDO" : "🎤 VOZ"}

@@ -11,6 +11,7 @@ import {
   truncateUserText,
 } from "@/lib/ai-guardrails.server";
 import { assistantName } from "@/lib/assistant-name";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 
 type ImageAttachment = { base64: string; mediaType: string };
 type InMsg = { role: "user" | "assistant"; text: string; images?: ImageAttachment[] };
@@ -406,7 +407,8 @@ export const Route = createFileRoute("/api/assistant")({
         } as const;
 
         const model = createChatModelWithFallback();
-        const system = `${buildPersona(settings)}\n\n${contextBlock}`;
+        const moment = readClientMoment(request);
+        const system = `${buildPersona(settings)}\n\n${formatMomentBlock(moment)}\n\n${contextBlock}`;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const modelMessages: any[] = incoming
           .filter((m) => m.text?.trim() || (m.role === "user" && m.images?.length))
