@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AppBottomBar } from "./AppBottomBar";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
+import { useWakeAlarmScheduler } from "@/hooks/useWakeAlarmScheduler";
 
 let bootstrapped = false;
 
@@ -24,6 +25,8 @@ export function MobileShell({
   hideNav?: boolean;
   hideMentor?: boolean;
 }) {
+  const [hasUser, setHasUser] = useState(false);
+
   useEffect(() => {
     if (bootstrapped) return;
     bootstrapped = true;
@@ -31,13 +34,18 @@ export function MobileShell({
       try {
         const { data } = await supabase.auth.getUser();
         if (!data.user) return;
+        setHasUser(true);
         const prefs = await getInclusionPrefs(data.user.id);
         applyAccessibilityFromPrefs(prefs);
       } catch {
         /* silencioso — preferências opcionais */
       }
     })();
+    // Also flip hasUser when session becomes available later.
+    supabase.auth.getUser().then(({ data }) => setHasUser(!!data.user)).catch(() => {});
   }, []);
+
+  useWakeAlarmScheduler(hasUser && !hideNav);
 
   return (
     <div className="relative flex min-h-[100dvh] w-full bg-background">

@@ -92,6 +92,8 @@ const SEED_PROMPTS: Record<string, string> = {
     "Quero refletir. Use meu diário, sonhos e registros recentes como base e conduza uma reflexão profunda sobre quem sou, onde estou e para onde quero ir.",
   descansar:
     "Quero descansar melhor. Primeiro me ajude a mapear o que é descanso pra mim, depois monte rituais e pausas que caibam na minha rotina.",
+  "planejar-dia":
+    "Acabei de acordar. Vamos planejar meu dia agora — olhe minha agenda, meus hábitos e metas, e proponha uma sequência realista de blocos para hoje. Ao final, ofereça mandar tudo para /executar.",
 };
 
 type ImageAttachment = { base64: string; mediaType: string };
