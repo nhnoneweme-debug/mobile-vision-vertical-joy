@@ -151,6 +151,8 @@ function AssistantPage() {
   useEffect(() => {
     try {
       setAutoplay(localStorage.getItem("wimi.tts.autoplay") === "1");
+      const mode = localStorage.getItem("wimi.composer.expandMode");
+      if (mode === "auto" || mode === "manual") setExpandMode(mode);
     } catch {
       /* noop */
     }
