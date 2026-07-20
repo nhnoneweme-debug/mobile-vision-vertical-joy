@@ -54,16 +54,16 @@ import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedHistoricoSessionIdRouteImport } from './routes/_authenticated/historico.$sessionId'
 import { Route as AuthenticatedDespertarSonhoRouteImport } from './routes/_authenticated/despertar.sonho'
 import { Route as AuthenticatedDespertarRingingRouteImport } from './routes/_authenticated/despertar.ringing'
 import { Route as AuthenticatedDespertarPlanejarRouteImport } from './routes/_authenticated/despertar.planejar'
+import { Route as AuthenticatedDesafioIdRouteImport } from './routes/_authenticated/desafio.$id'
 import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticated/area.$slug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
 import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
-import { Route as AuthenticatedTreinoHistoricoSessionIdRouteImport } from './routes/_authenticated/treino.historico.$sessionId'
-import { Route as AuthenticatedCirculoDesafioIdRouteImport } from './routes/_authenticated/circulo.desafio.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -296,6 +296,12 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedHistoricoSessionIdRoute =
+  AuthenticatedHistoricoSessionIdRouteImport.update({
+    id: '/historico/$sessionId',
+    path: '/historico/$sessionId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDespertarSonhoRoute =
   AuthenticatedDespertarSonhoRouteImport.update({
     id: '/sonho',
@@ -314,6 +320,11 @@ const AuthenticatedDespertarPlanejarRoute =
     path: '/planejar',
     getParentRoute: () => AuthenticatedDespertarRoute,
   } as any)
+const AuthenticatedDesafioIdRoute = AuthenticatedDesafioIdRouteImport.update({
+  id: '/desafio/$id',
+  path: '/desafio/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAreaSlugRoute = AuthenticatedAreaSlugRouteImport.update({
   id: '/area/$slug',
   path: '/area/$slug',
@@ -342,18 +353,6 @@ const ApiPublicHooksGenerateNudgesRoute =
     path: '/api/public/hooks/generate-nudges',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedTreinoHistoricoSessionIdRoute =
-  AuthenticatedTreinoHistoricoSessionIdRouteImport.update({
-    id: '/historico/$sessionId',
-    path: '/historico/$sessionId',
-    getParentRoute: () => AuthenticatedTreinoRoute,
-  } as any)
-const AuthenticatedCirculoDesafioIdRoute =
-  AuthenticatedCirculoDesafioIdRouteImport.update({
-    id: '/desafio/$id',
-    path: '/desafio/$id',
-    getParentRoute: () => AuthenticatedCirculoRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -365,7 +364,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
-  '/circulo': typeof AuthenticatedCirculoRouteWithChildren
+  '/circulo': typeof AuthenticatedCirculoRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
@@ -390,7 +389,7 @@ export interface FileRoutesByFullPath {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/studio': typeof AuthenticatedStudioRoute
-  '/treino': typeof AuthenticatedTreinoRouteWithChildren
+  '/treino': typeof AuthenticatedTreinoRoute
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/assistant-tts': typeof ApiAssistantTtsRoute
@@ -403,11 +402,11 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/desafio/$id': typeof AuthenticatedDesafioIdRoute
   '/despertar/planejar': typeof AuthenticatedDespertarPlanejarRoute
   '/despertar/ringing': typeof AuthenticatedDespertarRingingRoute
   '/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
-  '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
-  '/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
+  '/historico/$sessionId': typeof AuthenticatedHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -421,7 +420,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/calendario': typeof AuthenticatedCalendarioRoute
-  '/circulo': typeof AuthenticatedCirculoRouteWithChildren
+  '/circulo': typeof AuthenticatedCirculoRoute
   '/conquistas': typeof AuthenticatedConquistasRoute
   '/conversar': typeof AuthenticatedConversarRoute
   '/desafios': typeof AuthenticatedDesafiosRoute
@@ -446,7 +445,7 @@ export interface FileRoutesByTo {
   '/ritual': typeof AuthenticatedRitualRoute
   '/social': typeof AuthenticatedSocialRoute
   '/studio': typeof AuthenticatedStudioRoute
-  '/treino': typeof AuthenticatedTreinoRouteWithChildren
+  '/treino': typeof AuthenticatedTreinoRoute
   '/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/assistant-tts': typeof ApiAssistantTtsRoute
@@ -459,11 +458,11 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/desafio/$id': typeof AuthenticatedDesafioIdRoute
   '/despertar/planejar': typeof AuthenticatedDespertarPlanejarRoute
   '/despertar/ringing': typeof AuthenticatedDespertarRingingRoute
   '/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
-  '/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
-  '/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
+  '/historico/$sessionId': typeof AuthenticatedHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -479,7 +478,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
-  '/_authenticated/circulo': typeof AuthenticatedCirculoRouteWithChildren
+  '/_authenticated/circulo': typeof AuthenticatedCirculoRoute
   '/_authenticated/conquistas': typeof AuthenticatedConquistasRoute
   '/_authenticated/conversar': typeof AuthenticatedConversarRoute
   '/_authenticated/desafios': typeof AuthenticatedDesafiosRoute
@@ -504,7 +503,7 @@ export interface FileRoutesById {
   '/_authenticated/ritual': typeof AuthenticatedRitualRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
-  '/_authenticated/treino': typeof AuthenticatedTreinoRouteWithChildren
+  '/_authenticated/treino': typeof AuthenticatedTreinoRoute
   '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/assistant-tts': typeof ApiAssistantTtsRoute
@@ -517,11 +516,11 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/area/$slug': typeof AuthenticatedAreaSlugRoute
+  '/_authenticated/desafio/$id': typeof AuthenticatedDesafioIdRoute
   '/_authenticated/despertar/planejar': typeof AuthenticatedDespertarPlanejarRoute
   '/_authenticated/despertar/ringing': typeof AuthenticatedDespertarRingingRoute
   '/_authenticated/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
-  '/_authenticated/circulo/desafio/$id': typeof AuthenticatedCirculoDesafioIdRoute
-  '/_authenticated/treino/historico/$sessionId': typeof AuthenticatedTreinoHistoricoSessionIdRoute
+  '/_authenticated/historico/$sessionId': typeof AuthenticatedHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
@@ -575,11 +574,11 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
+    | '/desafio/$id'
     | '/despertar/planejar'
     | '/despertar/ringing'
     | '/despertar/sonho'
-    | '/circulo/desafio/$id'
-    | '/treino/historico/$sessionId'
+    | '/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
@@ -631,11 +630,11 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/area/$slug'
+    | '/desafio/$id'
     | '/despertar/planejar'
     | '/despertar/ringing'
     | '/despertar/sonho'
-    | '/circulo/desafio/$id'
-    | '/treino/historico/$sessionId'
+    | '/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   id:
@@ -688,11 +687,11 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/area/$slug'
+    | '/_authenticated/desafio/$id'
     | '/_authenticated/despertar/planejar'
     | '/_authenticated/despertar/ringing'
     | '/_authenticated/despertar/sonho'
-    | '/_authenticated/circulo/desafio/$id'
-    | '/_authenticated/treino/historico/$sessionId'
+    | '/_authenticated/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
     | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
@@ -1036,6 +1035,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/historico/$sessionId': {
+      id: '/_authenticated/historico/$sessionId'
+      path: '/historico/$sessionId'
+      fullPath: '/historico/$sessionId'
+      preLoaderRoute: typeof AuthenticatedHistoricoSessionIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/despertar/sonho': {
       id: '/_authenticated/despertar/sonho'
       path: '/sonho'
@@ -1056,6 +1062,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/despertar/planejar'
       preLoaderRoute: typeof AuthenticatedDespertarPlanejarRouteImport
       parentRoute: typeof AuthenticatedDespertarRoute
+    }
+    '/_authenticated/desafio/$id': {
+      id: '/_authenticated/desafio/$id'
+      path: '/desafio/$id'
+      fullPath: '/desafio/$id'
+      preLoaderRoute: typeof AuthenticatedDesafioIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/area/$slug': {
       id: '/_authenticated/area/$slug'
@@ -1092,33 +1105,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksGenerateNudgesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/treino/historico/$sessionId': {
-      id: '/_authenticated/treino/historico/$sessionId'
-      path: '/historico/$sessionId'
-      fullPath: '/treino/historico/$sessionId'
-      preLoaderRoute: typeof AuthenticatedTreinoHistoricoSessionIdRouteImport
-      parentRoute: typeof AuthenticatedTreinoRoute
-    }
-    '/_authenticated/circulo/desafio/$id': {
-      id: '/_authenticated/circulo/desafio/$id'
-      path: '/desafio/$id'
-      fullPath: '/circulo/desafio/$id'
-      preLoaderRoute: typeof AuthenticatedCirculoDesafioIdRouteImport
-      parentRoute: typeof AuthenticatedCirculoRoute
-    }
   }
 }
-
-interface AuthenticatedCirculoRouteChildren {
-  AuthenticatedCirculoDesafioIdRoute: typeof AuthenticatedCirculoDesafioIdRoute
-}
-
-const AuthenticatedCirculoRouteChildren: AuthenticatedCirculoRouteChildren = {
-  AuthenticatedCirculoDesafioIdRoute: AuthenticatedCirculoDesafioIdRoute,
-}
-
-const AuthenticatedCirculoRouteWithChildren =
-  AuthenticatedCirculoRoute._addFileChildren(AuthenticatedCirculoRouteChildren)
 
 interface AuthenticatedDespertarRouteChildren {
   AuthenticatedDespertarPlanejarRoute: typeof AuthenticatedDespertarPlanejarRoute
@@ -1138,23 +1126,11 @@ const AuthenticatedDespertarRouteWithChildren =
     AuthenticatedDespertarRouteChildren,
   )
 
-interface AuthenticatedTreinoRouteChildren {
-  AuthenticatedTreinoHistoricoSessionIdRoute: typeof AuthenticatedTreinoHistoricoSessionIdRoute
-}
-
-const AuthenticatedTreinoRouteChildren: AuthenticatedTreinoRouteChildren = {
-  AuthenticatedTreinoHistoricoSessionIdRoute:
-    AuthenticatedTreinoHistoricoSessionIdRoute,
-}
-
-const AuthenticatedTreinoRouteWithChildren =
-  AuthenticatedTreinoRoute._addFileChildren(AuthenticatedTreinoRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
-  AuthenticatedCirculoRoute: typeof AuthenticatedCirculoRouteWithChildren
+  AuthenticatedCirculoRoute: typeof AuthenticatedCirculoRoute
   AuthenticatedConquistasRoute: typeof AuthenticatedConquistasRoute
   AuthenticatedConversarRoute: typeof AuthenticatedConversarRoute
   AuthenticatedDesafiosRoute: typeof AuthenticatedDesafiosRoute
@@ -1179,16 +1155,18 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRitualRoute: typeof AuthenticatedRitualRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
-  AuthenticatedTreinoRoute: typeof AuthenticatedTreinoRouteWithChildren
+  AuthenticatedTreinoRoute: typeof AuthenticatedTreinoRoute
   AuthenticatedWearablesRoute: typeof AuthenticatedWearablesRoute
   AuthenticatedAreaSlugRoute: typeof AuthenticatedAreaSlugRoute
+  AuthenticatedDesafioIdRoute: typeof AuthenticatedDesafioIdRoute
+  AuthenticatedHistoricoSessionIdRoute: typeof AuthenticatedHistoricoSessionIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
-  AuthenticatedCirculoRoute: AuthenticatedCirculoRouteWithChildren,
+  AuthenticatedCirculoRoute: AuthenticatedCirculoRoute,
   AuthenticatedConquistasRoute: AuthenticatedConquistasRoute,
   AuthenticatedConversarRoute: AuthenticatedConversarRoute,
   AuthenticatedDesafiosRoute: AuthenticatedDesafiosRoute,
@@ -1214,9 +1192,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRitualRoute: AuthenticatedRitualRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
-  AuthenticatedTreinoRoute: AuthenticatedTreinoRouteWithChildren,
+  AuthenticatedTreinoRoute: AuthenticatedTreinoRoute,
   AuthenticatedWearablesRoute: AuthenticatedWearablesRoute,
   AuthenticatedAreaSlugRoute: AuthenticatedAreaSlugRoute,
+  AuthenticatedDesafioIdRoute: AuthenticatedDesafioIdRoute,
+  AuthenticatedHistoricoSessionIdRoute: AuthenticatedHistoricoSessionIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

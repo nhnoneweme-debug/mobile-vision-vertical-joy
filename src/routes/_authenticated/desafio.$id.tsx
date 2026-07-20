@@ -18,7 +18,7 @@ import {
   type CalendarRow,
 } from "@/lib/challenges";
 
-export const Route = createFileRoute("/_authenticated/circulo/desafio/$id")({
+export const Route = createFileRoute("/_authenticated/desafio/$id")({
   head: () => ({ meta: [{ title: "Desafio — Weme" }] }),
   component: DesafioDetailPage,
   errorComponent: ({ reset }) => (

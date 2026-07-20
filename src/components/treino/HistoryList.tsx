@@ -147,7 +147,7 @@ export function SessionCard({
             )}
             {showViewAll && (
               <Link
-                to="/treino/historico/$sessionId"
+                to="/historico/$sessionId"
                 params={{ sessionId: entry.sessionId }}
                 className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-charcoal-800 px-3 py-2 font-display text-[11px] tracking-[0.2em] text-muted-foreground active:scale-[0.98]"
               >

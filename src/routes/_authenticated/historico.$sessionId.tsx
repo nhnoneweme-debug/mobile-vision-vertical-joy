@@ -5,7 +5,7 @@ import { MobileShell } from "@/components/shell/MobileShell";
 import { SessionCard } from "@/components/treino/HistoryList";
 import { getWorkoutHistory, type HistoryEntry } from "@/lib/workouts.functions";
 
-export const Route = createFileRoute("/_authenticated/treino/historico/$sessionId")({
+export const Route = createFileRoute("/_authenticated/historico/$sessionId")({
   component: SessionDetailPage,
   errorComponent: ({ error }) => (
     <MobileShell>
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/treino/historico/$sessionI
 });
 
 function SessionDetailPage() {
-  const { sessionId } = useParams({ from: "/_authenticated/treino/historico/$sessionId" });
+  const { sessionId } = useParams({ from: "/_authenticated/historico/$sessionId" });
   const fn = useServerFn(getWorkoutHistory);
   const [entry, setEntry] = useState<HistoryEntry | null | undefined>(undefined);
 
