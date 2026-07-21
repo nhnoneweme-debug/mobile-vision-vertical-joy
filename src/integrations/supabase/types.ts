@@ -522,6 +522,7 @@ export type Database = {
       chat_settings: {
         Row: {
           assistant_name: string
+          composer_placeholder: string
           custom_instructions: string
           focus: string
           open_mode: string
@@ -533,6 +534,7 @@ export type Database = {
         }
         Insert: {
           assistant_name?: string
+          composer_placeholder?: string
           custom_instructions?: string
           focus?: string
           open_mode?: string
@@ -544,6 +546,7 @@ export type Database = {
         }
         Update: {
           assistant_name?: string
+          composer_placeholder?: string
           custom_instructions?: string
           focus?: string
           open_mode?: string
