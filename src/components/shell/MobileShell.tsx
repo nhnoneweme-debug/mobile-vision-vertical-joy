@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AppBottomBar } from "./AppBottomBar";
 import { DesktopSidebar } from "./DesktopSidebar";
+import { FocusFloatingButton } from "./FocusFloatingButton";
 import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
 import { useWakeAlarmScheduler } from "@/hooks/useWakeAlarmScheduler";
+import { WakeLockProvider } from "@/providers/WakeLockProvider";
 
 let bootstrapped = false;
 
