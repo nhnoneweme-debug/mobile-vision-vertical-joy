@@ -245,6 +245,18 @@ function PerfilPage() {
         </Link>
 
         <div className="mt-6">
+          <BehavioralClassPicker
+            userId={userId}
+            currentClass={cls}
+            onSaved={(next) =>
+              setProfile((prev) =>
+                prev ? { ...prev, behavioral_class: next } : prev,
+              )
+            }
+          />
+        </div>
+
+        <div className="mt-6">
           <LevelTrackPicker userId={userId} xp={profile?.xp ?? 0} />
         </div>
 
