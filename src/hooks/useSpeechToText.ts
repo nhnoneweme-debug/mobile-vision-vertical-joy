@@ -53,20 +53,43 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     rec.interimResults = true;
     rec.onstart = () => setListening(true);
     rec.onend = () => {
-      setListening(false);
       recRef.current = null;
-      setInterim("");
-      // Religa se o usuário não mandou parar nem mutou (silêncio encerra a sessão).
+      // Religa se o usuário não mandou parar nem mutou. Mantemos `listening=true`
+      // durante a religada para o preview de transcrição não piscar/desaparecer
+      // no intervalo entre o `end` do Chrome (após silêncio) e o próximo `start`.
       if (wantedRef.current && !mutedRef.current) {
-        try {
-          rec.start();
-          recRef.current = rec;
-        } catch {
-          wantedRef.current = false;
-        }
+        // Pequeno atraso reduz religadas em rajada (menos "bip" do Chrome).
+        window.setTimeout(() => {
+          if (!wantedRef.current || mutedRef.current || recRef.current) return;
+          try {
+            rec.start();
+            recRef.current = rec;
+          } catch {
+            wantedRef.current = false;
+            setListening(false);
+            setInterim("");
+          }
+        }, 250);
+        return;
+      }
+      setListening(false);
+      setInterim("");
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onerror = (ev: any) => {
+      // Em `no-speech`/`aborted` deixamos o onend religar; só derrubamos o
+      // estado em erros duros (perm/network) — aí realmente paramos.
+      const code = ev?.error;
+      if (code && code !== "no-speech" && code !== "aborted") {
+        wantedRef.current = false;
+        setListening(false);
+        setInterim("");
       }
     };
-    rec.onerror = () => setListening(false);
+    // Dedupe do último final: em religadas o Chrome às vezes re-entrega o
+    // último trecho, o que aparecia como texto duplicado no textarea.
+    let lastFinal = "";
+    let lastFinalAt = 0;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (ev: any) => {
       let finalText = "";
@@ -77,7 +100,15 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
         else interimText += r[0].transcript;
       }
       setInterim(interimText.trim());
-      if (finalText.trim()) onFinalRef.current(finalText.trim());
+      const f = finalText.trim();
+      if (f) {
+        const now = Date.now();
+        if (f !== lastFinal || now - lastFinalAt > 2500) {
+          lastFinal = f;
+          lastFinalAt = now;
+          onFinalRef.current(f);
+        }
+      }
     };
     try {
       rec.start();
