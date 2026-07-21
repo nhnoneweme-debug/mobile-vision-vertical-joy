@@ -186,11 +186,20 @@ export function useSpeechToText(
     rec.onend = () => {
       if (session !== sessionRef.current) return;
       recRef.current = null;
-      setListening(false);
       setInterim("");
-      // Sem auto-restart: evita beeps repetidos e resultados ecoados no Chrome
-      // mobile. Se algum navegador encerrar por limite de tempo, o usuário toca
-      // no mic novamente para continuar a mesma frase.
+      // Modo manual: o mic só fecha quando o usuário toca no botão.
+      // Se ainda estamos ativos (e não mutados), religamos silenciosamente
+      // para manter a sessão aberta mesmo quando o Chrome encerra sozinho
+      // após uma frase ou por timeout interno.
+      if (activeRef.current && !mutedRef.current) {
+        setTimeout(() => {
+          if (session === sessionRef.current && activeRef.current && !mutedRef.current) {
+            createAndStart();
+          }
+        }, 150);
+      } else {
+        setListening(false);
+      }
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
