@@ -45,6 +45,8 @@ function ExecutarPage() {
 
   const [manifest, setManifest] = useState<JourneyManifestation | null>(null);
   const [manifestChannel, setManifestChannel] = useState<"foreground" | "push">("foreground");
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatSeed, setChatSeed] = useState<string | null>(null);
   const seedProcessedRef = useRef(false);
 
   // Timeline com estado por bloco.
