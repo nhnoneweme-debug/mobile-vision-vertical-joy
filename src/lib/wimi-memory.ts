@@ -31,7 +31,7 @@ export async function buildSharedContext(framework: WimiFramework): Promise<Shar
     if (uid) {
       const [{ data: profile }, { data: settings }, { count }] = await Promise.all([
         supabase.from("profiles").select("display_name").eq("id", uid).maybeSingle(),
-        supabase.from("chat_settings").select("ai_name").eq("user_id", uid).maybeSingle(),
+        supabase.from("chat_settings").select("assistant_name").eq("user_id", uid).maybeSingle(),
         supabase
           .from("user_missions")
           .select("id", { count: "exact", head: true })
@@ -40,8 +40,9 @@ export async function buildSharedContext(framework: WimiFramework): Promise<Shar
           .is("archived_at", null),
       ]);
       displayName = (profile?.display_name as string | null) ?? null;
-      aiName = (settings?.ai_name as string | null) ?? null;
+      aiName = (settings?.assistant_name as string | null) ?? null;
       todayCount = count ?? 0;
+
     }
   } catch {
     /* silencioso — seed sem enriquecimento ainda é útil */
