@@ -24,11 +24,11 @@ export function CaminhosPanel({ onOpenAgenda }: { onOpenAgenda: () => void }) {
     {
       key: "planejar",
       label: "Planejar",
-      hint: "Estruture metas com a WiMi",
+      hint: "Estruture blocos com a WiMi",
       icon: Compass,
-      to: "/assistente",
-      search: { seed: "planejar" },
+      to: "/planejar",
     },
+
     {
       key: "executar",
       label: "Executar",

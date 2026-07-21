@@ -18,9 +18,10 @@ export function FocusFloatingButton() {
   const onImmersive =
     pathname.startsWith("/assistente") || pathname.startsWith("/conversar");
 
-  // Não polui a UI: só aparece quando a barra inferior sumiu (rotas imersivas)
-  // ou quando o modo foco está ativo (feedback de estado + toggle rápido).
-  if (!onImmersive && !wake.active) return null;
+  // Global: sempre visível quando suportado. Feedback claro do estado (ember
+  // pulsante quando ativo). Posicionamento adaptativo evita colidir com a
+  // barra inferior fora das rotas imersivas.
+
 
   return (
     <button

@@ -30,6 +30,7 @@ import { Route as AuthenticatedRitualRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
 import { Route as AuthenticatedPreferenciasNotificacoesRouteImport } from './routes/_authenticated/preferencias-notificacoes'
 import { Route as AuthenticatedPlanoAlimentarRouteImport } from './routes/_authenticated/plano-alimentar'
+import { Route as AuthenticatedPlanejarRouteImport } from './routes/_authenticated/planejar'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedOrientadorChatRouteImport } from './routes/_authenticated/orientador-chat'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -173,6 +174,11 @@ const AuthenticatedPlanoAlimentarRoute =
     path: '/plano-alimentar',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPlanejarRoute = AuthenticatedPlanejarRouteImport.update({
+  id: '/planejar',
+  path: '/planejar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
@@ -390,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orientador-chat': typeof AuthenticatedOrientadorChatRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/planejar': typeof AuthenticatedPlanejarRoute
   '/plano-alimentar': typeof AuthenticatedPlanoAlimentarRoute
   '/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/progresso': typeof AuthenticatedProgressoRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orientador-chat': typeof AuthenticatedOrientadorChatRoute
   '/perfil': typeof AuthenticatedPerfilRoute
+  '/planejar': typeof AuthenticatedPlanejarRoute
   '/plano-alimentar': typeof AuthenticatedPlanoAlimentarRoute
   '/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/progresso': typeof AuthenticatedProgressoRoute
@@ -506,6 +514,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/orientador-chat': typeof AuthenticatedOrientadorChatRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/planejar': typeof AuthenticatedPlanejarRoute
   '/_authenticated/plano-alimentar': typeof AuthenticatedPlanoAlimentarRoute
   '/_authenticated/preferencias-notificacoes': typeof AuthenticatedPreferenciasNotificacoesRoute
   '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
@@ -565,6 +574,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/orientador-chat'
     | '/perfil'
+    | '/planejar'
     | '/plano-alimentar'
     | '/preferencias-notificacoes'
     | '/progresso'
@@ -622,6 +632,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/orientador-chat'
     | '/perfil'
+    | '/planejar'
     | '/plano-alimentar'
     | '/preferencias-notificacoes'
     | '/progresso'
@@ -680,6 +691,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/orientador-chat'
     | '/_authenticated/perfil'
+    | '/_authenticated/planejar'
     | '/_authenticated/plano-alimentar'
     | '/_authenticated/preferencias-notificacoes'
     | '/_authenticated/progresso'
@@ -879,6 +891,13 @@ declare module '@tanstack/react-router' {
       path: '/plano-alimentar'
       fullPath: '/plano-alimentar'
       preLoaderRoute: typeof AuthenticatedPlanoAlimentarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/planejar': {
+      id: '/_authenticated/planejar'
+      path: '/planejar'
+      fullPath: '/planejar'
+      preLoaderRoute: typeof AuthenticatedPlanejarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/perfil': {
@@ -1170,6 +1189,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedOrientadorChatRoute: typeof AuthenticatedOrientadorChatRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedPlanejarRoute: typeof AuthenticatedPlanejarRoute
   AuthenticatedPlanoAlimentarRoute: typeof AuthenticatedPlanoAlimentarRoute
   AuthenticatedPreferenciasNotificacoesRoute: typeof AuthenticatedPreferenciasNotificacoesRoute
   AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
@@ -1206,6 +1226,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedOrientadorChatRoute: AuthenticatedOrientadorChatRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedPlanejarRoute: AuthenticatedPlanejarRoute,
   AuthenticatedPlanoAlimentarRoute: AuthenticatedPlanoAlimentarRoute,
   AuthenticatedPreferenciasNotificacoesRoute:
     AuthenticatedPreferenciasNotificacoesRoute,
