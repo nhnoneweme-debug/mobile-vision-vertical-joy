@@ -195,6 +195,7 @@ function AssistantPage() {
   const voiceModeRef = useRef(false);
   // Referência ao wrapper do composer p/ colapsar em auto-mode ao clicar fora.
   const composerWrapRef = useRef<HTMLDivElement | null>(null);
+  const sttPreviewRef = useRef<HTMLDivElement | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const { canGoBack, goBack } = useGoBack();
 
@@ -228,9 +229,16 @@ function AssistantPage() {
     listening,
     supported: sttSupported,
     interim: sttInterim,
+    preview: sttPreview,
     start: startListening,
     stop: stopListening,
   } = useSpeechToText((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
+
+  useEffect(() => {
+    const el = sttPreviewRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [sttPreview, sttInterim, listening]);
 
   async function handleImageSelect(files: FileList | null) {
     if (!files?.length) return;
@@ -940,19 +948,18 @@ function AssistantPage() {
         <div ref={endRef} />
       </div>
 
-      <div className="h-28" />
+      <div className={listening ? "h-56" : "h-28"} />
 
       <div
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
         style={{ maxWidth: "var(--shell-max)" }}
       >
-        {/* Preview ao vivo da transcrição enquanto o mic está aberto: mostra o
-            parcial da fala em curso pra o usuário auditar. O texto final já cai
-            no textarea abaixo — a soma dos dois é o que será enviado. */}
+        {/* Preview ao vivo da transcrição enquanto o mic está aberto: janela de
+            auditoria com 5 linhas. O texto final já cai no textarea abaixo. */}
         {listening ? (
           <div
             aria-live="polite"
-            className="mb-2 flex items-start gap-2 rounded-lg border border-ember/30 bg-ember/5 px-3 py-2"
+            className="mb-2 flex items-start gap-2 rounded-xl border border-ember/30 bg-charcoal-800/95 px-3 py-2 shadow-[0_18px_40px_-24px_var(--ember)]"
           >
             <span className="mt-1 h-2 w-2 shrink-0 animate-pulse rounded-full bg-ember" />
             <div className="flex-1 min-w-0">
@@ -960,10 +967,11 @@ function AssistantPage() {
                 OUVINDO — AUDITE A TRANSCRIÇÃO
               </div>
               <div
-                className="mt-0.5 max-h-16 overflow-y-auto font-mono text-[12px] leading-snug text-foreground/90"
+                ref={sttPreviewRef}
+                className="mt-1 h-[5.65rem] overflow-hidden font-mono text-[12px] leading-[1.13rem] text-foreground/90"
                 style={{ overflowWrap: "anywhere" }}
               >
-                {sttInterim || (
+                {sttPreview || (
                   <span className="italic text-muted-foreground">fale que eu transcrevo…</span>
                 )}
               </div>
