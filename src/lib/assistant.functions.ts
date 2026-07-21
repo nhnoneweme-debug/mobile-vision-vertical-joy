@@ -15,6 +15,8 @@ export type ChatSettings = {
   assistant_name: string;
   /** Gênero da voz da IA (TTS + Web Speech fallback). */
   voice_gender: VoiceGender;
+  /** Ao abrir a IA: começar nova conversa ou retomar a última. */
+  open_mode: "new" | "last";
 };
 
 export {
@@ -31,6 +33,7 @@ export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   custom_instructions: "",
   assistant_name: "",
   voice_gender: "feminina",
+  open_mode: "new",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,7 +102,7 @@ export const getChatSettings = createServerFn({ method: "GET" })
     const db = context.supabase as Db;
     const { data } = await db
       .from("chat_settings")
-      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender")
+      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender, open_mode")
       .eq("user_id", context.userId)
       .maybeSingle();
     return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
@@ -117,6 +120,7 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         // trim + max: "  " vira "" e cai no fallback (WiMi).
         assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
         voice_gender: z.enum(["feminina", "masculina"]),
+        open_mode: z.enum(["new", "last"]),
       })
       .parse(d),
   )

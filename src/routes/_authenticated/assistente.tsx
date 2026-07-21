@@ -656,25 +656,41 @@ function AssistantPage() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
     (async () => {
-      // Abrir a IA SEMPRE começa uma sessão nova — retomar a última fazia a tela
-      // abrir no meio de um assunto velho. O histórico fica no drawer.
+      let convs: Conversation[] = [];
       try {
-        setConversations(await fnListConversations());
+        convs = await fnListConversations();
+        setConversations(convs);
       } catch {
         /* sem histórico */
       }
+      let s: ChatSettings = CHAT_SETTINGS_DEFAULT;
       try {
-        const s = await fnGetSettings();
+        s = await fnGetSettings();
         setSettings(s);
-        // A saudação carrega o nome escolhido; só troca se ninguém falou ainda.
-        setMsgs((prev) =>
-          prev.length === 1 && prev[0].role === "assistant"
-            ? [{ id: nid(), role: "assistant", text: assistantGreeting(assistantName(s)) }]
-            : prev,
-        );
       } catch {
         /* usa defaults */
       }
+      // Retomar a última conversa quando o usuário preferir; senão, saudação nova.
+      if (s.open_mode === "last" && convs.length > 0) {
+        try {
+          const last = convs[0];
+          const hist = await fnGetConversation({ data: { conversation_id: last.id } });
+          if (hist.length) {
+            setConversationId(last.id);
+            setMsgs(
+              hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg),
+            );
+            return;
+          }
+        } catch {
+          /* cai no fluxo padrão */
+        }
+      }
+      setMsgs((prev) =>
+        prev.length === 1 && prev[0].role === "assistant"
+          ? [{ id: nid(), role: "assistant", text: assistantGreeting(assistantName(s)) }]
+          : prev,
+      );
     })();
   }, [fnListConversations, fnGetSettings]);
   useEffect(() => {
@@ -1634,6 +1650,17 @@ function AssistantPage() {
                 { v: "treino", label: "Treino" },
                 { v: "nutricao", label: "Nutrição" },
                 { v: "mente", label: "Mente" },
+              ]}
+            />
+            <SegGroup
+              label="AO ABRIR A IA"
+              value={settings.open_mode}
+              onChange={(v) =>
+                persistSettings({ ...settings, open_mode: v as ChatSettings["open_mode"] })
+              }
+              options={[
+                { v: "new", label: "Nova conversa" },
+                { v: "last", label: "Última conversa" },
               ]}
             />
             <SegGroup
