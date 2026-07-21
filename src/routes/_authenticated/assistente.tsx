@@ -298,9 +298,13 @@ function AssistantPage() {
   }, [composerExpanded, expandMode]);
 
   function toggleVoice() {
-    if (voiceMode) {
+    if (voiceMode && listening) {
       stopListening();
       setVoiceMode(false);
+      return;
+    }
+    if (voiceMode && !listening) {
+      startListening();
       return;
     }
     if (!sttSupported) {
