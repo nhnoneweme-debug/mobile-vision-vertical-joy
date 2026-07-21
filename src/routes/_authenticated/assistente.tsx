@@ -1614,6 +1614,28 @@ function AssistantPage() {
                 Como sua inteligência digital se chama. Em branco, ela é {ASSISTANT_NAME_FALLBACK}.
               </p>
             </div>
+            <div>
+              <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+                FRASE DE CHAMADO
+              </p>
+              <input
+                value={settings.composer_placeholder}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    composer_placeholder: e.target.value.slice(0, 80),
+                  })
+                }
+                onBlur={() => persistSettings(settings)}
+                maxLength={80}
+                placeholder="Fala comigo…"
+                aria-label="Frase de chamado do campo de mensagem"
+                className="w-full rounded-lg border border-border bg-charcoal-900 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-ember/60 focus:outline-none"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                O que aparece dentro do campo de mensagem quando ele está vazio.
+              </p>
+            </div>
             <SegGroup
               label="PERSONALIDADE"
               value={settings.persona}
