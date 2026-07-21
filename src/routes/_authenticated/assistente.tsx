@@ -1662,6 +1662,7 @@ function AssistantPage() {
                 { v: "new", label: "Nova conversa" },
                 { v: "last", label: "Última conversa" },
               ]}
+            />
             <SegGroup
               label="VOZ DA IA"
               value={settings.voice_gender}
