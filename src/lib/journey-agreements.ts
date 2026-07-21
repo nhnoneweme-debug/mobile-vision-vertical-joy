@@ -89,6 +89,7 @@ export function saveAgreements(a: JourneyAgreements): void {
         preEnd: clamp(a.preEnd, 0, 30),
         atEnd: clamp(a.atEnd, 0, 10),
         preStart: clamp(a.preStart, 0, 30),
+        atStart: clamp(a.atStart, 0, 10),
         notify: normalizeNotify(a.notify),
       }),
     );
