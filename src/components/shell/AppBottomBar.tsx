@@ -4,7 +4,7 @@ import { Bell, ChevronLeft, Coffee, Home, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread, generateMyNudges } from "@/lib/notifications";
 import { useGoBack } from "@/hooks/useGoBack";
-import { useWakeLock } from "@/hooks/useWakeLock";
+import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { ProfileMenu } from "./ProfileMenu";
 
 // Barra inferior única do app: Notificações (esq.) · IA em destaque (centro) ·
