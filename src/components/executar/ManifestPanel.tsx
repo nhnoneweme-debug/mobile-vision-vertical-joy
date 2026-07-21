@@ -4,7 +4,7 @@
 // Toda ação relevante gera um execution_event via server function.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Loader2, Mic, MicOff, MessageCircle, Plus, Sparkles, X } from "lucide-react";
+import { Check, Loader2, Mic, MicOff, MessageCircle, Play, Plus, Sparkles, X, Flame } from "lucide-react";
 import { toast } from "sonner";
 import type { JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { vibrateFor, playPing } from "@/components/assistente/JourneyManifestFX";
@@ -21,6 +21,7 @@ export type ManifestAction =
   | { kind: "skip" }
   | { kind: "extend"; minutes: number }
   | { kind: "note"; text: string }
+  | { kind: "start" }
   | { kind: "converse" };
 
 export function ManifestPanel({
