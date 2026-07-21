@@ -4,7 +4,7 @@
 // e o ManifestPanel é a interface viva. Toda ação relevante grava um
 // execution_event no banco.
 
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, MessageCircle } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -118,6 +118,26 @@ function ExecutarPage() {
         <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
           <LiveClock />
           <BlockNowSummary journey={journey} />
+          {/* Trigger de conversa acompanhada — não sai da tela. */}
+          <button
+            type="button"
+            onClick={() => {
+              const now = journey.current;
+              const ctx = now
+                ? `Estou executando "${now.title}" agora${
+                    journey.minutesToEndOfCurrent != null
+                      ? ` (faltam ${journey.minutesToEndOfCurrent}min)`
+                      : ""
+                  }. Fica de olho comigo — vou falar aqui do palco de execução.`
+                : "Estou no palco de execução, entre blocos. Me acompanha?";
+              setChatSeed(ctx);
+              setChatOpen(true);
+            }}
+            className="mt-3 inline-flex items-center gap-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember active:scale-95"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            Conversar sem sair do palco
+          </button>
         </section>
 
         <section>
@@ -147,17 +167,33 @@ function ExecutarPage() {
                 kind: "negotiation",
                 phase: manifest.phase,
                 channel: "manual",
-                meta: { destination: "assistente" },
+                meta: { destination: "executar-chat" },
               },
             }).catch(() => {});
-            const seed = `manifest:${manifest.block.id}:${manifest.phase}`;
+            // Em vez de mandar pro /assistente e perder o palco, abrimos o
+            // drawer inline com contexto do bloco em negociação.
+            setChatSeed(
+              `Sobre "${manifest.block.title}" (${phaseText(manifest.phase)}): ${manifest.message}`,
+            );
+            setChatOpen(true);
             setManifest(null);
-            navigate({ to: "/assistente", search: { seed } as never });
           }}
         />
       ) : null}
+
+      <ExecutarChatDrawer
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        seed={chatSeed}
+      />
     </MobileShell>
   );
+}
+
+function phaseText(p: JourneyManifestation["phase"]): string {
+  if (p === "preEnd") return "faltando pouco pra fechar";
+  if (p === "atEnd") return "no fim do bloco";
+  return "começando agora";
 }
 
 function BlockNowSummary({ journey }: { journey: ReturnType<typeof useActiveJourney> }) {
