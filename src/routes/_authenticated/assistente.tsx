@@ -66,6 +66,18 @@ import {
   type ChatSettings,
 } from "@/lib/assistant.functions";
 import type { Proposal } from "@/routes/api/assistant";
+import { useActiveJourney } from "@/hooks/useActiveJourney";
+import { JourneyStrip } from "@/components/assistente/JourneyStrip";
+import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
+import {
+  loadAgreements,
+  saveAgreements,
+  recordChoice,
+  DEFAULT_AGREEMENTS,
+  type JourneyAgreements,
+} from "@/lib/journey-agreements";
+import { markMissionToday } from "@/lib/missions";
+import type { JourneySuggestion } from "@/lib/journey-suggestions";
 
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
 // que carregam (o fallback é "WiMi").
