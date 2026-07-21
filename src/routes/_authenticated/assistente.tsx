@@ -954,11 +954,28 @@ function AssistantPage() {
       }));
 
       setMsgs((prev) => [...prev, { id: nid(), role: "assistant", text: m.message, actions }]);
-      if (autoplayRef.current) {
-        // fala a manifestação em voz — só se o autoplay está ligado.
-        const idPreview = seq; // acabamos de criar
+      const notify = agreementsRef.current.notify;
+      if (notify.vibrate) vibrateFor(phase);
+      if (notify.voice && autoplayRef.current) {
+        const idPreview = seq;
         void playMessageTts(idPreview, m.message);
+      } else if (notify.vibrate) {
+        // Sem voz: um "ping" curto ajuda a chamar atenção quando o TTS
+        // está desligado. Autoplay/AudioContext desbloqueado no shell.
+        playPing(phase);
       }
+      if (notify.autoMic) {
+        // Abre o microfone pra o usuário responder por voz no ato.
+        // Import dinâmico evita rodar em navegadores sem STT.
+        setTimeout(() => {
+          try {
+            void ensureMicOn();
+          } catch {
+            /* noop */
+          }
+        }, 400);
+      }
+
     },
     // playMessageTts é estável dentro do componente pra este uso; deps mínimas
     // eslint-disable-next-line react-hooks/exhaustive-deps
