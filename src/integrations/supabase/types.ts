@@ -524,6 +524,7 @@ export type Database = {
           assistant_name: string
           custom_instructions: string
           focus: string
+          open_mode: string
           persona: string
           response_length: string
           updated_at: string
@@ -534,6 +535,7 @@ export type Database = {
           assistant_name?: string
           custom_instructions?: string
           focus?: string
+          open_mode?: string
           persona?: string
           response_length?: string
           updated_at?: string
@@ -544,6 +546,7 @@ export type Database = {
           assistant_name?: string
           custom_instructions?: string
           focus?: string
+          open_mode?: string
           persona?: string
           response_length?: string
           updated_at?: string
