@@ -954,7 +954,7 @@ function AssistantPage() {
       }));
 
       setMsgs((prev) => [...prev, { id: nid(), role: "assistant", text: m.message, actions }]);
-      const notify = agreementsRef.current.notify;
+      const notify = agreements.notify;
       if (notify.vibrate) vibrateFor(phase);
       if (notify.voice && autoplayRef.current) {
         const idPreview = seq;
@@ -964,17 +964,17 @@ function AssistantPage() {
         // está desligado. Autoplay/AudioContext desbloqueado no shell.
         playPing(phase);
       }
-      if (notify.autoMic) {
-        // Abre o microfone pra o usuário responder por voz no ato.
-        // Import dinâmico evita rodar em navegadores sem STT.
+      if (notify.autoMic && !listening) {
+        // Abre o microfone para o usuário responder por voz no ato.
         setTimeout(() => {
           try {
-            void ensureMicOn();
+            startListening();
           } catch {
             /* noop */
           }
-        }, 400);
+        }, 500);
       }
+
 
     },
     // playMessageTts é estável dentro do componente pra este uso; deps mínimas
