@@ -315,12 +315,13 @@ function AssistantPage() {
     const missions = journey.blocks
       .filter((b) => b.raw?.id && b.raw?.scheduled_time)
       .map((b) => ({
-        id: b.raw!.id as string,
-        title: (b.raw!.title as string) ?? b.title,
-        area: (b.raw!.area as string | null) ?? null,
-        scheduled_time: b.raw!.scheduled_time as string,
-        end_time: (b.raw!.end_time as string | null) ?? null,
+        id: b.raw.id,
+        title: b.raw.title ?? b.title,
+        area: b.area,
+        scheduled_time: b.raw.scheduled_time as string,
+        end_time: b.raw.end_time ?? null,
       }));
+
     void fnSyncJourney({
       data: {
         tz,
