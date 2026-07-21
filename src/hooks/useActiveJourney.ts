@@ -124,6 +124,7 @@ export function useActiveJourney(): ActiveJourney {
   return {
     current,
     next,
+    blocks,
     progressPct,
     minutesToEndOfCurrent,
     minutesToStartOfNext,
@@ -132,3 +133,4 @@ export function useActiveJourney(): ActiveJourney {
     refresh,
   };
 }
+
