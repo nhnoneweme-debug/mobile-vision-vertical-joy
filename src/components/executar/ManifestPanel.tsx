@@ -135,6 +135,16 @@ export function ManifestPanel({
       } else if (action.kind === "extend") {
         await extendMissionToday({ data: { mission_id: manifestation.block.id, minutes: action.minutes } });
         toast.success(`+${action.minutes}min pro bloco.`);
+      } else if (action.kind === "start") {
+        await logExecutionEvent({
+          data: {
+            mission_id: manifestation.block.id,
+            kind: "mission_started",
+            phase: "atStart",
+            channel: source === "voice" ? "voice" : "manual",
+          },
+        });
+        toast.success("Bora. Tô contigo.");
       } else if (action.kind === "note") {
         await logExecutionEvent({
           data: { mission_id: manifestation.block.id, kind: "voice_note", channel: "voice", note: action.text },
@@ -147,6 +157,8 @@ export function ManifestPanel({
       onResolved(action);
     }
   }
+
+  const isKickoff = manifestation.phase === "atStart";
 
   return (
     <section className="fixed inset-x-0 bottom-24 z-30 mx-auto max-w-[var(--shell-max)] px-4 lg:bottom-4">
