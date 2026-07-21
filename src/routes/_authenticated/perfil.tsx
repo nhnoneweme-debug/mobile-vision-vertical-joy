@@ -9,6 +9,7 @@ import { QuestHistory } from "@/components/profile/QuestHistory";
 import { NotificationPrefsCard } from "@/components/profile/NotificationPrefsCard";
 import { OrientadorInbox } from "@/components/profile/OrientadorInbox";
 import { LevelTrackPicker } from "@/components/profile/LevelTrackPicker";
+import { BehavioralClassPicker } from "@/components/profile/BehavioralClassPicker";
 import { EditNameDialog } from "@/components/profile/EditNameDialog";
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -242,6 +243,18 @@ function PerfilPage() {
             ABRIR →
           </span>
         </Link>
+
+        <div className="mt-6">
+          <BehavioralClassPicker
+            userId={userId}
+            currentClass={cls}
+            onSaved={(next) =>
+              setProfile((prev) =>
+                prev ? { ...prev, behavioral_class: next } : prev,
+              )
+            }
+          />
+        </div>
 
         <div className="mt-6">
           <LevelTrackPicker userId={userId} xp={profile?.xp ?? 0} />
