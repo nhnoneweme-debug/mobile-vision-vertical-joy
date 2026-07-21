@@ -19,7 +19,11 @@ export const DATA_HEADER = [
 ].join("\n");
 
 export const MAX_USER_CHARS = 4000;
-export const MAX_OUTPUT_TOKENS = 800;
+// Modelos com reasoning (ex.: gpt-5.5) consomem tokens de raciocínio DENTRO
+// deste orçamento. 800 era baixo demais: no nível "equilibrado/profundo" o
+// modelo gastava tudo em reasoning e não sobrava nada para o texto visível
+// (SSE chegava sem nenhum delta). 4096 dá folga para reasoning + resposta.
+export const MAX_OUTPUT_TOKENS = 4096;
 
 export function truncateUserText(text: string): string {
   if (text.length <= MAX_USER_CHARS) return text;
