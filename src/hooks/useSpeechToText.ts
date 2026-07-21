@@ -252,6 +252,7 @@ export function useSpeechToText(
   }, [stopRecognition]);
 
   const start = useCallback(() => {
+    if (activeRef.current) return createAndStart();
     sessionRef.current += 1;
     activeRef.current = true;
     mutedRef.current = false;
