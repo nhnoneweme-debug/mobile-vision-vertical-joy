@@ -948,7 +948,7 @@ function AssistantPage() {
         <div ref={endRef} />
       </div>
 
-      <div className="h-56" />
+      <div className={listening ? "h-56" : "h-28"} />
 
       <div
         className="fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-border bg-charcoal-900/95 px-3 pb-6 pt-2 backdrop-blur-xl"
