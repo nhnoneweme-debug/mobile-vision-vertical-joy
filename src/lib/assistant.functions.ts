@@ -120,6 +120,7 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         // trim + max: "  " vira "" e cai no fallback (WiMi).
         assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
         voice_gender: z.enum(["feminina", "masculina"]),
+        open_mode: z.enum(["new", "last"]),
       })
       .parse(d),
   )
