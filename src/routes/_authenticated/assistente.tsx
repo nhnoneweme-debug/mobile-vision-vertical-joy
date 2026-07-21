@@ -1653,6 +1653,16 @@ function AssistantPage() {
               ]}
             />
             <SegGroup
+              label="AO ABRIR A IA"
+              value={settings.open_mode}
+              onChange={(v) =>
+                persistSettings({ ...settings, open_mode: v as ChatSettings["open_mode"] })
+              }
+              options={[
+                { v: "new", label: "Nova conversa" },
+                { v: "last", label: "Última conversa" },
+              ]}
+            <SegGroup
               label="VOZ DA IA"
               value={settings.voice_gender}
               onChange={(v) =>
