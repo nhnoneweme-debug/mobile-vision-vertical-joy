@@ -117,8 +117,15 @@ type ProposalMsg = {
   cta?: { to: string; label: string };
   ctas?: { to: string; label: string }[];
 };
+export type ManifestAction = {
+  id: string;
+  label: string;
+  intent: "primary" | "secondary" | "ghost";
+  // Retorna true se a ação já persistiu algo (evita duplicar).
+  run: () => void | Promise<void>;
+};
 type Msg =
-  | { id: number; role: "assistant"; text: string }
+  | { id: number; role: "assistant"; text: string; actions?: ManifestAction[]; consumed?: boolean }
   | { id: number; role: "user"; text: string; images?: ImageAttachment[] }
   | ProposalMsg;
 
