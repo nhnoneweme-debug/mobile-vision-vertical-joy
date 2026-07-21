@@ -14,7 +14,7 @@ import { ProfileMenu } from "./ProfileMenu";
 export function AppBottomBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { canGoBack, goBack } = useGoBack();
-  const wake = useWakeLock();
+  const wake = useWakeLockContext();
   const [displayName, setDisplayName] = useState("Você");
   const [unread, setUnread] = useState(0);
 
