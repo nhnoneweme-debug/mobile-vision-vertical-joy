@@ -19,7 +19,7 @@ const EVENT_KINDS = [
   "negotiation",
 ] as const;
 
-const PHASES = ["preEnd", "atEnd", "preStart"] as const;
+const PHASES = ["preEnd", "atEnd", "preStart", "atStart"] as const;
 const CHANNELS = ["foreground", "push", "voice", "manual"] as const;
 
 const jsonValue: z.ZodType<Json> = z.lazy(() =>
