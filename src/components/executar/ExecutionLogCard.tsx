@@ -35,14 +35,14 @@ function fmtTime(iso: string): string {
 export function ExecutionLogCard() {
   const [open, setOpen] = useState(false);
   const fn = useServerFn(getTodayExecutionLog);
-  const { data } = useQuery({
+  const { data } = useQuery<ExecutionEventRow[]>({
     queryKey: ["execution-log", "today"],
-    queryFn: () => fn(),
+    queryFn: () => fn() as Promise<ExecutionEventRow[]>,
     staleTime: 15_000,
     refetchOnWindowFocus: true,
   });
 
-  const rows = (data ?? []).filter((r) =>
+  const rows = (data ?? []).filter((r: ExecutionEventRow) =>
     ["manifest_ack", "mission_done", "mission_skipped", "mission_extended", "voice_note"].includes(r.kind),
   );
 

@@ -5,6 +5,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 
 const EVENT_KINDS = [
   "manifest_shown",
@@ -21,6 +22,10 @@ const EVENT_KINDS = [
 const PHASES = ["preEnd", "atEnd", "preStart"] as const;
 const CHANNELS = ["foreground", "push", "voice", "manual"] as const;
 
+const jsonValue: z.ZodType<Json> = z.lazy(() =>
+  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValue), z.record(z.string(), jsonValue)]),
+);
+
 const logSchema = z.object({
   mission_id: z.string().uuid().nullable().optional(),
   kind: z.enum(EVENT_KINDS),
@@ -29,7 +34,7 @@ const logSchema = z.object({
   latency_ms: z.number().int().min(0).max(600_000).nullable().optional(),
   delta_min: z.number().int().min(-240).max(240).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), jsonValue).optional(),
 });
 
 export type LogExecutionEventInput = z.infer<typeof logSchema>;
@@ -48,7 +53,7 @@ export const logExecutionEvent = createServerFn({ method: "POST" })
       latency_ms: data.latency_ms ?? null,
       delta_min: data.delta_min ?? null,
       note: data.note ?? null,
-      meta: (data.meta ?? {}) as Record<string, unknown>,
+      meta: (data.meta ?? {}) as Json,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -69,7 +74,7 @@ export const extendMissionToday = createServerFn({ method: "POST" })
       _minutes: data.minutes,
     });
     if (error) throw new Error(error.message);
-    return result as { ok: boolean; new_end_time: string; delta_min: number };
+    return (result ?? { ok: false }) as Json;
   });
 
 export type ExecutionEventRow = {
@@ -80,13 +85,13 @@ export type ExecutionEventRow = {
   channel: (typeof CHANNELS)[number] | null;
   delta_min: number | null;
   note: string | null;
-  meta: Record<string, unknown>;
+  meta: Json;
   occurred_at: string;
 };
 
 export const getTodayExecutionLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<ExecutionEventRow[]> => {
     const { supabase, userId } = context;
     const today = new Date();
     const y = today.getUTCFullYear();
