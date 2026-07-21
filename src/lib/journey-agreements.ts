@@ -6,7 +6,7 @@
 // localStorage (decisão por dispositivo, sem migration). Quando fizermos a
 // coluna em `chat_settings`, esta camada continua a mesma; só troca a fonte.
 
-export type JourneyPhase = "preEnd" | "atEnd" | "preStart";
+export type JourneyPhase = "preEnd" | "atEnd" | "preStart" | "atStart";
 
 export type JourneyNotifyChannels = {
   text: boolean;
