@@ -17,6 +17,8 @@ export type ChatSettings = {
   voice_gender: VoiceGender;
   /** Ao abrir a IA: começar nova conversa ou retomar a última. */
   open_mode: "new" | "last";
+  /** Frase de chamado exibida como placeholder do campo de mensagem. Vazio = padrão. */
+  composer_placeholder: string;
 };
 
 export {
@@ -34,6 +36,7 @@ export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   assistant_name: "",
   voice_gender: "feminina",
   open_mode: "new",
+  composer_placeholder: "",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,7 +105,7 @@ export const getChatSettings = createServerFn({ method: "GET" })
     const db = context.supabase as Db;
     const { data } = await db
       .from("chat_settings")
-      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender, open_mode")
+      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender, open_mode, composer_placeholder")
       .eq("user_id", context.userId)
       .maybeSingle();
     return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
@@ -121,6 +124,7 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
         voice_gender: z.enum(["feminina", "masculina"]),
         open_mode: z.enum(["new", "last"]),
+        composer_placeholder: z.string().trim().max(80),
       })
       .parse(d),
   )
