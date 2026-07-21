@@ -387,6 +387,11 @@ function AssistantPage() {
    */
   async function playMessageTts(msgId: number, text: string) {
     if (!text.trim()) return;
+    if (voiceModeRef.current || listening) {
+      stopListening();
+      setVoiceMode(false);
+      voiceModeRef.current = false;
+    }
     if (ttsMsgId === msgId && audioRef.current) {
       if (ttsState === "playing") {
         audioRef.current.pause();
@@ -629,6 +634,12 @@ function AssistantPage() {
     const t = text.trim();
     const imgs = pendingImages;
     if ((!t && !imgs.length) || thinking) return;
+    const voiceWasActive = voiceModeRef.current || listening;
+    if (voiceWasActive) {
+      stopListening();
+      setVoiceMode(false);
+      voiceModeRef.current = false;
+    }
     const convo = msgs
       .filter(
         (m): m is Extract<Msg, { role: "user" | "assistant" }> =>
@@ -720,8 +731,7 @@ function AssistantPage() {
       if (sawError && assistantId == null) {
         appendDelta("Tive um problema pra responder agora. Tenta de novo?");
       }
-      const shouldSpeak =
-        (voiceModeRef.current || autoplayRef.current) && full.trim() && assistantId != null;
+      const shouldSpeak = (voiceWasActive || autoplayRef.current) && full.trim() && assistantId != null;
       if (shouldSpeak) void playMessageTts(assistantId!, full.trim());
       if (isNewConversation) void refreshConversations();
     } catch {
