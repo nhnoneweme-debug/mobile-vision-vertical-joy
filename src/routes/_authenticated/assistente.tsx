@@ -1645,7 +1645,7 @@ function AssistantPage() {
                     { key: "preEnd", label: "Antes de acabar" },
                     { key: "atEnd", label: "Ao terminar" },
                     { key: "preStart", label: "Antes do próximo" },
-                  ] as Array<{ key: keyof JourneyAgreements; label: string }>
+                  ] as Array<{ key: "preEnd" | "atEnd" | "preStart"; label: string }>
                 ).map(({ key, label }) => (
                   <label key={key} className="flex flex-col gap-1 text-[10px] text-muted-foreground">
                     <span className="font-display tracking-[0.15em]">{label.toUpperCase()}</span>
@@ -1653,7 +1653,7 @@ function AssistantPage() {
                       type="number"
                       min={0}
                       max={60}
-                      value={agreements[key] as number}
+                      value={agreements[key]}
                       onChange={(e) => {
                         const n = Math.max(0, Math.min(60, Number(e.target.value) || 0));
                         updateAgreements({ [key]: n } as Partial<JourneyAgreements>);
@@ -1663,10 +1663,38 @@ function AssistantPage() {
                   </label>
                 ))}
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { key: "text", label: "Texto no chat" },
+                    { key: "voice", label: "Voz (TTS)" },
+                    { key: "vibrate", label: "Vibrar" },
+                    { key: "autoMic", label: "Abrir microfone" },
+                  ] as Array<{ key: keyof JourneyNotifyChannels; label: string }>
+                ).map(({ key, label }) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-charcoal-900 px-2.5 py-2 text-[11px] text-foreground"
+                  >
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={agreements.notify[key]}
+                      onChange={(e) => {
+                        const next = { ...agreements.notify, [key]: e.target.checked };
+                        updateAgreements({ notify: next });
+                      }}
+                      className="h-4 w-4 accent-ember"
+                    />
+                  </label>
+                ))}
+              </div>
               <p className="mt-1.5 text-[10px] text-muted-foreground">
                 A WiMi manifesta a mensagem certa no bloco atual usando as suas últimas escolhas.
+                Push no celular travado respeita esses canais e as horas silenciosas dos ajustes.
               </p>
             </div>
+
             <p className="rounded-lg border border-border bg-charcoal-800/40 p-2.5 text-[11px] text-muted-foreground">
               A IA sempre analisa seu progresso no app (streak, calorias do dia, treinos, hábitos,
               dieta) pra personalizar as respostas.
