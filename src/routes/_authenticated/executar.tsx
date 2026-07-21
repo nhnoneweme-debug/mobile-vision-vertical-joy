@@ -6,7 +6,7 @@
 
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity } from "lucide-react";
+import { Activity, MessageCircle } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { useActiveJourney, type JourneyBlock } from "@/hooks/useActiveJourney";
@@ -14,6 +14,7 @@ import { LiveClock } from "@/components/executar/LiveClock";
 import { JourneyTimeline, type TimelineItem } from "@/components/executar/JourneyTimeline";
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutionLogCard } from "@/components/executar/ExecutionLogCard";
+import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { formatMomentLabel, getClientMoment } from "@/lib/client-moment";
 import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
