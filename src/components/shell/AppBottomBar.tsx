@@ -106,27 +106,8 @@ export function AppBottomBar() {
             )}
           </Link>
 
-          {/* Wake Lock — mantém a tela acesa como se um vídeo estivesse tocando.
-              Enquanto ativo, o navegador não apaga a tela nem manda a aba pro
-              background por inatividade. Reaquire automático ao voltar da aba. */}
-          {wake.supported && (
-            <button
-              type="button"
-              onClick={() => void wake.toggle()}
-              aria-label={wake.active ? "Liberar tela (desligar modo foco)" : "Manter tela acesa (modo foco)"}
-              aria-pressed={wake.active}
-              title={wake.active ? "Modo foco ativo — tela sempre acesa" : "Manter tela acesa"}
-              className={
-                "relative grid h-11 w-11 place-items-center rounded-2xl transition-colors active:scale-95 " +
-                (wake.active ? "text-ember" : "text-muted-foreground hover:text-foreground")
-              }
-            >
-              <Coffee className="h-6 w-6" strokeWidth={2.2} />
-              {wake.active && (
-                <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-ember shadow-[0_0_6px] shadow-ember" />
-              )}
-            </button>
-          )}
+          {/* Wake Lock movido pra FocusFloatingButton — botão flutuante global. */}
+
         </div>
 
         {/* Centro — IA em destaque (elevado, sobreposto ao topo da barra) */}
