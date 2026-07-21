@@ -88,7 +88,9 @@ function ExecutarPage() {
           ? `faltando pouco pra fechar "${block.title}". como tá indo?`
           : phase === "atEnd"
             ? `"${block.title}" terminou. bora fechar ou estender?`
-            : `"${block.title}" tá começando. bora?`,
+            : phase === "atStart"
+              ? `é AGORA. "${block.title}" começa — nós dois nisso.`
+              : `"${block.title}" tá começando. bora?`,
     });
   }, [search.seed, journey.blocks]);
 
