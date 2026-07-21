@@ -1609,6 +1609,40 @@ function AssistantPage() {
                 {savingCfg ? "salvando…" : `${settings.custom_instructions.length}/500`}
               </p>
             </div>
+            {/* Acordos de acompanhamento da jornada — quando a WiMi se manifesta.
+                Valores em minutos, editáveis pelo operador. */}
+            <div>
+              <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+                GATILHOS DA JORNADA (MIN)
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { key: "preEnd", label: "Antes de acabar" },
+                    { key: "atEnd", label: "Ao terminar" },
+                    { key: "preStart", label: "Antes do próximo" },
+                  ] as Array<{ key: keyof JourneyAgreements; label: string }>
+                ).map(({ key, label }) => (
+                  <label key={key} className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                    <span className="font-display tracking-[0.15em]">{label.toUpperCase()}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={agreements[key] as number}
+                      onChange={(e) => {
+                        const n = Math.max(0, Math.min(60, Number(e.target.value) || 0));
+                        updateAgreements({ [key]: n } as Partial<JourneyAgreements>);
+                      }}
+                      className="rounded-lg border border-border bg-charcoal-900 px-2 py-1.5 text-center text-sm text-foreground focus:border-ember/60 focus:outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                A WiMi manifesta a mensagem certa no bloco atual usando as suas últimas escolhas.
+              </p>
+            </div>
             <p className="rounded-lg border border-border bg-charcoal-800/40 p-2.5 text-[11px] text-muted-foreground">
               A IA sempre analisa seu progresso no app (streak, calorias do dia, treinos, hábitos,
               dieta) pra personalizar as respostas.
