@@ -159,6 +159,13 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
         wantedRef.current = false;
         sessionRef.current += 1;
         clearRestartTimer();
+        if (recRef.current === rec) recRef.current = null;
+        startingRef.current = false;
+        try {
+          rec.abort();
+        } catch {
+          /* já parado */
+        }
         setListening(false);
         setInterim("");
         setPreview("");
