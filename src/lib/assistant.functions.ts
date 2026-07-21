@@ -17,6 +17,8 @@ export type ChatSettings = {
   voice_gender: VoiceGender;
   /** Ao abrir a IA: começar nova conversa ou retomar a última. */
   open_mode: "new" | "last";
+  /** Frase de chamado exibida como placeholder do campo de mensagem. Vazio = padrão. */
+  composer_placeholder: string;
 };
 
 export {
