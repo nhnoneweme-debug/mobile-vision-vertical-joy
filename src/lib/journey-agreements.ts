@@ -22,6 +22,9 @@ export type JourneyAgreements = {
   atEnd: number;
   // Minutos antes do início do próximo bloco.
   preStart: number;
+  // Tolerância em minutos após o start real do bloco para ainda disparar
+  // o gatilho épico de kickoff (evita evocar quando o usuário chegou tarde).
+  atStart: number;
   // Canais habilitados para a manifestação.
   notify: JourneyNotifyChannels;
 };
@@ -37,6 +40,7 @@ export const DEFAULT_AGREEMENTS: JourneyAgreements = {
   preEnd: 2,
   atEnd: 0,
   preStart: 1,
+  atStart: 1,
   notify: DEFAULT_NOTIFY,
 };
 
