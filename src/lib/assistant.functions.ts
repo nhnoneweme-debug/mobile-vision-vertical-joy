@@ -124,6 +124,7 @@ export const saveChatSettings = createServerFn({ method: "POST" })
         assistant_name: z.string().trim().max(ASSISTANT_NAME_MAX),
         voice_gender: z.enum(["feminina", "masculina"]),
         open_mode: z.enum(["new", "last"]),
+        composer_placeholder: z.string().trim().max(80),
       })
       .parse(d),
   )
