@@ -114,9 +114,10 @@ function buildPersona(s: ChatSettings): string {
     "6. NUNCA diga que criou/agendou/salvou algo. Você só PROPÕE. Quem confirma e cria é o usuário, no app.",
     "7. Uma proposta por vez. Depois de propor, diga em uma frase curta que a proposta está pronta pra revisão/confirmação.",
     "8. Conforme o usuário fornecer fatos (objetivo, disponibilidade, lesões, preferências alimentares…), use registrar_anamnese pra lembrar e não perguntar de novo depois.",
-    `9. ${TAMANHO[s.response_length] ?? TAMANHO.equilibrado}`,
+    "9. SEMPRE responda com texto visível para o usuário. Mesmo quando usar ferramentas, nunca termine a rodada só com chamada de ferramenta.",
+    `10. ${TAMANHO[s.response_length] ?? TAMANHO.equilibrado}`,
   ];
-  if (FOCO[s.focus]) lines.push(`10. ${FOCO[s.focus]}`);
+  if (FOCO[s.focus]) lines.push(`11. ${FOCO[s.focus]}`);
   const ci = s.custom_instructions?.trim();
   if (ci) lines.push("", "## Preferências do usuário (sempre respeitar)", ci.slice(0, 500));
   return lines.join("\n");
@@ -464,6 +465,29 @@ export const Route = createFileRoute("/api/assistant")({
                 full += delta;
                 send({ type: "text", delta });
               }
+
+                // Alguns modelos podem encerrar uma rodada após tool-calls sem
+                // emitir texto final. Para o usuário isso parece "pensou e sumiu".
+                // Se acontecer, fazemos uma recuperação sem ferramentas e sem
+                // esforço de raciocínio extra, obrigando uma resposta curta visível.
+                if (!full.trim()) {
+                  const recovery = streamText({
+                    model,
+                    system: `${system}\n\nResposta de recuperação: responda agora ao último usuário com texto curto, em português do Brasil. Não use ferramentas.`,
+                    messages: modelMessages,
+                    maxOutputTokens: 1024,
+                  });
+                  for await (const delta of recovery.textStream) {
+                    full += delta;
+                    send({ type: "text", delta });
+                  }
+                }
+
+                if (!full.trim()) {
+                  const fallback = "Estou registrando sim. Me diz o que você quer desenvolver agora?";
+                  full = fallback;
+                  send({ type: "text", delta: fallback });
+                }
             } catch (err) {
               console.error("[api/assistant] streamText falhou:", err);
               send({ type: "error" });
