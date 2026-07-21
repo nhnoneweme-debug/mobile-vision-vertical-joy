@@ -893,6 +893,72 @@ function AssistantPage() {
     push({ role: "assistant", text: "Sem problema. Quer ajustar o pedido? É só me falar." });
   }
 
+  /** Handler das manifestações da WiMi disparadas pelo JourneyAgent.
+   *  Injeta uma mensagem local (role=assistant) com 3 sugestões dinâmicas
+   *  que executam a ação real quando tocadas (marcar feito, estender, etc.). */
+  const manifestHandler = useCallback(
+    (m: JourneyManifestation) => {
+      const kind = (m.block.area ?? "geral") || "geral";
+      const phase = m.phase;
+      const missionRaw = m.block.raw;
+
+      const doMarkDone = async () => {
+        if (userId) {
+          try {
+            await markMissionToday(missionRaw, userId, true);
+            toast.success("Registrado como feito.");
+            journey.refresh();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Não consegui registrar.");
+          }
+        }
+      };
+      const doMarkSkip = async () => {
+        if (userId) {
+          try {
+            await markMissionToday(missionRaw, userId, false);
+            toast("Registrado como não realizado.");
+            journey.refresh();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Não consegui registrar.");
+          }
+        }
+      };
+
+      const actions: ManifestAction[] = m.suggestions.map((s: JourneySuggestion) => ({
+        id: s.id,
+        label: s.label,
+        intent: s.intent,
+        run: async () => {
+          recordChoice(kind, phase, s.id);
+          if (s.id === "done" || s.id === "rest_done") await doMarkDone();
+          else if (s.id === "skip") await doMarkSkip();
+          else if (s.id === "log_note") setInput((prev) => (prev ? prev : "Registrar sobre isto: "));
+          else if (s.id === "check_in") setInput((prev) => (prev ? prev : "Preciso de ajuda com isso agora: "));
+          else if (s.id === "extend" || s.id === "rest_more") {
+            setInput((prev) => (prev ? prev : "Estender esse bloco em 5 minutos."));
+          } else if (s.id === "reschedule") {
+            setInput((prev) => (prev ? prev : "Adiar esse bloco em 10 minutos."));
+          } else if (s.id === "start_now" || s.id === "start_rest" || s.id === "ready") {
+            setInput((prev) => (prev ? prev : "Começando agora."));
+          } else if (s.id === "focus_next") {
+            setInput((prev) => (prev ? prev : "Me lembre do próximo passo do plano."));
+          }
+        },
+      }));
+
+      setMsgs((prev) => [...prev, { id: nid(), role: "assistant", text: m.message, actions }]);
+      if (autoplayRef.current) {
+        // fala a manifestação em voz — só se o autoplay está ligado.
+        const idPreview = seq; // acabamos de criar
+        void playMessageTts(idPreview, m.message);
+      }
+    },
+    // playMessageTts é estável dentro do componente pra este uso; deps mínimas
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, journey],
+  );
+
   return (
     <MobileShell>
       <audio ref={hiddenAudioRef} className="hidden" preload="auto" />
