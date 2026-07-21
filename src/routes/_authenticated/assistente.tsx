@@ -979,7 +979,8 @@ function AssistantPage() {
     },
     // playMessageTts é estável dentro do componente pra este uso; deps mínimas
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, journey],
+    [userId, journey, agreements, listening, startListening],
+
   );
 
   return (
