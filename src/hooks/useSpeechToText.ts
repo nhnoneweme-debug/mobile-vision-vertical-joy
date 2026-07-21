@@ -1,19 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Reconhecimento de fala (Web Speech API) em pt-BR, contínuo — a pessoa fala e
-// o texto final vai caindo no callback. Usado pelo chat da IA e pelos dumps.
+// Reconhecimento de fala (Web Speech API) em pt-BR.
 //
-// `mute()` pausa a captura sem encerrar a "sessão" lógica: o usuário pode
-// silenciar pra atender alguém e retomar sem perder o que já foi transcrito.
-// `interim` expõe o texto parcial pra UI mostrar o acompanhamento ao vivo.
+// A versão anterior usava `continuous=true` + auto-restart. No Chrome mobile isso
+// costuma tocar um beep a cada start/restart e pode reemitir o mesmo resultado
+// final, gerando "oi, oi" no campo. Aqui mantemos uma sessão única iniciada por
+// gesto do usuário, sem religar automaticamente. O usuário toca no mic para
+// pausar/parar e toca de novo para continuar.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Recognition = any;
 
-type RecentFinal = { norm: string; at: number };
+type UseSpeechToTextOptions = {
+  /**
+   * Quando false, a captura para na primeira frase. Por padrão fica ligado
+   * para manter a conversa fluida sem precisar reiniciar a cada palavra.
+   */
+  continuous?: boolean;
+};
 
-const RECENT_FINAL_TTL = 8_000;
-const RESTART_DELAY_MS = 900;
+type RecentCommit = { norm: string; at: number };
+
+const RECENT_COMMIT_TTL = 20_000;
+const TAIL_WORDS_TO_COMPARE = 18;
 
 function normalizeSpeechText(text: string) {
   return text
@@ -29,14 +38,55 @@ function cleanTranscript(text: string) {
   return text.trim().replace(/\s+/g, " ");
 }
 
-function collapseLikelyEcho(text: string) {
-  const clean = cleanTranscript(text);
-  const words = clean.split(/\s+/).filter(Boolean);
-  if (words.length < 2 || words.length > 5) return clean;
-  const normalized = words.map(normalizeSpeechText);
-  const first = normalized[0];
-  if (!first || first.length > 12) return clean;
-  return normalized.every((w) => w === first) ? words[0] : clean;
+function wordsOf(text: string) {
+  return cleanTranscript(text).split(/\s+/).filter(Boolean);
+}
+
+function lastWords(text: string, count: number) {
+  const words = wordsOf(text);
+  return words.slice(Math.max(0, words.length - count)).join(" ");
+}
+
+function collapseImmediateEcho(text: string) {
+  const words = wordsOf(text);
+  if (words.length < 2) return cleanTranscript(text);
+
+  // "oi oi oi" / "teste teste" / pequenas frases espelhadas na mesma emissão.
+  for (let size = 1; size <= Math.floor(words.length / 2); size++) {
+    if (words.length % size !== 0) continue;
+    const first = normalizeSpeechText(words.slice(0, size).join(" "));
+    if (!first || first.length > 80) continue;
+    let repeated = true;
+    for (let i = size; i < words.length; i += size) {
+      if (normalizeSpeechText(words.slice(i, i + size).join(" ")) !== first) {
+        repeated = false;
+        break;
+      }
+    }
+    if (repeated) return words.slice(0, size).join(" ");
+  }
+
+  return cleanTranscript(text);
+}
+
+function subtractAlreadyCommitted(candidate: string, committedTail: string) {
+  const candidateWords = wordsOf(candidate);
+  const tailWords = wordsOf(committedTail);
+  if (!candidateWords.length || !tailWords.length) return cleanTranscript(candidate);
+
+  const normalizedCandidate = candidateWords.map(normalizeSpeechText);
+  const normalizedTail = tailWords.map(normalizeSpeechText);
+  const maxOverlap = Math.min(normalizedCandidate.length, normalizedTail.length);
+
+  for (let size = maxOverlap; size >= 1; size--) {
+    const tailSlice = normalizedTail.slice(normalizedTail.length - size).join(" ");
+    const candidateSlice = normalizedCandidate.slice(0, size).join(" ");
+    if (tailSlice === candidateSlice) {
+      return candidateWords.slice(size).join(" ");
+    }
+  }
+
+  return cleanTranscript(candidate);
 }
 
 function getSpeechRecognition(): Recognition | null {
@@ -46,20 +96,24 @@ function getSpeechRecognition(): Recognition | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
-export function useSpeechToText(onFinalText: (text: string) => void) {
+export function useSpeechToText(
+  onFinalText: (text: string) => void,
+  options: UseSpeechToTextOptions = {},
+) {
+  const continuous = options.continuous !== false;
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
   const [muted, setMuted] = useState(false);
   const [interim, setInterim] = useState("");
   const [preview, setPreview] = useState("");
+
   const recRef = useRef<Recognition>(null);
-  const startingRef = useRef(false);
-  const restartTimerRef = useRef<number | null>(null);
-  const sessionRef = useRef(0);
-  const processedFinalIndexesRef = useRef<Set<number>>(new Set());
-  const recentFinalsRef = useRef<RecentFinal[]>([]);
-  const wantedRef = useRef(false);
+  const activeRef = useRef(false);
   const mutedRef = useRef(false);
+  const sessionRef = useRef(0);
+  const committedTextRef = useRef("");
+  const recentCommitsRef = useRef<RecentCommit[]>([]);
+  const finalResultKeysRef = useRef<Set<string>>(new Set());
   const onFinalRef = useRef(onFinalText);
   onFinalRef.current = onFinalText;
 
@@ -68,192 +122,186 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     if (!t) return;
     setPreview((prev) => {
       const next = `${prev} ${t}`.trim().replace(/\s+/g, " ");
-      // Mantém só o trecho recente: a UI mostra as últimas 5 linhas e oculta o
-      // que passou, sem acumular uma transcrição gigante na memória.
       return next.length > 900 ? next.slice(-900).replace(/^\S+\s*/, "") : next;
     });
   }, []);
 
-  useEffect(() => {
-    setSupported(!!getSpeechRecognition());
-  }, []);
+  const commitFinalText = useCallback(
+    (raw: string) => {
+      let text = collapseImmediateEcho(raw);
+      text = subtractAlreadyCommitted(text, lastWords(committedTextRef.current, TAIL_WORDS_TO_COMPARE));
+      text = collapseImmediateEcho(text);
+      if (!text) return;
 
-  const clearRestartTimer = useCallback(() => {
-    if (restartTimerRef.current == null) return;
-    window.clearTimeout(restartTimerRef.current);
-    restartTimerRef.current = null;
-  }, []);
+      const norm = normalizeSpeechText(text);
+      if (!norm) return;
 
-  const shouldAcceptFinal = useCallback((text: string) => {
-    const norm = normalizeSpeechText(text);
-    if (!norm) return false;
-    const now = Date.now();
-    recentFinalsRef.current = recentFinalsRef.current.filter((item) => now - item.at < RECENT_FINAL_TTL);
-    if (recentFinalsRef.current.some((item) => item.norm === norm)) return false;
-    recentFinalsRef.current.push({ norm, at: now });
-    return true;
-  }, []);
+      const now = Date.now();
+      recentCommitsRef.current = recentCommitsRef.current.filter(
+        (item) => now - item.at < RECENT_COMMIT_TTL,
+      );
+      if (recentCommitsRef.current.some((item) => item.norm === norm)) return;
 
-  const stopRec = useCallback(() => {
-    clearRestartTimer();
+      recentCommitsRef.current.push({ norm, at: now });
+      committedTextRef.current = `${committedTextRef.current} ${text}`.trim();
+      appendPreview(text);
+      onFinalRef.current(text);
+    },
+    [appendPreview],
+  );
+
+  const stopRecognition = useCallback(() => {
     const rec = recRef.current;
-    if (rec) {
-      try {
-        rec.onstart = null;
-        rec.onend = null;
-        rec.onerror = null;
-        rec.onresult = null;
-        rec.abort();
-      } catch {
-        /* já parado */
-      }
-      recRef.current = null;
+    if (!rec) return;
+    rec.onstart = null;
+    rec.onend = null;
+    rec.onerror = null;
+    rec.onresult = null;
+    try {
+      rec.abort();
+    } catch {
+      /* já parado */
     }
-    startingRef.current = false;
-    processedFinalIndexesRef.current = new Set();
-  }, [clearRestartTimer]);
+    recRef.current = null;
+  }, []);
 
-  const startRec = useCallback(() => {
+  const createAndStart = useCallback(() => {
     const SR = getSpeechRecognition();
-    if (!SR || recRef.current || startingRef.current) return false;
-    clearRestartTimer();
-    startingRef.current = true;
-    processedFinalIndexesRef.current = new Set();
+    if (!SR || recRef.current || !activeRef.current || mutedRef.current) return false;
+
     const session = sessionRef.current;
+    finalResultKeysRef.current = new Set();
+
     const rec = new SR();
     rec.lang = "pt-BR";
-    rec.continuous = true;
+    rec.continuous = continuous;
     rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
     rec.onstart = () => {
       if (session !== sessionRef.current) return;
-      startingRef.current = false;
       setListening(true);
     };
+
     rec.onend = () => {
       if (session !== sessionRef.current) return;
       recRef.current = null;
-      startingRef.current = false;
-      // Religa se o usuário não mandou parar nem mutou. Mantemos `listening=true`
-      // durante a religada para o preview de transcrição não piscar/desaparecer
-      // no intervalo entre o `end` do Chrome (após silêncio) e o próximo `start`.
-      if (wantedRef.current && !mutedRef.current) {
-        // Atraso maior reduz religadas em rajada — principal causa dos bipes no
-        // Chrome mobile — e um novo objeto evita resultados finais ecoados.
-        restartTimerRef.current = window.setTimeout(() => {
-          restartTimerRef.current = null;
-          if (session !== sessionRef.current || !wantedRef.current || mutedRef.current) return;
-          startRec();
-        }, RESTART_DELAY_MS);
-        return;
-      }
       setListening(false);
       setInterim("");
-      setPreview("");
+      // Sem auto-restart: evita beeps repetidos e resultados ecoados no Chrome
+      // mobile. Se algum navegador encerrar por limite de tempo, o usuário toca
+      // no mic novamente para continuar a mesma frase.
     };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onerror = (ev: any) => {
-      // Em `no-speech`/`aborted` deixamos o onend religar; só derrubamos o
-      // estado em erros duros (perm/network) — aí realmente paramos.
+      if (session !== sessionRef.current) return;
       const code = ev?.error;
-      if (code && code !== "no-speech" && code !== "aborted") {
-        wantedRef.current = false;
-        sessionRef.current += 1;
-        clearRestartTimer();
-        if (recRef.current === rec) recRef.current = null;
-        startingRef.current = false;
-        try {
-          rec.abort();
-        } catch {
-          /* já parado */
-        }
-        setListening(false);
-        setInterim("");
-        setPreview("");
-      }
+      if (code === "no-speech" || code === "aborted") return;
+      activeRef.current = false;
+      mutedRef.current = false;
+      recRef.current = null;
+      setMuted(false);
+      setListening(false);
+      setInterim("");
     };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (ev: any) => {
       if (session !== sessionRef.current) return;
-      let interimText = "";
-      const finals: string[] = [];
+      let nextInterim = "";
+
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const r = ev.results[i];
         const transcript = cleanTranscript(r?.[0]?.transcript ?? "");
         if (!transcript) continue;
+
         if (r.isFinal) {
-          if (processedFinalIndexesRef.current.has(i)) continue;
-          processedFinalIndexesRef.current.add(i);
-          finals.push(transcript);
+          const key = `${i}:${normalizeSpeechText(transcript)}`;
+          if (finalResultKeysRef.current.has(key)) continue;
+          finalResultKeysRef.current.add(key);
+          commitFinalText(transcript);
         } else {
-          interimText += ` ${transcript}`;
+          nextInterim = `${nextInterim} ${transcript}`.trim();
         }
       }
-      setInterim(cleanTranscript(interimText));
-      for (const finalText of finals) {
-        const f = collapseLikelyEcho(finalText);
-        if (!shouldAcceptFinal(f)) continue;
-        appendPreview(f);
-        onFinalRef.current(f);
-      }
+
+      setInterim(nextInterim ? collapseImmediateEcho(nextInterim) : "");
     };
+
     try {
       recRef.current = rec;
       rec.start();
       return true;
     } catch {
       if (recRef.current === rec) recRef.current = null;
-      startingRef.current = false;
+      setListening(false);
       return false;
     }
-  }, [appendPreview, clearRestartTimer, shouldAcceptFinal]);
+  }, [commitFinalText, continuous]);
 
   const stop = useCallback(() => {
     sessionRef.current += 1;
-    wantedRef.current = false;
+    activeRef.current = false;
     mutedRef.current = false;
+    setMuted(false);
+    setListening(false);
+    setInterim("");
+    setPreview("");
+    stopRecognition();
+  }, [stopRecognition]);
+
+  const start = useCallback(() => {
+    if (activeRef.current) return createAndStart();
+    sessionRef.current += 1;
+    activeRef.current = true;
+    mutedRef.current = false;
+    committedTextRef.current = "";
+    recentCommitsRef.current = [];
     setMuted(false);
     setInterim("");
     setPreview("");
-    stopRec();
-    setListening(false);
-  }, [stopRec]);
-
-  const start = useCallback(() => {
-    sessionRef.current += 1;
-    recentFinalsRef.current = [];
-    wantedRef.current = true;
-    mutedRef.current = false;
-    setMuted(false);
-    return startRec();
-  }, [startRec]);
+    return createAndStart();
+  }, [createAndStart]);
 
   const mute = useCallback(() => {
-    if (!wantedRef.current) return;
+    if (!activeRef.current) return;
     sessionRef.current += 1;
     mutedRef.current = true;
     setMuted(true);
+    setListening(false);
     setInterim("");
-    setPreview("");
-    stopRec(); // pausa a captura; wantedRef segue true pra retomar
-  }, [stopRec]);
+    stopRecognition();
+  }, [stopRecognition]);
 
   const unmute = useCallback(() => {
-    if (!wantedRef.current) return;
+    if (!activeRef.current) return;
     sessionRef.current += 1;
     mutedRef.current = false;
     setMuted(false);
-    startRec();
-  }, [startRec]);
+    createAndStart();
+  }, [createAndStart]);
 
   const toggle = useCallback(() => {
-    if (wantedRef.current) stop();
-    else start();
-  }, [start, stop]);
+    if (!activeRef.current) {
+      start();
+      return;
+    }
+    if (recRef.current || listening) {
+      stop();
+      return;
+    }
+    createAndStart();
+  }, [createAndStart, listening, start, stop]);
 
   const toggleMute = useCallback(() => {
     if (mutedRef.current) unmute();
     else mute();
   }, [mute, unmute]);
+
+  useEffect(() => {
+    setSupported(!!getSpeechRecognition());
+  }, []);
 
   useEffect(() => stop, [stop]);
 
