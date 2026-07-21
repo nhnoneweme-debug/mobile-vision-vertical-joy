@@ -36,6 +36,7 @@ export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   assistant_name: "",
   voice_gender: "feminina",
   open_mode: "new",
+  composer_placeholder: "",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
