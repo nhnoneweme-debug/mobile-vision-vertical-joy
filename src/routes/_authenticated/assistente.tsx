@@ -218,6 +218,43 @@ function AssistantPage() {
   const imgInputRef = useRef<HTMLInputElement>(null);
   const { canGoBack, goBack } = useGoBack();
 
+  // Menu do nível de raciocínio (chip compacto na barra superior).
+  const [effortMenuOpen, setEffortMenuOpen] = useState(false);
+  const effortMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!effortMenuOpen) return;
+    function onDown(ev: MouseEvent | TouchEvent) {
+      const el = effortMenuRef.current;
+      if (el && !el.contains(ev.target as Node)) setEffortMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [effortMenuOpen]);
+
+  // Acordos de acompanhamento da jornada (preEnd/atEnd/preStart em minutos).
+  // Guardados no localStorage — decisão por dispositivo, sem migration.
+  // Passar `agreementsVersion` para o JourneyAgent força reler quando muda.
+  const [agreements, setAgreements] = useState<JourneyAgreements>(DEFAULT_AGREEMENTS);
+  const [agreementsVersion, setAgreementsVersion] = useState(0);
+  useEffect(() => {
+    setAgreements(loadAgreements());
+  }, []);
+  function updateAgreements(patch: Partial<JourneyAgreements>) {
+    setAgreements((prev) => {
+      const next = { ...prev, ...patch };
+      saveAgreements(next);
+      setAgreementsVersion((v) => v + 1);
+      return next;
+    });
+  }
+
+  // Bloco atual + próximo da agenda (missões com scheduled_time hoje).
+  const journey = useActiveJourney();
+
   // Restaura preferência de autoplay do dispositivo (item 3).
   useEffect(() => {
     try {
