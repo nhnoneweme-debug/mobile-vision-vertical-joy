@@ -72,6 +72,7 @@ export function loadAgreements(): JourneyAgreements {
       preEnd: clamp(parsed.preEnd ?? DEFAULT_AGREEMENTS.preEnd, 0, 30),
       atEnd: clamp(parsed.atEnd ?? DEFAULT_AGREEMENTS.atEnd, 0, 10),
       preStart: clamp(parsed.preStart ?? DEFAULT_AGREEMENTS.preStart, 0, 30),
+      atStart: clamp(parsed.atStart ?? DEFAULT_AGREEMENTS.atStart, 0, 10),
       notify: normalizeNotify(parsed.notify),
     };
   } catch {
