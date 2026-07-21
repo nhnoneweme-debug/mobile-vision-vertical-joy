@@ -55,7 +55,7 @@ export const Route = createFileRoute("/api/public/hooks/journey-tick")({
             const r = await sendPushToUser(row.user_id, {
               title: row.title ?? "WiMi",
               body: row.body ?? "Manifestação da sua jornada.",
-              url: `/assistente?seed=manifest:${row.mission_id}:${row.phase}`,
+              url: `/executar?seed=manifest:${row.mission_id}:${row.phase}`,
               kind: "mission_due",
               tag: `journey:${row.mission_id}:${row.phase}`,
             });
