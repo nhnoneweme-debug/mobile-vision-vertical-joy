@@ -105,7 +105,7 @@ export const getChatSettings = createServerFn({ method: "GET" })
     const db = context.supabase as Db;
     const { data } = await db
       .from("chat_settings")
-      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender, open_mode")
+      .select("persona, response_length, focus, custom_instructions, assistant_name, voice_gender, open_mode, composer_placeholder")
       .eq("user_id", context.userId)
       .maybeSingle();
     return { ...CHAT_SETTINGS_DEFAULT, ...((data ?? {}) as Partial<ChatSettings>) };
