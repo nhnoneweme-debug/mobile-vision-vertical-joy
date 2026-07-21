@@ -1457,7 +1457,7 @@ function AssistantPage() {
                 if (expandMode === "auto") setComposerExpanded(true);
               }}
               rows={composerExpanded ? 5 : 1}
-              placeholder={listening ? "Estou ouvindo…" : "Fala comigo…"}
+              placeholder={listening ? "Estou ouvindo…" : (settings.composer_placeholder?.trim() || "Fala comigo…")}
               className={
                 composerExpanded
                   ? "absolute bottom-0 left-0 right-0 z-10 max-h-[40vh] w-full resize-none rounded-xl border border-ember/60 bg-charcoal-800 px-3 py-2.5 pl-10 text-foreground shadow-2xl outline-none placeholder:text-muted-foreground focus:border-ember/60"
