@@ -10,6 +10,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Recognition = any;
 
+type RecentFinal = { norm: string; at: number };
+
+const RECENT_FINAL_TTL = 8_000;
+const RESTART_DELAY_MS = 900;
+
+function normalizeSpeechText(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanTranscript(text: string) {
+  return text.trim().replace(/\s+/g, " ");
+}
+
+function collapseLikelyEcho(text: string) {
+  const clean = cleanTranscript(text);
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 5) return clean;
+  const normalized = words.map(normalizeSpeechText);
+  const first = normalized[0];
+  if (!first || first.length > 12) return clean;
+  return normalized.every((w) => w === first) ? words[0] : clean;
+}
+
 function getSpeechRecognition(): Recognition | null {
   if (typeof window === "undefined") return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,13 +53,18 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
   const [interim, setInterim] = useState("");
   const [preview, setPreview] = useState("");
   const recRef = useRef<Recognition>(null);
+  const startingRef = useRef(false);
+  const restartTimerRef = useRef<number | null>(null);
+  const sessionRef = useRef(0);
+  const processedFinalIndexesRef = useRef<Set<number>>(new Set());
+  const recentFinalsRef = useRef<RecentFinal[]>([]);
   const wantedRef = useRef(false);
   const mutedRef = useRef(false);
   const onFinalRef = useRef(onFinalText);
   onFinalRef.current = onFinalText;
 
   const appendPreview = useCallback((text: string) => {
-    const t = text.trim();
+    const t = cleanTranscript(text);
     if (!t) return;
     setPreview((prev) => {
       const next = `${prev} ${t}`.trim().replace(/\s+/g, " ");
@@ -44,45 +78,72 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     setSupported(!!getSpeechRecognition());
   }, []);
 
+  const clearRestartTimer = useCallback(() => {
+    if (restartTimerRef.current == null) return;
+    window.clearTimeout(restartTimerRef.current);
+    restartTimerRef.current = null;
+  }, []);
+
+  const shouldAcceptFinal = useCallback((text: string) => {
+    const norm = normalizeSpeechText(text);
+    if (!norm) return false;
+    const now = Date.now();
+    recentFinalsRef.current = recentFinalsRef.current.filter((item) => now - item.at < RECENT_FINAL_TTL);
+    if (recentFinalsRef.current.some((item) => item.norm === norm)) return false;
+    recentFinalsRef.current.push({ norm, at: now });
+    return true;
+  }, []);
+
   const stopRec = useCallback(() => {
+    clearRestartTimer();
     const rec = recRef.current;
     if (rec) {
       try {
+        rec.onstart = null;
+        rec.onend = null;
+        rec.onerror = null;
+        rec.onresult = null;
         rec.abort();
       } catch {
         /* já parado */
       }
       recRef.current = null;
     }
-  }, []);
+    startingRef.current = false;
+    processedFinalIndexesRef.current = new Set();
+  }, [clearRestartTimer]);
 
   const startRec = useCallback(() => {
     const SR = getSpeechRecognition();
-    if (!SR || recRef.current) return false;
+    if (!SR || recRef.current || startingRef.current) return false;
+    clearRestartTimer();
+    startingRef.current = true;
+    processedFinalIndexesRef.current = new Set();
+    const session = sessionRef.current;
     const rec = new SR();
     rec.lang = "pt-BR";
     rec.continuous = true;
     rec.interimResults = true;
-    rec.onstart = () => setListening(true);
+    rec.onstart = () => {
+      if (session !== sessionRef.current) return;
+      startingRef.current = false;
+      setListening(true);
+    };
     rec.onend = () => {
+      if (session !== sessionRef.current) return;
       recRef.current = null;
+      startingRef.current = false;
       // Religa se o usuário não mandou parar nem mutou. Mantemos `listening=true`
       // durante a religada para o preview de transcrição não piscar/desaparecer
       // no intervalo entre o `end` do Chrome (após silêncio) e o próximo `start`.
       if (wantedRef.current && !mutedRef.current) {
-        // Pequeno atraso reduz religadas em rajada (menos "bip" do Chrome).
-        window.setTimeout(() => {
-          if (!wantedRef.current || mutedRef.current || recRef.current) return;
-          try {
-            rec.start();
-            recRef.current = rec;
-          } catch {
-            wantedRef.current = false;
-            setListening(false);
-            setInterim("");
-            setPreview("");
-          }
-        }, 250);
+        // Atraso maior reduz religadas em rajada — principal causa dos bipes no
+        // Chrome mobile — e um novo objeto evita resultados finais ecoados.
+        restartTimerRef.current = window.setTimeout(() => {
+          restartTimerRef.current = null;
+          if (session !== sessionRef.current || !wantedRef.current || mutedRef.current) return;
+          startRec();
+        }, RESTART_DELAY_MS);
         return;
       }
       setListening(false);
@@ -96,46 +157,51 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
       const code = ev?.error;
       if (code && code !== "no-speech" && code !== "aborted") {
         wantedRef.current = false;
+        sessionRef.current += 1;
+        clearRestartTimer();
         setListening(false);
         setInterim("");
         setPreview("");
       }
     };
-    // Dedupe do último final: em religadas o Chrome às vezes re-entrega o
-    // último trecho, o que aparecia como texto duplicado no textarea.
-    let lastFinal = "";
-    let lastFinalAt = 0;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (ev: any) => {
-      let finalText = "";
+      if (session !== sessionRef.current) return;
       let interimText = "";
+      const finals: string[] = [];
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const r = ev.results[i];
-        if (r.isFinal) finalText += r[0].transcript;
-        else interimText += r[0].transcript;
-      }
-      setInterim(interimText.trim());
-      const f = finalText.trim();
-      if (f) {
-        const now = Date.now();
-        if (f !== lastFinal || now - lastFinalAt > 2500) {
-          lastFinal = f;
-          lastFinalAt = now;
-          appendPreview(f);
-          onFinalRef.current(f);
+        const transcript = cleanTranscript(r?.[0]?.transcript ?? "");
+        if (!transcript) continue;
+        if (r.isFinal) {
+          if (processedFinalIndexesRef.current.has(i)) continue;
+          processedFinalIndexesRef.current.add(i);
+          finals.push(transcript);
+        } else {
+          interimText += ` ${transcript}`;
         }
+      }
+      setInterim(cleanTranscript(interimText));
+      for (const finalText of finals) {
+        const f = collapseLikelyEcho(finalText);
+        if (!shouldAcceptFinal(f)) continue;
+        appendPreview(f);
+        onFinalRef.current(f);
       }
     };
     try {
-      rec.start();
       recRef.current = rec;
+      rec.start();
       return true;
     } catch {
+      if (recRef.current === rec) recRef.current = null;
+      startingRef.current = false;
       return false;
     }
-  }, [appendPreview]);
+  }, [appendPreview, clearRestartTimer, shouldAcceptFinal]);
 
   const stop = useCallback(() => {
+    sessionRef.current += 1;
     wantedRef.current = false;
     mutedRef.current = false;
     setMuted(false);
@@ -146,6 +212,8 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
   }, [stopRec]);
 
   const start = useCallback(() => {
+    sessionRef.current += 1;
+    recentFinalsRef.current = [];
     wantedRef.current = true;
     mutedRef.current = false;
     setMuted(false);
@@ -154,6 +222,7 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
 
   const mute = useCallback(() => {
     if (!wantedRef.current) return;
+    sessionRef.current += 1;
     mutedRef.current = true;
     setMuted(true);
     setInterim("");
@@ -163,6 +232,7 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
 
   const unmute = useCallback(() => {
     if (!wantedRef.current) return;
+    sessionRef.current += 1;
     mutedRef.current = false;
     setMuted(false);
     startRec();
