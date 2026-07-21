@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Sparkles,
@@ -66,6 +66,18 @@ import {
   type ChatSettings,
 } from "@/lib/assistant.functions";
 import type { Proposal } from "@/routes/api/assistant";
+import { useActiveJourney } from "@/hooks/useActiveJourney";
+import { JourneyStrip } from "@/components/assistente/JourneyStrip";
+import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
+import {
+  loadAgreements,
+  saveAgreements,
+  recordChoice,
+  DEFAULT_AGREEMENTS,
+  type JourneyAgreements,
+} from "@/lib/journey-agreements";
+import { markMissionToday } from "@/lib/missions";
+import type { JourneySuggestion } from "@/lib/journey-suggestions";
 
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
 // que carregam (o fallback é "WiMi").
@@ -105,8 +117,15 @@ type ProposalMsg = {
   cta?: { to: string; label: string };
   ctas?: { to: string; label: string }[];
 };
+export type ManifestAction = {
+  id: string;
+  label: string;
+  intent: "primary" | "secondary" | "ghost";
+  // Retorna true se a ação já persistiu algo (evita duplicar).
+  run: () => void | Promise<void>;
+};
 type Msg =
-  | { id: number; role: "assistant"; text: string }
+  | { id: number; role: "assistant"; text: string; actions?: ManifestAction[]; consumed?: boolean }
   | { id: number; role: "user"; text: string; images?: ImageAttachment[] }
   | ProposalMsg;
 
@@ -198,6 +217,43 @@ function AssistantPage() {
   const sttPreviewRef = useRef<HTMLDivElement | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const { canGoBack, goBack } = useGoBack();
+
+  // Menu do nível de raciocínio (chip compacto na barra superior).
+  const [effortMenuOpen, setEffortMenuOpen] = useState(false);
+  const effortMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!effortMenuOpen) return;
+    function onDown(ev: MouseEvent | TouchEvent) {
+      const el = effortMenuRef.current;
+      if (el && !el.contains(ev.target as Node)) setEffortMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [effortMenuOpen]);
+
+  // Acordos de acompanhamento da jornada (preEnd/atEnd/preStart em minutos).
+  // Guardados no localStorage — decisão por dispositivo, sem migration.
+  // Passar `agreementsVersion` para o JourneyAgent força reler quando muda.
+  const [agreements, setAgreements] = useState<JourneyAgreements>(DEFAULT_AGREEMENTS);
+  const [agreementsVersion, setAgreementsVersion] = useState(0);
+  useEffect(() => {
+    setAgreements(loadAgreements());
+  }, []);
+  function updateAgreements(patch: Partial<JourneyAgreements>) {
+    setAgreements((prev) => {
+      const next = { ...prev, ...patch };
+      saveAgreements(next);
+      setAgreementsVersion((v) => v + 1);
+      return next;
+    });
+  }
+
+  // Bloco atual + próximo da agenda (missões com scheduled_time hoje).
+  const journey = useActiveJourney();
 
   // Restaura preferência de autoplay do dispositivo (item 3).
   useEffect(() => {
@@ -837,6 +893,72 @@ function AssistantPage() {
     push({ role: "assistant", text: "Sem problema. Quer ajustar o pedido? É só me falar." });
   }
 
+  /** Handler das manifestações da WiMi disparadas pelo JourneyAgent.
+   *  Injeta uma mensagem local (role=assistant) com 3 sugestões dinâmicas
+   *  que executam a ação real quando tocadas (marcar feito, estender, etc.). */
+  const manifestHandler = useCallback(
+    (m: JourneyManifestation) => {
+      const kind = (m.block.area ?? "geral") || "geral";
+      const phase = m.phase;
+      const missionRaw = m.block.raw;
+
+      const doMarkDone = async () => {
+        if (userId) {
+          try {
+            await markMissionToday(missionRaw, userId, true);
+            toast.success("Registrado como feito.");
+            journey.refresh();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Não consegui registrar.");
+          }
+        }
+      };
+      const doMarkSkip = async () => {
+        if (userId) {
+          try {
+            await markMissionToday(missionRaw, userId, false);
+            toast("Registrado como não realizado.");
+            journey.refresh();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Não consegui registrar.");
+          }
+        }
+      };
+
+      const actions: ManifestAction[] = m.suggestions.map((s: JourneySuggestion) => ({
+        id: s.id,
+        label: s.label,
+        intent: s.intent,
+        run: async () => {
+          recordChoice(kind, phase, s.id);
+          if (s.id === "done" || s.id === "rest_done") await doMarkDone();
+          else if (s.id === "skip") await doMarkSkip();
+          else if (s.id === "log_note") setInput((prev) => (prev ? prev : "Registrar sobre isto: "));
+          else if (s.id === "check_in") setInput((prev) => (prev ? prev : "Preciso de ajuda com isso agora: "));
+          else if (s.id === "extend" || s.id === "rest_more") {
+            setInput((prev) => (prev ? prev : "Estender esse bloco em 5 minutos."));
+          } else if (s.id === "reschedule") {
+            setInput((prev) => (prev ? prev : "Adiar esse bloco em 10 minutos."));
+          } else if (s.id === "start_now" || s.id === "start_rest" || s.id === "ready") {
+            setInput((prev) => (prev ? prev : "Começando agora."));
+          } else if (s.id === "focus_next") {
+            setInput((prev) => (prev ? prev : "Me lembre do próximo passo do plano."));
+          }
+        },
+      }));
+
+      setMsgs((prev) => [...prev, { id: nid(), role: "assistant", text: m.message, actions }]);
+      if (autoplayRef.current) {
+        // fala a manifestação em voz — só se o autoplay está ligado.
+        const idPreview = seq; // acabamos de criar
+        void playMessageTts(idPreview, m.message);
+      }
+    },
+    // playMessageTts é estável dentro do componente pra este uso; deps mínimas
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, journey],
+  );
+
   return (
     <MobileShell>
       <audio ref={hiddenAudioRef} className="hidden" preload="auto" />
@@ -873,7 +995,19 @@ function AssistantPage() {
         </div>
       </header>
 
+      {/* Painel de execução viva — mostra o AGORA / A SEGUIR baseado nas
+          missões com horário para hoje. Não renderiza se nada estiver
+          agendado. O JourneyAgent (sem UI) manifesta a WiMi no chat quando
+          cruza os gatilhos negociados com o usuário. */}
+      <JourneyStrip journey={journey} />
+      <JourneyAgent
+        journey={journey}
+        onManifest={manifestHandler}
+        agreementsVersion={agreementsVersion}
+      />
+
       <div className="space-y-3 px-4 pt-4">
+
         {msgs.map((m) => {
           if (m.role === "user") {
             return (
@@ -901,13 +1035,45 @@ function AssistantPage() {
           if (m.role === "assistant") {
             return (
               <div key={m.id} className="flex justify-start gap-1.5">
-                <div className="forge-card max-w-[86%] rounded-2xl rounded-bl-md px-3.5 py-2.5">
-                  {/* A IA responde em markdown (**negrito**, listas). Renderizar
-                      como texto puro mostrava os asteriscos crus pro usuário —
-                      mesmo padrão já usado no /conversar e no DumpChat. */}
-                  <div className="prose prose-sm prose-invert max-w-none text-sm leading-snug text-foreground prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-display">
-                    <ReactMarkdown>{m.text}</ReactMarkdown>
+                <div className="flex max-w-[86%] flex-col gap-1.5">
+                  <div className="forge-card rounded-2xl rounded-bl-md px-3.5 py-2.5">
+                    {/* A IA responde em markdown (**negrito**, listas). Renderizar
+                        como texto puro mostrava os asteriscos crus pro usuário —
+                        mesmo padrão já usado no /conversar e no DumpChat. */}
+                    <div className="prose prose-sm prose-invert max-w-none text-sm leading-snug text-foreground prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-display">
+                      <ReactMarkdown>{m.text}</ReactMarkdown>
+                    </div>
                   </div>
+                  {m.actions && m.actions.length > 0 && !m.consumed ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {m.actions.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={async () => {
+                            await a.run();
+                            setMsgs((prev) =>
+                              prev.map((x) =>
+                                x.id === m.id && x.role === "assistant"
+                                  ? { ...x, consumed: true }
+                                  : x,
+                              ),
+                            );
+                          }}
+                          className={
+                            "rounded-full px-2.5 py-1 text-[11px] font-display uppercase tracking-[0.12em] transition active:scale-95 " +
+                            (a.intent === "primary"
+                              ? "bg-ember text-charcoal-900 hover:brightness-110"
+                              : a.intent === "secondary"
+                                ? "border border-ember/40 text-ember hover:bg-ember/10"
+                                : "border border-border text-muted-foreground hover:text-foreground")
+                          }
+                        >
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 {(() => {
                   const active = ttsMsgId === m.id;
@@ -1061,44 +1227,69 @@ function AssistantPage() {
             {autoplay ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             AUTO
           </button>
-        </div>
-        {/* Nível de raciocínio da IA — vale para a PRÓXIMA mensagem. */}
-        <div
-          role="radiogroup"
-          aria-label="Nível de raciocínio"
-          className="mb-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-charcoal-800/60 p-1"
-        >
-          {(
-            [
-              { id: "low", label: "Rápido", Icon: Zap },
-              { id: "medium", label: "Equilibrado", Icon: Scale },
-              { id: "high", label: "Profundo", Icon: Brain },
-            ] as Array<{ id: Effort; label: string; Icon: typeof Zap }>
-          ).map(({ id, label, Icon }) => {
-            const active = effort === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => {
-                  setEffort(id);
-                  effortRef.current = id;
-                  saveEffort(id);
-                }}
-                className={
-                  "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition " +
-                  (active
-                    ? "bg-ember text-charcoal-900 shadow"
-                    : "text-muted-foreground hover:text-foreground")
-                }
+          {/* Chip compacto de nível de raciocínio (Rápido/Equilibrado/Profundo).
+              Substitui a barra de 3 botões que ocupava linha inteira. */}
+          <div ref={effortMenuRef} className="relative">
+            {(() => {
+              const map: Record<Effort, { label: string; Icon: typeof Zap }> = {
+                low: { label: "Rápido", Icon: Zap },
+                medium: { label: "Equilibrado", Icon: Scale },
+                high: { label: "Profundo", Icon: Brain },
+              };
+              const cur = map[effort];
+              const CurIcon = cur.Icon;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setEffortMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={effortMenuOpen}
+                  className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
+                >
+                  <CurIcon className="h-3.5 w-3.5" strokeWidth={2.2} /> {cur.label.toUpperCase()}
+                </button>
+              );
+            })()}
+            {effortMenuOpen ? (
+              <div
+                role="menu"
+                className="absolute bottom-full right-0 z-40 mb-2 w-40 overflow-hidden rounded-xl border border-border bg-charcoal-900/95 shadow-xl backdrop-blur"
               >
-                <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
-                {label}
-              </button>
-            );
-          })}
+                {(
+                  [
+                    { id: "low", label: "Rápido", Icon: Zap },
+                    { id: "medium", label: "Equilibrado", Icon: Scale },
+                    { id: "high", label: "Profundo", Icon: Brain },
+                  ] as Array<{ id: Effort; label: string; Icon: typeof Zap }>
+                ).map(({ id, label, Icon }) => {
+                  const active = effort === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        setEffort(id);
+                        effortRef.current = id;
+                        saveEffort(id);
+                        setEffortMenuOpen(false);
+                      }}
+                      className={
+                        "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition " +
+                        (active
+                          ? "bg-ember/10 text-ember"
+                          : "text-muted-foreground hover:bg-charcoal-800 hover:text-foreground")
+                      }
+                    >
+                      <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
         {pendingImages.length ? (
           <div className="mb-2 flex gap-2 overflow-x-auto">
@@ -1416,6 +1607,40 @@ function AssistantPage() {
               />
               <p className="mt-1 text-right text-[10px] text-muted-foreground">
                 {savingCfg ? "salvando…" : `${settings.custom_instructions.length}/500`}
+              </p>
+            </div>
+            {/* Acordos de acompanhamento da jornada — quando a WiMi se manifesta.
+                Valores em minutos, editáveis pelo operador. */}
+            <div>
+              <p className="mb-1.5 font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+                GATILHOS DA JORNADA (MIN)
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { key: "preEnd", label: "Antes de acabar" },
+                    { key: "atEnd", label: "Ao terminar" },
+                    { key: "preStart", label: "Antes do próximo" },
+                  ] as Array<{ key: keyof JourneyAgreements; label: string }>
+                ).map(({ key, label }) => (
+                  <label key={key} className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                    <span className="font-display tracking-[0.15em]">{label.toUpperCase()}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={agreements[key] as number}
+                      onChange={(e) => {
+                        const n = Math.max(0, Math.min(60, Number(e.target.value) || 0));
+                        updateAgreements({ [key]: n } as Partial<JourneyAgreements>);
+                      }}
+                      className="rounded-lg border border-border bg-charcoal-900 px-2 py-1.5 text-center text-sm text-foreground focus:border-ember/60 focus:outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                A WiMi manifesta a mensagem certa no bloco atual usando as suas últimas escolhas.
               </p>
             </div>
             <p className="rounded-lg border border-border bg-charcoal-800/40 p-2.5 text-[11px] text-muted-foreground">
