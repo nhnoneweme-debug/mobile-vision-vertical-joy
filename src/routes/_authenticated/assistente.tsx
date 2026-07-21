@@ -995,7 +995,19 @@ function AssistantPage() {
         </div>
       </header>
 
+      {/* Painel de execução viva — mostra o AGORA / A SEGUIR baseado nas
+          missões com horário para hoje. Não renderiza se nada estiver
+          agendado. O JourneyAgent (sem UI) manifesta a WiMi no chat quando
+          cruza os gatilhos negociados com o usuário. */}
+      <JourneyStrip journey={journey} />
+      <JourneyAgent
+        journey={journey}
+        onManifest={manifestHandler}
+        agreementsVersion={agreementsVersion}
+      />
+
       <div className="space-y-3 px-4 pt-4">
+
         {msgs.map((m) => {
           if (m.role === "user") {
             return (
