@@ -75,11 +75,11 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
       setListening(false);
       setInterim("");
     };
-    rec.onerror = () => {
-      // Em `no-speech` deixamos o onend religar; só derrubamos o estado em erros
-      // duros (perm/network) — aí realmente paramos.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const code = (arguments as any)?.[0]?.error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onerror = (ev: any) => {
+      // Em `no-speech`/`aborted` deixamos o onend religar; só derrubamos o
+      // estado em erros duros (perm/network) — aí realmente paramos.
+      const code = ev?.error;
       if (code && code !== "no-speech" && code !== "aborted") {
         wantedRef.current = false;
         setListening(false);
