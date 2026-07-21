@@ -13,8 +13,8 @@ type Recognition = any;
 
 type UseSpeechToTextOptions = {
   /**
-   * Quando true, a captura continua após pausas de silêncio. No mobile, isso
-   * pode gerar beeps do navegador; por padrão fica desligado.
+   * Quando false, a captura para na primeira frase. Por padrão fica ligado
+   * para manter a conversa fluida sem precisar reiniciar a cada palavra.
    */
   continuous?: boolean;
 };
@@ -100,7 +100,7 @@ export function useSpeechToText(
   onFinalText: (text: string) => void,
   options: UseSpeechToTextOptions = {},
 ) {
-  const continuous = options.continuous === true;
+  const continuous = options.continuous !== false;
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -282,9 +282,16 @@ export function useSpeechToText(
   }, [createAndStart]);
 
   const toggle = useCallback(() => {
-    if (activeRef.current) stop();
-    else start();
-  }, [start, stop]);
+    if (!activeRef.current) {
+      start();
+      return;
+    }
+    if (recRef.current || listening) {
+      stop();
+      return;
+    }
+    createAndStart();
+  }, [createAndStart, listening, start, stop]);
 
   const toggleMute = useCallback(() => {
     if (mutedRef.current) unmute();
