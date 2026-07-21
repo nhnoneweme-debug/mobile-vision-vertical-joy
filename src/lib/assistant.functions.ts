@@ -15,6 +15,8 @@ export type ChatSettings = {
   assistant_name: string;
   /** Gênero da voz da IA (TTS + Web Speech fallback). */
   voice_gender: VoiceGender;
+  /** Ao abrir a IA: começar nova conversa ou retomar a última. */
+  open_mode: "new" | "last";
 };
 
 export {
@@ -31,6 +33,7 @@ export const CHAT_SETTINGS_DEFAULT: ChatSettings = {
   custom_instructions: "",
   assistant_name: "",
   voice_gender: "feminina",
+  open_mode: "new",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
