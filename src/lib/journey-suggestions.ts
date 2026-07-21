@@ -49,6 +49,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
       { id: "reschedule", label: "Adiar 10 min", intent: "ghost" },
       { id: "focus_next", label: "Me lembra o plano", intent: "ghost" },
     ],
+    atStart: [
+      { id: "start_now", label: "Iniciar agora", intent: "primary" },
+      { id: "reschedule", label: "Adiar 10 min", intent: "secondary" },
+      { id: "skip", label: "Pular hoje", intent: "ghost" },
+    ],
   },
   treino: {
     preEnd: [
@@ -68,6 +73,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
       { id: "start_now", label: "Aquecer agora", intent: "secondary" },
       { id: "reschedule", label: "Adiar 15 min", intent: "ghost" },
     ],
+    atStart: [
+      { id: "start_now", label: "Puxar ferro", intent: "primary" },
+      { id: "reschedule", label: "Adiar 15 min", intent: "secondary" },
+      { id: "skip", label: "Hoje não", intent: "ghost" },
+    ],
   },
   cozinha: {
     preEnd: [
@@ -83,6 +93,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
     preStart: [
       { id: "ready", label: "Vou preparar", intent: "primary" },
       { id: "start_now", label: "Começar já", intent: "secondary" },
+      { id: "reschedule", label: "Comer daqui 15", intent: "ghost" },
+    ],
+    atStart: [
+      { id: "start_now", label: "À mesa", intent: "primary" },
+      { id: "log_note", label: "Anotar refeição", intent: "secondary" },
       { id: "reschedule", label: "Comer daqui 15", intent: "ghost" },
     ],
   },
@@ -102,6 +117,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
       { id: "start_now", label: "Começar agora", intent: "secondary" },
       { id: "reschedule", label: "Daqui 10 min", intent: "ghost" },
     ],
+    atStart: [
+      { id: "start_now", label: "Iniciar prática", intent: "primary" },
+      { id: "log_note", label: "Anotar intenção", intent: "secondary" },
+      { id: "reschedule", label: "Daqui 10 min", intent: "ghost" },
+    ],
   },
   quarto: {
     preEnd: [
@@ -119,6 +139,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
       { id: "start_now", label: "Ritual de dormir", intent: "secondary" },
       { id: "reschedule", label: "Só mais 15", intent: "ghost" },
     ],
+    atStart: [
+      { id: "start_rest", label: "Entrar em descanso", intent: "primary" },
+      { id: "reschedule", label: "Só mais 15", intent: "secondary" },
+      { id: "log_note", label: "Registrar sensação", intent: "ghost" },
+    ],
   },
   descanso: {
     preEnd: [
@@ -135,6 +160,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
       { id: "ready", label: "Pronto pra pausar", intent: "primary" },
       { id: "start_now", label: "Pausar já", intent: "secondary" },
       { id: "reschedule", label: "Daqui 5", intent: "ghost" },
+    ],
+    atStart: [
+      { id: "start_rest", label: "Pausar agora", intent: "primary" },
+      { id: "reschedule", label: "Daqui 5", intent: "secondary" },
+      { id: "focus_next", label: "Pular pausa", intent: "ghost" },
     ],
   },
 };

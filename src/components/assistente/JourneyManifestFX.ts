@@ -10,6 +10,7 @@ const VIBRATION: Record<JourneyPhase, number[]> = {
   preEnd: [120],
   atEnd: [200, 80, 200],
   preStart: [80, 60, 80],
+  atStart: [220, 90, 120, 90, 220],
 };
 
 export function vibrateFor(phase: JourneyPhase): void {

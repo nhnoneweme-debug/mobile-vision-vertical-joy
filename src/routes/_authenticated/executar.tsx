@@ -88,7 +88,9 @@ function ExecutarPage() {
           ? `faltando pouco pra fechar "${block.title}". como tá indo?`
           : phase === "atEnd"
             ? `"${block.title}" terminou. bora fechar ou estender?`
-            : `"${block.title}" tá começando. bora?`,
+            : phase === "atStart"
+              ? `é AGORA. "${block.title}" começa — nós dois nisso.`
+              : `"${block.title}" tá começando. bora?`,
     });
   }, [search.seed, journey.blocks]);
 
@@ -192,6 +194,7 @@ function ExecutarPage() {
 function phaseText(p: JourneyManifestation["phase"]): string {
   if (p === "preEnd") return "faltando pouco pra fechar";
   if (p === "atEnd") return "no fim do bloco";
+  if (p === "atStart") return "kickoff épico";
   return "começando agora";
 }
 

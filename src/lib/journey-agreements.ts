@@ -6,7 +6,7 @@
 // localStorage (decisão por dispositivo, sem migration). Quando fizermos a
 // coluna em `chat_settings`, esta camada continua a mesma; só troca a fonte.
 
-export type JourneyPhase = "preEnd" | "atEnd" | "preStart";
+export type JourneyPhase = "preEnd" | "atEnd" | "preStart" | "atStart";
 
 export type JourneyNotifyChannels = {
   text: boolean;
@@ -22,6 +22,9 @@ export type JourneyAgreements = {
   atEnd: number;
   // Minutos antes do início do próximo bloco.
   preStart: number;
+  // Tolerância em minutos após o start real do bloco para ainda disparar
+  // o gatilho épico de kickoff (evita evocar quando o usuário chegou tarde).
+  atStart: number;
   // Canais habilitados para a manifestação.
   notify: JourneyNotifyChannels;
 };
@@ -37,6 +40,7 @@ export const DEFAULT_AGREEMENTS: JourneyAgreements = {
   preEnd: 2,
   atEnd: 0,
   preStart: 1,
+  atStart: 1,
   notify: DEFAULT_NOTIFY,
 };
 
@@ -68,6 +72,7 @@ export function loadAgreements(): JourneyAgreements {
       preEnd: clamp(parsed.preEnd ?? DEFAULT_AGREEMENTS.preEnd, 0, 30),
       atEnd: clamp(parsed.atEnd ?? DEFAULT_AGREEMENTS.atEnd, 0, 10),
       preStart: clamp(parsed.preStart ?? DEFAULT_AGREEMENTS.preStart, 0, 30),
+      atStart: clamp(parsed.atStart ?? DEFAULT_AGREEMENTS.atStart, 0, 10),
       notify: normalizeNotify(parsed.notify),
     };
   } catch {
@@ -84,6 +89,7 @@ export function saveAgreements(a: JourneyAgreements): void {
         preEnd: clamp(a.preEnd, 0, 30),
         atEnd: clamp(a.atEnd, 0, 10),
         preStart: clamp(a.preStart, 0, 30),
+        atStart: clamp(a.atStart, 0, 10),
         notify: normalizeNotify(a.notify),
       }),
     );

@@ -4,7 +4,7 @@
 // Toda ação relevante gera um execution_event via server function.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Loader2, Mic, MicOff, MessageCircle, Plus, Sparkles, X } from "lucide-react";
+import { Check, Loader2, Mic, MicOff, MessageCircle, Play, Plus, Sparkles, X, Flame } from "lucide-react";
 import { toast } from "sonner";
 import type { JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { vibrateFor, playPing } from "@/components/assistente/JourneyManifestFX";
@@ -21,6 +21,7 @@ export type ManifestAction =
   | { kind: "skip" }
   | { kind: "extend"; minutes: number }
   | { kind: "note"; text: string }
+  | { kind: "start" }
   | { kind: "converse" };
 
 export function ManifestPanel({
@@ -134,6 +135,16 @@ export function ManifestPanel({
       } else if (action.kind === "extend") {
         await extendMissionToday({ data: { mission_id: manifestation.block.id, minutes: action.minutes } });
         toast.success(`+${action.minutes}min pro bloco.`);
+      } else if (action.kind === "start") {
+        await logExecutionEvent({
+          data: {
+            mission_id: manifestation.block.id,
+            kind: "mission_started",
+            phase: "atStart",
+            channel: source === "voice" ? "voice" : "manual",
+          },
+        });
+        toast.success("Bora. Tô contigo.");
       } else if (action.kind === "note") {
         await logExecutionEvent({
           data: { mission_id: manifestation.block.id, kind: "voice_note", channel: "voice", note: action.text },
@@ -147,11 +158,24 @@ export function ManifestPanel({
     }
   }
 
+  const isKickoff = manifestation.phase === "atStart";
+
   return (
     <section className="fixed inset-x-0 bottom-24 z-30 mx-auto max-w-[var(--shell-max)] px-4 lg:bottom-4">
-      <div className="rounded-2xl border border-ember/50 bg-charcoal-900/95 p-4 shadow-[0_0_40px_-12px] shadow-ember/40 backdrop-blur-xl">
+      <div
+        className={
+          "rounded-2xl border p-4 backdrop-blur-xl " +
+          (isKickoff
+            ? "border-ember/70 bg-gradient-to-br from-ember/20 via-charcoal-900/95 to-charcoal-900/95 shadow-[0_0_60px_-10px] shadow-ember/60"
+            : "border-ember/50 bg-charcoal-900/95 shadow-[0_0_40px_-12px] shadow-ember/40")
+        }
+      >
         <div className="mb-2 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-ember" />
+          {isKickoff ? (
+            <Flame className="h-4 w-4 animate-pulse text-ember" />
+          ) : (
+            <Sparkles className="h-4 w-4 text-ember" />
+          )}
           <span className="font-display text-[10px] uppercase tracking-[0.2em] text-ember">
             WiMi · {phaseLabel(manifestation.phase)}
           </span>
@@ -160,7 +184,9 @@ export function ManifestPanel({
           </span>
         </div>
 
-        <p className="text-sm text-foreground">{manifestation.message}</p>
+        <p className={isKickoff ? "text-base font-medium leading-snug text-foreground" : "text-sm text-foreground"}>
+          {manifestation.message}
+        </p>
 
         {speech.supported && (speech.listening || heardText) ? (
           <div className="mt-2 flex items-start gap-2 rounded-lg border border-ember/20 bg-charcoal-800/60 p-2">
@@ -176,34 +202,66 @@ export function ManifestPanel({
         ) : null}
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void ackAndResolve({ kind: "done" }, "click")}
-            className="flex items-center gap-1 rounded-full bg-ember px-3 py-1.5 text-xs font-medium text-charcoal-900 disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Feito
-          </button>
-          {[5, 10, 20].map((m) => (
-            <button
-              key={m}
-              type="button"
-              disabled={busy}
-              onClick={() => void ackAndResolve({ kind: "extend", minutes: m }, "click")}
-              className="flex items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember disabled:opacity-60"
-            >
-              <Plus className="h-3 w-3" />
-              {m}min
-            </button>
-          ))}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void ackAndResolve({ kind: "skip" }, "click")}
-            className="flex items-center gap-1 rounded-full border border-border bg-charcoal-800/60 px-3 py-1.5 text-xs text-muted-foreground disabled:opacity-60"
-          >
-            <X className="h-3 w-3" /> Pular
-          </button>
+          {isKickoff ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void ackAndResolve({ kind: "start" }, "click")}
+                className="flex items-center gap-1 rounded-full bg-ember px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-charcoal-900 disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />} Iniciar
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void ackAndResolve({ kind: "extend", minutes: 10 }, "click")}
+                className="flex items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember disabled:opacity-60"
+              >
+                <Plus className="h-3 w-3" />
+                10min
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void ackAndResolve({ kind: "skip" }, "click")}
+                className="flex items-center gap-1 rounded-full border border-border bg-charcoal-800/60 px-3 py-1.5 text-xs text-muted-foreground disabled:opacity-60"
+              >
+                <X className="h-3 w-3" /> Pular hoje
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void ackAndResolve({ kind: "done" }, "click")}
+                className="flex items-center gap-1 rounded-full bg-ember px-3 py-1.5 text-xs font-medium text-charcoal-900 disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Feito
+              </button>
+              {[5, 10, 20].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void ackAndResolve({ kind: "extend", minutes: m }, "click")}
+                  className="flex items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember disabled:opacity-60"
+                >
+                  <Plus className="h-3 w-3" />
+                  {m}min
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void ackAndResolve({ kind: "skip" }, "click")}
+                className="flex items-center gap-1 rounded-full border border-border bg-charcoal-800/60 px-3 py-1.5 text-xs text-muted-foreground disabled:opacity-60"
+              >
+                <X className="h-3 w-3" /> Pular
+              </button>
+            </>
+          )}
           <button
             type="button"
             disabled={busy}
@@ -221,6 +279,7 @@ export function ManifestPanel({
 function phaseLabel(p: JourneyManifestation["phase"]): string {
   if (p === "preEnd") return "faltando pouco";
   if (p === "atEnd") return "no fim do bloco";
+  if (p === "atStart") return "kickoff · agora";
   return "começando agora";
 }
 
