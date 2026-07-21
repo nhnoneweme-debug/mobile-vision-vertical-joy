@@ -1113,6 +1113,53 @@ export type Database = {
         }
         Relationships: []
       }
+      journey_push_schedule: {
+        Row: {
+          body: string | null
+          created_at: string
+          fire_at: string
+          id: string
+          mission_id: string
+          phase: string
+          sent_at: string | null
+          title: string | null
+          tz: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          fire_at: string
+          id?: string
+          mission_id: string
+          phase: string
+          sent_at?: string | null
+          title?: string | null
+          tz?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          fire_at?: string
+          id?: string
+          mission_id?: string
+          phase?: string
+          sent_at?: string | null
+          title?: string | null
+          tz?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_push_schedule_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "user_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lore_chapters: {
         Row: {
           body: string
