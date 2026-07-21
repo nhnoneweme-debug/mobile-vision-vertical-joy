@@ -39,7 +39,6 @@ export const Route = createFileRoute("/_authenticated/executar")({
 
 function ExecutarPage() {
   const journey = useActiveJourney();
-  const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/executar" }) as SeedSearch;
   const qc = useQueryClient();
 
