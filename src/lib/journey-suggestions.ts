@@ -49,6 +49,11 @@ const POOL: Record<string, Record<JourneyPhase, JourneySuggestion[]>> = {
       { id: "reschedule", label: "Adiar 10 min", intent: "ghost" },
       { id: "focus_next", label: "Me lembra o plano", intent: "ghost" },
     ],
+    atStart: [
+      { id: "start_now", label: "Iniciar agora", intent: "primary" },
+      { id: "reschedule", label: "Adiar 10 min", intent: "secondary" },
+      { id: "skip", label: "Pular hoje", intent: "ghost" },
+    ],
   },
   treino: {
     preEnd: [
