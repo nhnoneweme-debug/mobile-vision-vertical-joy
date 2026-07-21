@@ -63,6 +63,7 @@ import { Route as AuthenticatedAreaSlugRouteImport } from './routes/_authenticat
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicHooksPushNotificationRouteImport } from './routes/api/public/hooks/push-notification'
+import { Route as ApiPublicHooksJourneyTickRouteImport } from './routes/api/public/hooks/journey-tick'
 import { Route as ApiPublicHooksGenerateNudgesRouteImport } from './routes/api/public/hooks/generate-nudges'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -347,6 +348,12 @@ const ApiPublicHooksPushNotificationRoute =
     path: '/api/public/hooks/push-notification',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksJourneyTickRoute =
+  ApiPublicHooksJourneyTickRouteImport.update({
+    id: '/api/public/hooks/journey-tick',
+    path: '/api/public/hooks/journey-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksGenerateNudgesRoute =
   ApiPublicHooksGenerateNudgesRouteImport.update({
     id: '/api/public/hooks/generate-nudges',
@@ -408,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
   '/historico/$sessionId': typeof AuthenticatedHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
+  '/api/public/hooks/journey-tick': typeof ApiPublicHooksJourneyTickRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
 export interface FileRoutesByTo {
@@ -464,6 +472,7 @@ export interface FileRoutesByTo {
   '/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
   '/historico/$sessionId': typeof AuthenticatedHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
+  '/api/public/hooks/journey-tick': typeof ApiPublicHooksJourneyTickRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
 export interface FileRoutesById {
@@ -522,6 +531,7 @@ export interface FileRoutesById {
   '/_authenticated/despertar/sonho': typeof AuthenticatedDespertarSonhoRoute
   '/_authenticated/historico/$sessionId': typeof AuthenticatedHistoricoSessionIdRoute
   '/api/public/hooks/generate-nudges': typeof ApiPublicHooksGenerateNudgesRoute
+  '/api/public/hooks/journey-tick': typeof ApiPublicHooksJourneyTickRoute
   '/api/public/hooks/push-notification': typeof ApiPublicHooksPushNotificationRoute
 }
 export interface FileRouteTypes {
@@ -580,6 +590,7 @@ export interface FileRouteTypes {
     | '/despertar/sonho'
     | '/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
+    | '/api/public/hooks/journey-tick'
     | '/api/public/hooks/push-notification'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -636,6 +647,7 @@ export interface FileRouteTypes {
     | '/despertar/sonho'
     | '/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
+    | '/api/public/hooks/journey-tick'
     | '/api/public/hooks/push-notification'
   id:
     | '__root__'
@@ -693,6 +705,7 @@ export interface FileRouteTypes {
     | '/_authenticated/despertar/sonho'
     | '/_authenticated/historico/$sessionId'
     | '/api/public/hooks/generate-nudges'
+    | '/api/public/hooks/journey-tick'
     | '/api/public/hooks/push-notification'
   fileRoutesById: FileRoutesById
 }
@@ -715,6 +728,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksGenerateNudgesRoute: typeof ApiPublicHooksGenerateNudgesRoute
+  ApiPublicHooksJourneyTickRoute: typeof ApiPublicHooksJourneyTickRoute
   ApiPublicHooksPushNotificationRoute: typeof ApiPublicHooksPushNotificationRoute
 }
 
@@ -1098,6 +1112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksPushNotificationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/journey-tick': {
+      id: '/api/public/hooks/journey-tick'
+      path: '/api/public/hooks/journey-tick'
+      fullPath: '/api/public/hooks/journey-tick'
+      preLoaderRoute: typeof ApiPublicHooksJourneyTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/generate-nudges': {
       id: '/api/public/hooks/generate-nudges'
       path: '/api/public/hooks/generate-nudges'
@@ -1222,6 +1243,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksGenerateNudgesRoute: ApiPublicHooksGenerateNudgesRoute,
+  ApiPublicHooksJourneyTickRoute: ApiPublicHooksJourneyTickRoute,
   ApiPublicHooksPushNotificationRoute: ApiPublicHooksPushNotificationRoute,
 }
 export const routeTree = rootRouteImport

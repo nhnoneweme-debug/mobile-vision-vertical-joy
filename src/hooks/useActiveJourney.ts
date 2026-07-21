@@ -21,6 +21,8 @@ export type JourneyBlock = {
 export type ActiveJourney = {
   current: JourneyBlock | null;
   next: JourneyBlock | null;
+  // Todos os blocos agendados para hoje, em ordem.
+  blocks: JourneyBlock[];
   // 0..100 do bloco atual
   progressPct: number;
   minutesToEndOfCurrent: number | null;
@@ -29,6 +31,7 @@ export type ActiveJourney = {
   loading: boolean;
   refresh: () => void;
 };
+
 
 function parseHM(s: string | null | undefined): number | null {
   if (!s) return null;
@@ -121,6 +124,7 @@ export function useActiveJourney(): ActiveJourney {
   return {
     current,
     next,
+    blocks,
     progressPct,
     minutesToEndOfCurrent,
     minutesToStartOfNext,
@@ -129,3 +133,4 @@ export function useActiveJourney(): ActiveJourney {
     refresh,
   };
 }
+

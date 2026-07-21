@@ -69,15 +69,21 @@ import type { Proposal } from "@/routes/api/assistant";
 import { useActiveJourney } from "@/hooks/useActiveJourney";
 import { JourneyStrip } from "@/components/assistente/JourneyStrip";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
+import { vibrateFor, playPing } from "@/components/assistente/JourneyManifestFX";
 import {
   loadAgreements,
   saveAgreements,
   recordChoice,
   DEFAULT_AGREEMENTS,
   type JourneyAgreements,
+  type JourneyPhase,
+  type JourneyNotifyChannels,
 } from "@/lib/journey-agreements";
 import { markMissionToday } from "@/lib/missions";
+import { syncJourneyPushSchedule } from "@/lib/journey-schedule.functions";
+import { suggestActions } from "@/lib/journey-suggestions";
 import type { JourneySuggestion } from "@/lib/journey-suggestions";
+
 
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
 // que carregam (o fallback é "WiMi").
@@ -275,11 +281,63 @@ function AssistantPage() {
   useEffect(() => {
     const seed = search.seed;
     if (!seed) return;
-    const prompt = SEED_PROMPTS[seed];
-    if (prompt) setInput((prev) => (prev ? prev : prompt));
+    // Deep-link vindo do push da jornada: "manifest:<missionId>:<phase>".
+    if (seed.startsWith("manifest:")) {
+      const [, , rawPhase] = seed.split(":");
+      const phase = (rawPhase as JourneyPhase) ?? "atEnd";
+      const label =
+        phase === "preStart"
+          ? "Voltei pra começar o próximo bloco. O que é primeiro?"
+          : phase === "preEnd"
+            ? "Estou aqui — como fecho esse bloco?"
+            : "Terminou. Bora fechar como feito?";
+      setMsgs((prev) => [
+        ...prev,
+        { id: nid(), role: "assistant", text: label },
+      ]);
+    } else {
+      const prompt = SEED_PROMPTS[seed];
+      if (prompt) setInput((prev) => (prev ? prev : prompt));
+    }
     // Limpa a query para não reaplicar em reloads / navegação de volta.
     void navigate({ search: { seed: undefined }, replace: true });
   }, [search.seed, navigate]);
+
+  // Sincroniza a agenda de manifestações push (celular travado) sempre que
+  // a jornada ou os acordos mudarem. Import via useServerFn abaixo.
+  const fnSyncJourney = useServerFn(syncJourneyPushSchedule);
+  useEffect(() => {
+    if (!userId || journey.loading) return;
+    const tz =
+      typeof Intl !== "undefined"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+        : "UTC";
+    const missions = journey.blocks
+      .filter((b) => b.raw?.id && b.raw?.scheduled_time)
+      .map((b) => ({
+        id: b.raw.id,
+        title: b.raw.title ?? b.title,
+        area: b.area,
+        scheduled_time: b.raw.scheduled_time as string,
+        end_time: b.raw.end_time ?? null,
+      }));
+
+    void fnSyncJourney({
+      data: {
+        tz,
+        agreements: {
+          preEnd: agreements.preEnd,
+          atEnd: agreements.atEnd,
+          preStart: agreements.preStart,
+        },
+        notify: agreements.notify,
+        missions,
+      },
+    }).catch(() => {
+      /* silencioso — o push é um extra, o foreground continua funcionando */
+    });
+  }, [userId, journey.blocks, journey.loading, agreements, fnSyncJourney]);
+
 
   const {
     listening,
@@ -948,15 +1006,33 @@ function AssistantPage() {
       }));
 
       setMsgs((prev) => [...prev, { id: nid(), role: "assistant", text: m.message, actions }]);
-      if (autoplayRef.current) {
-        // fala a manifestação em voz — só se o autoplay está ligado.
-        const idPreview = seq; // acabamos de criar
+      const notify = agreements.notify;
+      if (notify.vibrate) vibrateFor(phase);
+      if (notify.voice && autoplayRef.current) {
+        const idPreview = seq;
         void playMessageTts(idPreview, m.message);
+      } else if (notify.vibrate) {
+        // Sem voz: um "ping" curto ajuda a chamar atenção quando o TTS
+        // está desligado. Autoplay/AudioContext desbloqueado no shell.
+        playPing(phase);
       }
+      if (notify.autoMic && !listening) {
+        // Abre o microfone para o usuário responder por voz no ato.
+        setTimeout(() => {
+          try {
+            startListening();
+          } catch {
+            /* noop */
+          }
+        }, 500);
+      }
+
+
     },
     // playMessageTts é estável dentro do componente pra este uso; deps mínimas
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, journey],
+    [userId, journey, agreements, listening, startListening],
+
   );
 
   return (
@@ -1621,7 +1697,7 @@ function AssistantPage() {
                     { key: "preEnd", label: "Antes de acabar" },
                     { key: "atEnd", label: "Ao terminar" },
                     { key: "preStart", label: "Antes do próximo" },
-                  ] as Array<{ key: keyof JourneyAgreements; label: string }>
+                  ] as Array<{ key: "preEnd" | "atEnd" | "preStart"; label: string }>
                 ).map(({ key, label }) => (
                   <label key={key} className="flex flex-col gap-1 text-[10px] text-muted-foreground">
                     <span className="font-display tracking-[0.15em]">{label.toUpperCase()}</span>
@@ -1629,7 +1705,7 @@ function AssistantPage() {
                       type="number"
                       min={0}
                       max={60}
-                      value={agreements[key] as number}
+                      value={agreements[key]}
                       onChange={(e) => {
                         const n = Math.max(0, Math.min(60, Number(e.target.value) || 0));
                         updateAgreements({ [key]: n } as Partial<JourneyAgreements>);
@@ -1639,10 +1715,38 @@ function AssistantPage() {
                   </label>
                 ))}
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { key: "text", label: "Texto no chat" },
+                    { key: "voice", label: "Voz (TTS)" },
+                    { key: "vibrate", label: "Vibrar" },
+                    { key: "autoMic", label: "Abrir microfone" },
+                  ] as Array<{ key: keyof JourneyNotifyChannels; label: string }>
+                ).map(({ key, label }) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-charcoal-900 px-2.5 py-2 text-[11px] text-foreground"
+                  >
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={agreements.notify[key]}
+                      onChange={(e) => {
+                        const next = { ...agreements.notify, [key]: e.target.checked };
+                        updateAgreements({ notify: next });
+                      }}
+                      className="h-4 w-4 accent-ember"
+                    />
+                  </label>
+                ))}
+              </div>
               <p className="mt-1.5 text-[10px] text-muted-foreground">
                 A WiMi manifesta a mensagem certa no bloco atual usando as suas últimas escolhas.
+                Push no celular travado respeita esses canais e as horas silenciosas dos ajustes.
               </p>
             </div>
+
             <p className="rounded-lg border border-border bg-charcoal-800/40 p-2.5 text-[11px] text-muted-foreground">
               A IA sempre analisa seu progresso no app (streak, calorias do dia, treinos, hábitos,
               dieta) pra personalizar as respostas.
