@@ -22,11 +22,23 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
   const [supported, setSupported] = useState(false);
   const [muted, setMuted] = useState(false);
   const [interim, setInterim] = useState("");
+  const [preview, setPreview] = useState("");
   const recRef = useRef<Recognition>(null);
   const wantedRef = useRef(false);
   const mutedRef = useRef(false);
   const onFinalRef = useRef(onFinalText);
   onFinalRef.current = onFinalText;
+
+  const appendPreview = useCallback((text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    setPreview((prev) => {
+      const next = `${prev} ${t}`.trim().replace(/\s+/g, " ");
+      // Mantém só o trecho recente: a UI mostra as últimas 5 linhas e oculta o
+      // que passou, sem acumular uma transcrição gigante na memória.
+      return next.length > 900 ? next.slice(-900).replace(/^\S+\s*/, "") : next;
+    });
+  }, []);
 
   useEffect(() => {
     setSupported(!!getSpeechRecognition());
@@ -68,12 +80,14 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
             wantedRef.current = false;
             setListening(false);
             setInterim("");
+            setPreview("");
           }
         }, 250);
         return;
       }
       setListening(false);
       setInterim("");
+      setPreview("");
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onerror = (ev: any) => {
@@ -84,6 +98,7 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
         wantedRef.current = false;
         setListening(false);
         setInterim("");
+        setPreview("");
       }
     };
     // Dedupe do último final: em religadas o Chrome às vezes re-entrega o
@@ -106,6 +121,7 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
         if (f !== lastFinal || now - lastFinalAt > 2500) {
           lastFinal = f;
           lastFinalAt = now;
+          appendPreview(f);
           onFinalRef.current(f);
         }
       }
@@ -117,13 +133,14 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     } catch {
       return false;
     }
-  }, []);
+  }, [appendPreview]);
 
   const stop = useCallback(() => {
     wantedRef.current = false;
     mutedRef.current = false;
     setMuted(false);
     setInterim("");
+    setPreview("");
     stopRec();
     setListening(false);
   }, [stopRec]);
@@ -140,6 +157,7 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
     mutedRef.current = true;
     setMuted(true);
     setInterim("");
+    setPreview("");
     stopRec(); // pausa a captura; wantedRef segue true pra retomar
   }, [stopRec]);
 
@@ -162,5 +180,17 @@ export function useSpeechToText(onFinalText: (text: string) => void) {
 
   useEffect(() => stop, [stop]);
 
-  return { listening, supported, muted, interim, start, stop, toggle, mute, unmute, toggleMute };
+  return {
+    listening,
+    supported,
+    muted,
+    interim,
+    preview: `${preview} ${interim}`.trim(),
+    start,
+    stop,
+    toggle,
+    mute,
+    unmute,
+    toggleMute,
+  };
 }
