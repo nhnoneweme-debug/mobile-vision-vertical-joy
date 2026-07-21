@@ -281,11 +281,62 @@ function AssistantPage() {
   useEffect(() => {
     const seed = search.seed;
     if (!seed) return;
-    const prompt = SEED_PROMPTS[seed];
-    if (prompt) setInput((prev) => (prev ? prev : prompt));
+    // Deep-link vindo do push da jornada: "manifest:<missionId>:<phase>".
+    if (seed.startsWith("manifest:")) {
+      const [, , rawPhase] = seed.split(":");
+      const phase = (rawPhase as JourneyPhase) ?? "atEnd";
+      const label =
+        phase === "preStart"
+          ? "Voltei pra começar o próximo bloco. O que é primeiro?"
+          : phase === "preEnd"
+            ? "Estou aqui — como fecho esse bloco?"
+            : "Terminou. Bora fechar como feito?";
+      setMsgs((prev) => [
+        ...prev,
+        { id: nid(), role: "assistant", text: label },
+      ]);
+    } else {
+      const prompt = SEED_PROMPTS[seed];
+      if (prompt) setInput((prev) => (prev ? prev : prompt));
+    }
     // Limpa a query para não reaplicar em reloads / navegação de volta.
     void navigate({ search: { seed: undefined }, replace: true });
   }, [search.seed, navigate]);
+
+  // Sincroniza a agenda de manifestações push (celular travado) sempre que
+  // a jornada ou os acordos mudarem. Import via useServerFn abaixo.
+  const fnSyncJourney = useServerFn(syncJourneyPushSchedule);
+  useEffect(() => {
+    if (!userId || journey.loading) return;
+    const tz =
+      typeof Intl !== "undefined"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+        : "UTC";
+    const missions = journey.blocks
+      .filter((b) => b.raw?.id && b.raw?.scheduled_time)
+      .map((b) => ({
+        id: b.raw!.id as string,
+        title: (b.raw!.title as string) ?? b.title,
+        area: (b.raw!.area as string | null) ?? null,
+        scheduled_time: b.raw!.scheduled_time as string,
+        end_time: (b.raw!.end_time as string | null) ?? null,
+      }));
+    void fnSyncJourney({
+      data: {
+        tz,
+        agreements: {
+          preEnd: agreements.preEnd,
+          atEnd: agreements.atEnd,
+          preStart: agreements.preStart,
+        },
+        notify: agreements.notify,
+        missions,
+      },
+    }).catch(() => {
+      /* silencioso — o push é um extra, o foreground continua funcionando */
+    });
+  }, [userId, journey.blocks, journey.loading, agreements, fnSyncJourney]);
+
 
   const {
     listening,
