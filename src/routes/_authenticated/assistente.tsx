@@ -1227,44 +1227,69 @@ function AssistantPage() {
             {autoplay ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             AUTO
           </button>
-        </div>
-        {/* Nível de raciocínio da IA — vale para a PRÓXIMA mensagem. */}
-        <div
-          role="radiogroup"
-          aria-label="Nível de raciocínio"
-          className="mb-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-charcoal-800/60 p-1"
-        >
-          {(
-            [
-              { id: "low", label: "Rápido", Icon: Zap },
-              { id: "medium", label: "Equilibrado", Icon: Scale },
-              { id: "high", label: "Profundo", Icon: Brain },
-            ] as Array<{ id: Effort; label: string; Icon: typeof Zap }>
-          ).map(({ id, label, Icon }) => {
-            const active = effort === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => {
-                  setEffort(id);
-                  effortRef.current = id;
-                  saveEffort(id);
-                }}
-                className={
-                  "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition " +
-                  (active
-                    ? "bg-ember text-charcoal-900 shadow"
-                    : "text-muted-foreground hover:text-foreground")
-                }
+          {/* Chip compacto de nível de raciocínio (Rápido/Equilibrado/Profundo).
+              Substitui a barra de 3 botões que ocupava linha inteira. */}
+          <div ref={effortMenuRef} className="relative">
+            {(() => {
+              const map: Record<Effort, { label: string; Icon: typeof Zap }> = {
+                low: { label: "Rápido", Icon: Zap },
+                medium: { label: "Equilibrado", Icon: Scale },
+                high: { label: "Profundo", Icon: Brain },
+              };
+              const cur = map[effort];
+              const CurIcon = cur.Icon;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setEffortMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={effortMenuOpen}
+                  className="flex items-center gap-1.5 rounded-full border border-border bg-charcoal-900/60 px-2.5 py-1.5 font-display text-[10px] tracking-[0.15em] text-muted-foreground hover:text-foreground active:scale-95"
+                >
+                  <CurIcon className="h-3.5 w-3.5" strokeWidth={2.2} /> {cur.label.toUpperCase()}
+                </button>
+              );
+            })()}
+            {effortMenuOpen ? (
+              <div
+                role="menu"
+                className="absolute bottom-full right-0 z-40 mb-2 w-40 overflow-hidden rounded-xl border border-border bg-charcoal-900/95 shadow-xl backdrop-blur"
               >
-                <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
-                {label}
-              </button>
-            );
-          })}
+                {(
+                  [
+                    { id: "low", label: "Rápido", Icon: Zap },
+                    { id: "medium", label: "Equilibrado", Icon: Scale },
+                    { id: "high", label: "Profundo", Icon: Brain },
+                  ] as Array<{ id: Effort; label: string; Icon: typeof Zap }>
+                ).map(({ id, label, Icon }) => {
+                  const active = effort === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        setEffort(id);
+                        effortRef.current = id;
+                        saveEffort(id);
+                        setEffortMenuOpen(false);
+                      }}
+                      className={
+                        "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition " +
+                        (active
+                          ? "bg-ember/10 text-ember"
+                          : "text-muted-foreground hover:bg-charcoal-800 hover:text-foreground")
+                      }
+                    >
+                      <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
         {pendingImages.length ? (
           <div className="mb-2 flex gap-2 overflow-x-auto">
