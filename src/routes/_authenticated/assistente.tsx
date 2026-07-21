@@ -1035,13 +1035,45 @@ function AssistantPage() {
           if (m.role === "assistant") {
             return (
               <div key={m.id} className="flex justify-start gap-1.5">
-                <div className="forge-card max-w-[86%] rounded-2xl rounded-bl-md px-3.5 py-2.5">
-                  {/* A IA responde em markdown (**negrito**, listas). Renderizar
-                      como texto puro mostrava os asteriscos crus pro usuário —
-                      mesmo padrão já usado no /conversar e no DumpChat. */}
-                  <div className="prose prose-sm prose-invert max-w-none text-sm leading-snug text-foreground prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-display">
-                    <ReactMarkdown>{m.text}</ReactMarkdown>
+                <div className="flex max-w-[86%] flex-col gap-1.5">
+                  <div className="forge-card rounded-2xl rounded-bl-md px-3.5 py-2.5">
+                    {/* A IA responde em markdown (**negrito**, listas). Renderizar
+                        como texto puro mostrava os asteriscos crus pro usuário —
+                        mesmo padrão já usado no /conversar e no DumpChat. */}
+                    <div className="prose prose-sm prose-invert max-w-none text-sm leading-snug text-foreground prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-display">
+                      <ReactMarkdown>{m.text}</ReactMarkdown>
+                    </div>
                   </div>
+                  {m.actions && m.actions.length > 0 && !m.consumed ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {m.actions.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={async () => {
+                            await a.run();
+                            setMsgs((prev) =>
+                              prev.map((x) =>
+                                x.id === m.id && x.role === "assistant"
+                                  ? { ...x, consumed: true }
+                                  : x,
+                              ),
+                            );
+                          }}
+                          className={
+                            "rounded-full px-2.5 py-1 text-[11px] font-display uppercase tracking-[0.12em] transition active:scale-95 " +
+                            (a.intent === "primary"
+                              ? "bg-ember text-charcoal-900 hover:brightness-110"
+                              : a.intent === "secondary"
+                                ? "border border-ember/40 text-ember hover:bg-ember/10"
+                                : "border border-border text-muted-foreground hover:text-foreground")
+                          }
+                        >
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 {(() => {
                   const active = ttsMsgId === m.id;
