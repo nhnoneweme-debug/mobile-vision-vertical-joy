@@ -1,10 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ChevronLeft, Coffee, Home, Sparkles } from "lucide-react";
+import { Bell, ChevronLeft, Home, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { countUnread, generateMyNudges } from "@/lib/notifications";
 import { useGoBack } from "@/hooks/useGoBack";
-import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { ProfileMenu } from "./ProfileMenu";
 
 // Barra inferior única do app: Notificações (esq.) · IA em destaque (centro) ·
@@ -14,7 +13,7 @@ import { ProfileMenu } from "./ProfileMenu";
 export function AppBottomBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { canGoBack, goBack } = useGoBack();
-  const wake = useWakeLockContext();
+
   const [displayName, setDisplayName] = useState("Você");
   const [unread, setUnread] = useState(0);
 
