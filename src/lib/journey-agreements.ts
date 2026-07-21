@@ -8,6 +8,13 @@
 
 export type JourneyPhase = "preEnd" | "atEnd" | "preStart";
 
+export type JourneyNotifyChannels = {
+  text: boolean;
+  voice: boolean;
+  vibrate: boolean;
+  autoMic: boolean;
+};
+
 export type JourneyAgreements = {
   // Minutos antes do fim do bloco atual para o primeiro aviso.
   preEnd: number;
@@ -15,12 +22,22 @@ export type JourneyAgreements = {
   atEnd: number;
   // Minutos antes do início do próximo bloco.
   preStart: number;
+  // Canais habilitados para a manifestação.
+  notify: JourneyNotifyChannels;
+};
+
+export const DEFAULT_NOTIFY: JourneyNotifyChannels = {
+  text: true,
+  voice: true,
+  vibrate: true,
+  autoMic: true,
 };
 
 export const DEFAULT_AGREEMENTS: JourneyAgreements = {
   preEnd: 2,
   atEnd: 0,
   preStart: 1,
+  notify: DEFAULT_NOTIFY,
 };
 
 const KEY = "wimi:journey:agreements";
@@ -29,6 +46,16 @@ const CHOICE_KEY = "wimi:journey:choices";
 function clamp(n: number, min: number, max: number): number {
   if (!Number.isFinite(n)) return min;
   return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function normalizeNotify(n: Partial<JourneyNotifyChannels> | undefined): JourneyNotifyChannels {
+  if (!n || typeof n !== "object") return { ...DEFAULT_NOTIFY };
+  return {
+    text: n.text ?? DEFAULT_NOTIFY.text,
+    voice: n.voice ?? DEFAULT_NOTIFY.voice,
+    vibrate: n.vibrate ?? DEFAULT_NOTIFY.vibrate,
+    autoMic: n.autoMic ?? DEFAULT_NOTIFY.autoMic,
+  };
 }
 
 export function loadAgreements(): JourneyAgreements {
@@ -41,6 +68,7 @@ export function loadAgreements(): JourneyAgreements {
       preEnd: clamp(parsed.preEnd ?? DEFAULT_AGREEMENTS.preEnd, 0, 30),
       atEnd: clamp(parsed.atEnd ?? DEFAULT_AGREEMENTS.atEnd, 0, 10),
       preStart: clamp(parsed.preStart ?? DEFAULT_AGREEMENTS.preStart, 0, 30),
+      notify: normalizeNotify(parsed.notify),
     };
   } catch {
     return DEFAULT_AGREEMENTS;
@@ -56,12 +84,14 @@ export function saveAgreements(a: JourneyAgreements): void {
         preEnd: clamp(a.preEnd, 0, 30),
         atEnd: clamp(a.atEnd, 0, 10),
         preStart: clamp(a.preStart, 0, 30),
+        notify: normalizeNotify(a.notify),
       }),
     );
   } catch {
     /* noop */
   }
 }
+
 
 // Contador de escolhas por (kind|phase|actionId). Serve pra reordenar as 3
 // sugestões dinâmicas: o que o usuário mais escolheu vai primeiro.
