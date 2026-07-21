@@ -725,6 +725,124 @@ export type Database = {
           },
         ]
       }
+      execution_events: {
+        Row: {
+          channel: string | null
+          created_at: string
+          delta_min: number | null
+          event_date: string
+          id: string
+          kind: string
+          latency_ms: number | null
+          meta: Json
+          mission_id: string | null
+          note: string | null
+          occurred_at: string
+          phase: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          delta_min?: number | null
+          event_date?: string
+          id?: string
+          kind: string
+          latency_ms?: number | null
+          meta?: Json
+          mission_id?: string | null
+          note?: string | null
+          occurred_at?: string
+          phase?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          delta_min?: number | null
+          event_date?: string
+          id?: string
+          kind?: string
+          latency_ms?: number | null
+          meta?: Json
+          mission_id?: string | null
+          note?: string | null
+          occurred_at?: string
+          phase?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_events_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "user_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_sessions: {
+        Row: {
+          ack_count: number
+          ack_latency_sum_ms: number
+          actual_end_at: string | null
+          actual_start_at: string | null
+          avg_ack_latency_ms: number | null
+          extensions_total_min: number
+          id: string
+          manifest_count: number
+          mission_id: string
+          outcome: string | null
+          planned_end_min: number | null
+          planned_start_min: number | null
+          session_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ack_count?: number
+          ack_latency_sum_ms?: number
+          actual_end_at?: string | null
+          actual_start_at?: string | null
+          avg_ack_latency_ms?: number | null
+          extensions_total_min?: number
+          id?: string
+          manifest_count?: number
+          mission_id: string
+          outcome?: string | null
+          planned_end_min?: number | null
+          planned_start_min?: number | null
+          session_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ack_count?: number
+          ack_latency_sum_ms?: number
+          actual_end_at?: string | null
+          actual_start_at?: string | null
+          avg_ack_latency_ms?: number | null
+          extensions_total_min?: number
+          id?: string
+          manifest_count?: number
+          mission_id?: string
+          outcome?: string | null
+          planned_end_min?: number | null
+          planned_start_min?: number | null
+          session_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_sessions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "user_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -3179,6 +3297,10 @@ export type Database = {
       }
       evaluate_challenge: {
         Args: { _challenge: string; _user: string }
+        Returns: Json
+      }
+      extend_mission_today: {
+        Args: { _minutes: number; _mission: string }
         Returns: Json
       }
       finalize_challenge: { Args: { _challenge: string }; Returns: Json }
