@@ -26,16 +26,22 @@ export default defineTool({
     const sb = supabaseForUser(ctx);
     const userId = ctx.getUserId()!;
 
-    const table = kind === "mission" ? "user_mission_logs" : "habit_logs";
-    const column = kind === "mission" ? "mission_id" : "habit_id";
-
-    const { data: rows, error } = await sb
-      .from(table)
-      .delete()
-      .eq(column, id)
-      .eq("user_id", userId)
-      .eq("log_date", logDate)
-      .select("id");
+    const { data: rows, error } =
+      kind === "mission"
+        ? await sb
+            .from("user_mission_logs")
+            .delete()
+            .eq("mission_id", id)
+            .eq("user_id", userId)
+            .eq("log_date", logDate)
+            .select("id")
+        : await sb
+            .from("habit_logs")
+            .delete()
+            .eq("habit_id", id)
+            .eq("user_id", userId)
+            .eq("log_date", logDate)
+            .select("id");
     if (error)
       return { content: [{ type: "text", text: error.message }], isError: true };
 
