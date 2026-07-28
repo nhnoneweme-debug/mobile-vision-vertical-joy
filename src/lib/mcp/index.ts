@@ -22,7 +22,7 @@ export default defineMcp({
   title: "Weme",
   version: "0.1.0",
   instructions:
-    "Ferramentas do Weme para o usuário autenticado: consultar perfil, missões, hábitos e notificações, e gerar nudges pendentes do dia.",
+    "Ferramentas do Weme para o usuário autenticado. Leitura: perfil, missões, hábitos, notificações. Escrita: criar hábitos e compromissos, registrar conclusões, desfazer check-ins e planejar o dia em blocos. Sempre consulte list_missions/list_habits para obter IDs antes de concluir ou desfazer algo.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
@@ -33,5 +33,11 @@ export default defineMcp({
     listHabitsTool,
     listNotificationsTool,
     generateNudgesTool,
+    createHabitTool,
+    logHabitTool,
+    createMissionTool,
+    completeMissionTool,
+    undoCompletionTool,
+    planDayTool,
   ],
 });

@@ -120,6 +120,251 @@
           "properties": {}
         },
         "outputSchema": null
+      },
+      {
+        "name": "create_habit",
+        "title": "Criar hábito",
+        "description": "Cria um novo hábito para o usuário autenticado, com meta semanal e área opcional.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Título curto do hábito. Ex.: 'Beber 2L de água'."
+            },
+            "target_per_week": {
+              "description": "Quantas vezes por semana (1 a 7). Padrão 7.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "area_slug": {
+              "description": "Área do app: treino, cozinha, quarto, casa, mental, inclusao. Padrão 'casa'.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_habit",
+        "title": "Registrar hábito",
+        "description": "Registra a conclusão de um hábito em uma data (padrão hoje). Use list_habits antes para obter o habit_id.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "habit_id": {
+              "type": "string",
+              "description": "ID do hábito (vem de list_habits)."
+            },
+            "date": {
+              "description": "Data no formato AAAA-MM-DD. Padrão: hoje.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "habit_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_mission",
+        "title": "Criar missão / compromisso",
+        "description": "Cria uma missão (compromisso) para o usuário autenticado: diária, semanal em dias específicos, ou pontual (one_off).",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Título do compromisso. Ex.: 'Treino de força'."
+            },
+            "mission_type": {
+              "description": "Tipo. Padrão 'daily'. Use 'one_off' para algo pontual de hoje.",
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly",
+                "one_off"
+              ]
+            },
+            "days": {
+              "description": "Dias da semana quando mission_type='weekly'. Use: dom, seg, ter, qua, qui, sex, sab.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scheduled_time": {
+              "description": "Horário de início no formato HH:MM.",
+              "type": "string"
+            },
+            "end_time": {
+              "description": "Horário de fim no formato HH:MM.",
+              "type": "string"
+            },
+            "area_slug": {
+              "description": "Área: treino, cozinha, quarto, casa, mental, inclusao.",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Observações livres.",
+              "type": "string"
+            },
+            "remind_before_min": {
+              "description": "Minutos de antecedência do lembrete. Padrão 10.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "complete_mission",
+        "title": "Concluir missão",
+        "description": "Marca uma missão como concluída na data informada (padrão hoje) e dispara o XP. Use list_missions para obter o mission_id.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "mission_id": {
+              "type": "string",
+              "description": "ID da missão (vem de list_missions)."
+            },
+            "date": {
+              "description": "Data AAAA-MM-DD. Padrão: hoje.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "mission_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "undo_completion",
+        "title": "Desfazer conclusão",
+        "description": "Desfaz um check-in feito por engano: remove o registro de conclusão de uma missão ou de um hábito na data informada (padrão hoje).",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mission",
+                "habit"
+              ],
+              "description": "O que desfazer."
+            },
+            "id": {
+              "type": "string",
+              "description": "mission_id ou habit_id, conforme 'kind'."
+            },
+            "date": {
+              "description": "Data AAAA-MM-DD. Padrão: hoje.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "plan_day",
+        "title": "Planejar o dia",
+        "description": "Cria em lote os blocos do dia como missões pontuais (one_off), prontas para o palco de execução do Weme.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "blocks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "O que será feito nesse bloco."
+                  },
+                  "start": {
+                    "description": "Início HH:MM.",
+                    "type": "string"
+                  },
+                  "end": {
+                    "description": "Fim HH:MM.",
+                    "type": "string"
+                  },
+                  "area_slug": {
+                    "description": "treino, cozinha, quarto, casa, mental, inclusao.",
+                    "type": "string"
+                  },
+                  "notes": {
+                    "description": "Detalhe do bloco.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              },
+              "description": "Lista de blocos do dia, em ordem. Máximo 20."
+            },
+            "replace_today": {
+              "description": "Se true, desativa os blocos pontuais criados hoje antes de inserir os novos.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "blocks"
+          ]
+        },
+        "outputSchema": null
       }
     ]
   }
