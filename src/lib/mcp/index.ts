@@ -4,6 +4,12 @@ import listMissionsTool from "./tools/list-missions";
 import listHabitsTool from "./tools/list-habits";
 import listNotificationsTool from "./tools/list-notifications";
 import generateNudgesTool from "./tools/generate-nudges";
+import createHabitTool from "./tools/create-habit";
+import logHabitTool from "./tools/log-habit";
+import createMissionTool from "./tools/create-mission";
+import completeMissionTool from "./tools/complete-mission";
+import undoCompletionTool from "./tools/undo-completion";
+import planDayTool from "./tools/plan-day";
 
 // Build the OAuth issuer from the direct Supabase host (Vite inlines this at
 // build time). The `.lovable.cloud` proxy that SUPABASE_URL becomes on publish
