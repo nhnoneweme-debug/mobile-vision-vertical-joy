@@ -74,3 +74,19 @@ open_items_for_next_layer:
 ready_for_next_layer: true
 next_command: EXECUTAR WIMI-R8 — P0.2
 ```
+
+## Status do gate P0.2
+
+```yaml
+layer: P0.2
+p0_2_status: approved
+p0_2_approved_revision: R5
+p0_2_validation_result: pass
+p0_2_approval_receipt: .lovable/r8/p0.2-approved.md
+p0_2_validated_head: 69cac0ec656bdabd9318aaa99416fbe0b2925d05
+p0_3_status: not_started
+mcp_integration_status: parallel_unreconciled
+ready_for_next_layer_planning: true
+recommended_next_command: "PLANEJAR WIMI-R8 — P0.3"
+```
+
