@@ -508,6 +508,9 @@ export function describeCondition(t: TriggerDefinition): string {
   if (c.mode === "after_session")
     return `após ${Math.round(Number(c.seconds) / 60)} min de sessão Live`;
   if (c.source === "audio") return `quando ouvir "${String(c.keyword)}"`;
+  if (c.source === "event")
+    return LIVE_EVENT_LABEL[c.event as LiveEventName] ?? "evento da sessão Live";
+
   if (c.source === "motion") return "movimento (sensor removido — gatilho inativo)";
   if (c.source === "video") return "detecção por vídeo (em breve)";
   return "condição desconhecida";
