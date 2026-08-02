@@ -37,12 +37,31 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+// Sensores (acelerômetro/giroscópio) e mídia só funcionam se a própria página
+// declarar a Permissions-Policy. Sem isso o Chrome bloqueia devicemotion
+// silenciosamente — zero eventos, sem erro no console.
+const SENSOR_POLICY =
+  "accelerometer=(self), gyroscope=(self), magnetometer=(self), camera=(self), microphone=(self)";
+
+function withSensorPolicy(response: Response): Response {
+  const type = response.headers.get("content-type") ?? "";
+  if (!type.includes("text/html")) return response;
+  if (response.headers.has("permissions-policy")) return response;
+  const headers = new Headers(response.headers);
+  headers.set("permissions-policy", SENSOR_POLICY);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return withSensorPolicy(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
@@ -52,3 +71,4 @@ export default {
     }
   },
 };
+
