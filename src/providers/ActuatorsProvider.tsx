@@ -476,6 +476,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       toggleSpeech,
       speaking,
       speak,
+      chime,
       stopAll,
     }),
     [
@@ -497,6 +498,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       toggleSpeech,
       speaking,
       speak,
+      chime,
       stopAll,
     ],
   );
@@ -526,6 +528,7 @@ export function useActuators(): ActuatorsCtx {
       toggleSpeech: () => {},
       speaking: false,
       speak: () => {},
+      chime: () => {},
       stopAll: () => {},
     };
   }
