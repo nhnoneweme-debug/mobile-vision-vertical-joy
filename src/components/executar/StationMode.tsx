@@ -100,6 +100,7 @@ export function StationMode(props: StationProps) {
           <Minimize2 className="h-5 w-5" />
         </button>
       </div>
+      {props.overlay ? <div className="mt-3">{props.overlay}</div> : null}
 
       <div className="mt-4 scale-[1.15] origin-left">
         <LiveClock />
