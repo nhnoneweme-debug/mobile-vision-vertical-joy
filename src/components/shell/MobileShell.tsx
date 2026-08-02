@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getInclusionPrefs } from "@/lib/area-extra";
 import { useWakeAlarmScheduler } from "@/hooks/useWakeAlarmScheduler";
 import { WakeLockProvider } from "@/providers/WakeLockProvider";
+import { ActuatorsProvider } from "@/providers/ActuatorsProvider";
 
 let bootstrapped = false;
 
