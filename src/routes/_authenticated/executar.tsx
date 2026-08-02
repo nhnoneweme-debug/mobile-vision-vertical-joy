@@ -6,12 +6,20 @@
 
 import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, CalendarPlus, MessageCircle } from "lucide-react";
+import {
+  Activity,
+  CalendarPlus,
+  MessageCircle,
+  MoonStar,
+  PlusCircle,
+  Sunrise,
+} from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
-import { useActiveJourney, type JourneyBlock } from "@/hooks/useActiveJourney";
-import { type TimelineItem } from "@/components/executar/JourneyTimeline";
-import { TodayTimeline } from "@/components/executar/TodayTimeline";
+import { useActiveJourney } from "@/hooks/useActiveJourney";
+import { TodayTimeline, useTodayEntries } from "@/components/executar/TodayTimeline";
+import { RegisterSheet } from "@/components/executar/RegisterSheet";
+import { DayReviewSheet } from "@/components/executar/DayReviewSheet";
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { LivePanel } from "@/components/executar/LivePanel";
