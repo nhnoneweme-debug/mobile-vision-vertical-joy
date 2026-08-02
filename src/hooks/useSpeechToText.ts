@@ -17,7 +17,10 @@ type UseSpeechToTextOptions = {
    * para manter a conversa fluida sem precisar reiniciar a cada palavra.
    */
   continuous?: boolean;
+  /** BCP-47 do reconhecimento (pt-BR, en-US, es-ES). Troca a quente. */
+  lang?: string;
 };
+
 
 type RecentCommit = { norm: string; at: number };
 
