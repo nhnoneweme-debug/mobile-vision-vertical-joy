@@ -43,7 +43,12 @@ export function useTriggerEngine(
   controlsRef.current = controls;
 
   const fire = useCallback(
-    (t: TriggerDefinition, sourceKind: string, sourceRef: string, meta: Record<string, unknown>) => {
+    (
+      t: TriggerDefinition,
+      sourceKind: string,
+      sourceRef: string,
+      meta: Record<string, unknown>,
+    ) => {
       const key = `${t.id}:${sourceRef}`;
       if (doneRefsRef.current.has(key)) return;
       doneRefsRef.current.add(key);

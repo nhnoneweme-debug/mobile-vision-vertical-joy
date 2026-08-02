@@ -309,4 +309,3 @@ export function useDeviceMotionAggregator({
 
   return { supported, permission, requestPermission, live, error, diag, inIframe };
 }
-

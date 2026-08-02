@@ -109,7 +109,10 @@ export async function createTrigger(draft: TriggerDraft, position: number) {
   if (error) throw new Error(error.message);
 }
 
-export async function updateTrigger(id: string, patch: Partial<TriggerDraft & { position: number }>) {
+export async function updateTrigger(
+  id: string,
+  patch: Partial<TriggerDraft & { position: number }>,
+) {
   const { error } = await supabase
     .from("trigger_definitions")
     .update(patch as never)
