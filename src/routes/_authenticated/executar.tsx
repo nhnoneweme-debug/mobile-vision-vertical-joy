@@ -68,19 +68,17 @@ function ExecutarPage() {
   const seedProcessedRef = useRef(false);
   // Não existem dois palcos: "live" é a tela única do ambiente agente.
   const [tab, setTab] = useState<"live" | "gatilhos">("live");
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [dayReviewOpen, setDayReviewOpen] = useState(false);
 
+  // Entradas REAIS de hoje — a timeline não conhece plano nenhum, e o ritual
+  // da noite se ancora exatamente nelas.
+  const todayEntries = useTodayEntries();
+  const reviewEntries = useMemo(
+    () => todayEntries.map((e) => ({ time: e.time, label: e.title })),
+    [todayEntries],
+  );
 
-  // Timeline com estado por bloco.
-  const timeline: TimelineItem[] = useMemo(() => {
-    const now = journey.nowMin;
-    return journey.blocks.map((b: JourneyBlock) => {
-      if (b.endMin <= now) return { block: b, state: "done" as const };
-      if (b.startMin <= now && b.endMin > now) {
-        return { block: b, state: "now" as const, remaining: Math.max(0, b.endMin - now) };
-      }
-      return { block: b, state: "future" as const, remaining: Math.max(0, b.startMin - now) };
-    });
-  }, [journey.blocks, journey.nowMin]);
 
   const handleManifest = useCallback((m: JourneyManifestation) => {
     setManifestChannel("foreground");
