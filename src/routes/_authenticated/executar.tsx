@@ -15,6 +15,8 @@ import { JourneyTimeline, type TimelineItem } from "@/components/executar/Journe
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutionLogCard } from "@/components/executar/ExecutionLogCard";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
+import { LivePanel } from "@/components/executar/LivePanel";
+import { ActuatorsIndicator } from "@/components/executar/ActuatorsIndicator";
 import { formatMomentLabel, getClientMoment } from "@/lib/client-moment";
 import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,6 +56,7 @@ function ExecutarPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const seedProcessedRef = useRef(false);
+  const [tab, setTab] = useState<"palco" | "live">("palco");
 
   // Timeline com estado por bloco.
   const timeline: TimelineItem[] = useMemo(() => {
@@ -114,14 +117,38 @@ function ExecutarPage() {
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 shrink-0 text-ember" />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl tracking-wide">EXECUTAR</h1>
+            <h1 className="font-display text-xl tracking-wide">EXECUTANDO</h1>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
               {formatMomentLabel(getClientMoment())}
             </p>
           </div>
+          <ActuatorsIndicator />
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          {(["palco", "live"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              aria-pressed={tab === t}
+              className={`rounded-full px-3.5 py-1.5 font-display text-[11px] uppercase tracking-[0.16em] transition ${
+                tab === t
+                  ? "bg-ember/15 text-ember ring-1 ring-ember/40"
+                  : "text-muted-foreground ring-1 ring-border"
+              }`}
+            >
+              {t === "palco" ? "Palco" : "Live"}
+            </button>
+          ))}
         </div>
       </header>
 
+      {tab === "live" ? (
+        <div className="px-4 py-5 pb-40">
+          <LivePanel missionId={journey.current?.id ?? null} />
+        </div>
+      ) : (
       <div className="space-y-5 px-4 py-5 pb-40">
         <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
           <LiveClock />
@@ -157,6 +184,7 @@ function ExecutarPage() {
 
         <ExecutionLogCard />
       </div>
+      )}
 
       {manifest ? (
         <ManifestPanel
