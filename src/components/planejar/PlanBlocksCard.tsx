@@ -57,7 +57,7 @@ export function PlanBlocksCard({ blocks }: { blocks: ParsedPlanBlock[] }) {
           end_time: b.end || null,
         });
       }
-      toast.success("Plano enviado pro Executar", {
+      toast.success("Plano enviado pro Executando", {
         description: `${rows.length} bloco(s) no palco de hoje.`,
       });
       void nav({ to: "/executar" });
@@ -132,7 +132,7 @@ export function PlanBlocksCard({ blocks }: { blocks: ParsedPlanBlock[] }) {
         className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ember px-3 py-2 font-display text-xs uppercase tracking-wider text-charcoal-900 active:scale-95 disabled:opacity-40"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-        Enviar pro Executar
+        Enviar pro Executando
       </button>
     </div>
   );

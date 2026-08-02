@@ -158,7 +158,7 @@ function PlanejarPage() {
         {messages.length === 0 || (messages.length === 1 && messages[0].role === "assistant" && !messages[0].text) ? (
           <p className="rounded-2xl border border-border bg-charcoal-900/60 p-3 text-[12px] text-muted-foreground">
             Diga o que precisa acontecer nas próximas horas — a WiMi vai propor blocos com
-            horário, área e nome. Você edita e envia pro Executar.
+            horário, área e nome. Você edita e envia pro Executando.
           </p>
         ) : null}
         {messages.map((m, i) => {

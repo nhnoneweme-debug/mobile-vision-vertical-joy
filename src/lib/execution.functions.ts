@@ -17,6 +17,8 @@ const EVENT_KINDS = [
   "mission_ended",
   "voice_note",
   "negotiation",
+  "live_transcript",
+  "sensor_reading",
 ] as const;
 
 const PHASES = ["preEnd", "atEnd", "preStart", "atStart"] as const;
@@ -33,7 +35,7 @@ const logSchema = z.object({
   channel: z.enum(CHANNELS).nullable().optional(),
   latency_ms: z.number().int().min(0).max(600_000).nullable().optional(),
   delta_min: z.number().int().min(-240).max(240).nullable().optional(),
-  note: z.string().max(500).nullable().optional(),
+  note: z.string().max(4000).nullable().optional(),
   meta: z.record(z.string(), jsonValue).optional(),
 });
 

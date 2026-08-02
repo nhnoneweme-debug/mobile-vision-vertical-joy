@@ -15,6 +15,8 @@ import { JourneyTimeline, type TimelineItem } from "@/components/executar/Journe
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutionLogCard } from "@/components/executar/ExecutionLogCard";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
+import { LivePanel } from "@/components/executar/LivePanel";
+import { ActuatorsIndicator } from "@/components/executar/ActuatorsIndicator";
 import { formatMomentLabel, getClientMoment } from "@/lib/client-moment";
 import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,11 +29,19 @@ export const Route = createFileRoute("/_authenticated/executar")({
   }),
   head: () => ({
     meta: [
-      { title: "Executar — WiMi" },
+      { title: "Executando — WiMi" },
       {
         name: "description",
-        content: "Palco vivo com relógio, timeline da jornada e a WiMi se manifestando pra te acompanhar.",
+        content:
+          "Palco vivo com relógio, timeline da jornada e a WiMi se manifestando pra te acompanhar.",
       },
+      { property: "og:title", content: "Executando — WiMi" },
+      {
+        property: "og:description",
+        content: "Painel live: microfone, movimento e atuadores acompanhando sua execução.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ExecutarPage,
@@ -47,6 +57,7 @@ function ExecutarPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const seedProcessedRef = useRef(false);
+  const [tab, setTab] = useState<"palco" | "live">("palco");
 
   // Timeline com estado por bloco.
   const timeline: TimelineItem[] = useMemo(() => {
@@ -60,13 +71,10 @@ function ExecutarPage() {
     });
   }, [journey.blocks, journey.nowMin]);
 
-  const handleManifest = useCallback(
-    (m: JourneyManifestation) => {
-      setManifestChannel("foreground");
-      setManifest(m);
-    },
-    [],
-  );
+  const handleManifest = useCallback((m: JourneyManifestation) => {
+    setManifestChannel("foreground");
+    setManifest(m);
+  }, []);
 
   // Deep-link do push: ?seed=manifest:<missionId>:<phase>
   useEffect(() => {
@@ -107,49 +115,74 @@ function ExecutarPage() {
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 shrink-0 text-ember" />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl tracking-wide">EXECUTAR</h1>
+            <h1 className="font-display text-xl tracking-wide">EXECUTANDO</h1>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
               {formatMomentLabel(getClientMoment())}
             </p>
           </div>
+          <ActuatorsIndicator />
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          {(["palco", "live"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              aria-pressed={tab === t}
+              className={`rounded-full px-3.5 py-1.5 font-display text-[11px] uppercase tracking-[0.16em] transition ${
+                tab === t
+                  ? "bg-ember/15 text-ember ring-1 ring-ember/40"
+                  : "text-muted-foreground ring-1 ring-border"
+              }`}
+            >
+              {t === "palco" ? "Palco" : "Live"}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div className="space-y-5 px-4 py-5 pb-40">
-        <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
-          <LiveClock />
-          <BlockNowSummary journey={journey} />
-          {/* Trigger de conversa acompanhada — não sai da tela. */}
-          <button
-            type="button"
-            onClick={() => {
-              const now = journey.current;
-              const ctx = now
-                ? `Estou executando "${now.title}" agora${
-                    journey.minutesToEndOfCurrent != null
-                      ? ` (faltam ${journey.minutesToEndOfCurrent}min)`
-                      : ""
-                  }. Fica de olho comigo — vou falar aqui do palco de execução.`
-                : "Estou no palco de execução, entre blocos. Me acompanha?";
-              setChatSeed(ctx);
-              setChatOpen(true);
-            }}
-            className="mt-3 inline-flex items-center gap-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember active:scale-95"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            Conversar sem sair do palco
-          </button>
-        </section>
+      {tab === "live" ? (
+        <div className="px-4 py-5 pb-40">
+          <LivePanel missionId={journey.current?.id ?? null} />
+        </div>
+      ) : (
+        <div className="space-y-5 px-4 py-5 pb-40">
+          <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
+            <LiveClock />
+            <BlockNowSummary journey={journey} />
+            {/* Trigger de conversa acompanhada — não sai da tela. */}
+            <button
+              type="button"
+              onClick={() => {
+                const now = journey.current;
+                const ctx = now
+                  ? `Estou executando "${now.title}" agora${
+                      journey.minutesToEndOfCurrent != null
+                        ? ` (faltam ${journey.minutesToEndOfCurrent}min)`
+                        : ""
+                    }. Fica de olho comigo — vou falar aqui do palco de execução.`
+                  : "Estou no palco de execução, entre blocos. Me acompanha?";
+                setChatSeed(ctx);
+                setChatOpen(true);
+              }}
+              className="mt-3 inline-flex items-center gap-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember active:scale-95"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              Conversar sem sair do palco
+            </button>
+          </section>
 
-        <section>
-          <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Timeline de hoje
-          </h2>
-          <JourneyTimeline items={timeline} />
-        </section>
+          <section>
+            <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Timeline de hoje
+            </h2>
+            <JourneyTimeline items={timeline} />
+          </section>
 
-        <ExecutionLogCard />
-      </div>
+          <ExecutionLogCard />
+        </div>
+      )}
 
       {manifest ? (
         <ManifestPanel
@@ -182,11 +215,7 @@ function ExecutarPage() {
         />
       ) : null}
 
-      <ExecutarChatDrawer
-        open={chatOpen}
-        onClose={() => setChatOpen(false)}
-        seed={chatSeed}
-      />
+      <ExecutarChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} seed={chatSeed} />
     </MobileShell>
   );
 }
@@ -212,7 +241,9 @@ function BlockNowSummary({ journey }: { journey: ReturnType<typeof useActiveJour
       {current ? (
         <div>
           <p className="text-sm text-foreground">
-            <span className="font-display text-[10px] uppercase tracking-[0.15em] text-ember">agora · </span>
+            <span className="font-display text-[10px] uppercase tracking-[0.15em] text-ember">
+              agora ·{" "}
+            </span>
             {current.title}
             {minutesToEndOfCurrent != null ? (
               <span className="text-muted-foreground"> · {minutesToEndOfCurrent}min restantes</span>
