@@ -39,6 +39,8 @@ export type StationProps = {
   onFlipCamera: () => void;
   onExit: () => void;
   onPauseAll: () => void;
+  /** Overlay de próximas ações — renderizado no topo do modo imersivo. */
+  overlay?: React.ReactNode;
 };
 
 function Big({
@@ -98,6 +100,7 @@ export function StationMode(props: StationProps) {
           <Minimize2 className="h-5 w-5" />
         </button>
       </div>
+      {props.overlay ? <div className="mt-3">{props.overlay}</div> : null}
 
       <div className="mt-4 scale-[1.15] origin-left">
         <LiveClock />

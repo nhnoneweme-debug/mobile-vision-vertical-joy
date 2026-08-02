@@ -35,6 +35,9 @@ import {
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
+import { NextActionsOverlay } from "./NextActionsOverlay";
+import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
+import { setLiveSessionStart } from "@/hooks/useLiveSession";
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
@@ -77,6 +80,12 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   const [lastBlock, setLastBlock] = useState<{ id: string; text: string } | null>(null);
   const [lastSpike, setLastSpike] = useState<{ at: string; magnitude: number } | null>(null);
   const [sessionStartedAt] = useState(() => Date.now());
+  const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
+
+  // Um único relógio de sessão para motor, overlay e Studio.
+  useEffect(() => {
+    setLiveSessionStart(sessionStartedAt);
+  }, [sessionStartedAt]);
 
   const actuators = useActuators();
   const wake = useWakeLockContext();
@@ -344,6 +353,22 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         if (mot === false) setMotionOn(false);
         if (mot === true) void toggleMotion();
       }
+      if (action.custom?.plan || action.custom?.instruction) {
+        toast(`gatilho: ${trigger.name}`, {
+          description: action.custom.plan ?? action.custom.instruction,
+          duration: 8000,
+        });
+      }
+      if (action.journey_log_prompt) {
+        setJourneyLog({
+          sessionId,
+          missionId: missionId ?? null,
+          missionTitle: null,
+          elapsedMin: Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000)),
+          recentTranscript: bufferRef.current.slice(-3),
+          triggerName: trigger.name,
+        });
+      }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? undefined,
       });
@@ -360,7 +385,17 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         },
       });
     },
-    [actuators, camera, flushTranscript, missionId, persist, sessionId, speech, toggleMotion],
+    [
+      actuators,
+      camera,
+      flushTranscript,
+      missionId,
+      persist,
+      sessionId,
+      sessionStartedAt,
+      speech,
+      toggleMotion,
+    ],
   );
 
   useTriggerEngine(
@@ -452,6 +487,10 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
 
   if (station) {
     return (
+      <>
+      {journeyLog ? (
+        <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
+      ) : null}
       <StationMode
         listening={speech.listening}
         micSupported={speech.supported}
@@ -473,12 +512,43 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         onFlipCamera={() => void camera.flip()}
         onExit={() => setStation(false)}
         onPauseAll={pauseAll}
+        overlay={
+          <NextActionsOverlay
+          triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
+          sessionStartedAt={sessionStartedAt}
+          now={{
+            label: speech.listening
+              ? "ouvindo e transcrevendo"
+              : motionOn
+                ? "lendo movimento"
+                : "sessão Live parada",
+            detail: `${blocksSaved} blocos`,
+          }}
+            big
+          />
+        }
       />
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
+      <NextActionsOverlay
+          triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
+          sessionStartedAt={sessionStartedAt}
+          now={{
+            label: speech.listening
+              ? "ouvindo e transcrevendo"
+              : motionOn
+                ? "lendo movimento"
+                : "sessão Live parada",
+            detail: `${blocksSaved} blocos`,
+          }}
+      />
+      {journeyLog ? (
+        <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
+      ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
           <WifiOff className="h-4 w-4 shrink-0" /> Você está offline. A captura fica pausada — nada

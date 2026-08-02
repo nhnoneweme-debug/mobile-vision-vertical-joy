@@ -143,15 +143,17 @@ function ExecutarPage() {
         </div>
       </header>
 
+      {/* O painel Live fica montado durante toda a sessão: trocar de aba não pode
+          matar os cronômetros do motor de gatilhos nem reiniciar a sessão. */}
+      <div className={tab === "live" ? "px-4 py-5 pb-40" : "hidden"} aria-hidden={tab !== "live"}>
+        <LivePanel missionId={journey.current?.id ?? null} />
+      </div>
+
       {tab === "gatilhos" ? (
         <div className="px-4 py-5 pb-40">
           <TriggersSection />
         </div>
-      ) : tab === "live" ? (
-        <div className="px-4 py-5 pb-40">
-          <LivePanel missionId={journey.current?.id ?? null} />
-        </div>
-      ) : (
+      ) : tab === "live" ? null : (
         <div className="space-y-5 px-4 py-5 pb-40">
           <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
             <LiveClock />

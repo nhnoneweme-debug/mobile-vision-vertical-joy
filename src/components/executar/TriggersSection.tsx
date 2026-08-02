@@ -13,6 +13,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Sparkles,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -28,9 +29,11 @@ import {
   describeTrigger,
   describeWindow,
   duplicateTrigger,
+  formatCountdown,
   listFirings,
   listRevisions,
   listTriggers,
+  nextChronosFireAt,
   recordFiring,
   reorderTriggers,
   restoreRevision,
@@ -44,6 +47,9 @@ import {
   type TriggerRevision,
 } from "@/lib/triggers";
 import { useActuators } from "@/providers/ActuatorsProvider";
+import { useLiveSessionStart, useSecondsTick } from "@/hooks/useLiveSession";
+import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
+import { CustomActionBox } from "./CustomActionBox";
 
 type CondKind =
   | "at_time"
@@ -95,6 +101,10 @@ type FormState = {
   cameraOff: boolean;
   motionOff: boolean;
   message: string;
+  journeyLog: boolean;
+  customInstruction: string;
+  customPlan: string | null;
+  customAction: TriggerAction | null;
   useWindow: boolean;
   winStart: string;
   winEnd: string;
@@ -121,6 +131,10 @@ const EMPTY_FORM: FormState = {
   cameraOff: false,
   motionOff: false,
   message: "",
+  journeyLog: false,
+  customInstruction: "",
+  customPlan: null,
+  customAction: null,
   useWindow: false,
   winStart: "08:00",
   winEnd: "18:00",
@@ -163,6 +177,13 @@ function buildAction(f: FormState): TriggerAction {
   if (f.cameraOff) sensors.camera = false;
   if (f.motionOff) sensors.motion = false;
   if (Object.keys(sensors).length) a.sensors = sensors;
+  if (f.journeyLog) a.journey_log_prompt = true;
+  if (f.customInstruction.trim()) {
+    // As primitivas interpretadas pela IA entram como base; a instrução crua
+    // fica guardada para a WiMi compor a manifestação no disparo.
+    Object.assign(a, f.customAction ?? {});
+    a.custom = { instruction: f.customInstruction.trim(), plan: f.customPlan ?? undefined };
+  }
   if (f.message.trim()) a.message = f.message.trim();
   return a;
 }
@@ -223,6 +244,10 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     cameraOff: a.sensors?.camera === false,
     motionOff: a.sensors?.motion === false,
     message: a.message ?? "",
+    journeyLog: !!a.journey_log_prompt,
+    customInstruction: a.custom?.instruction ?? "",
+    customPlan: a.custom?.plan ?? null,
+    customAction: null,
     useWindow: !!(w.start && w.end),
     winStart: w.start ?? "08:00",
     winEnd: w.end ?? "18:00",
@@ -237,6 +262,9 @@ export function TriggersSection() {
   const [open, setOpen] = useState(false);
   const [libOpen, setLibOpen] = useState(false);
   const [versionsFor, setVersionsFor] = useState<string | null>(null);
+  const [speakOpen, setSpeakOpen] = useState(false);
+  const sessionStartedAt = useLiveSessionStart();
+  const tick = useSecondsTick();
 
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
   const firingsQ = useQuery({ queryKey: ["trigger-firings"], queryFn: () => listFirings(200) });
@@ -385,6 +413,13 @@ export function TriggersSection() {
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
+              onClick={() => setSpeakOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-2 text-xs text-ember active:scale-95"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Criar falando
+            </button>
+            <button
+              type="button"
               onClick={() => setLibOpen((v) => !v)}
               className="flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs text-muted-foreground active:scale-95"
             >
@@ -455,6 +490,14 @@ export function TriggersSection() {
                         {describeCondition(t)}
                         {win ? `, ${win}` : ""} → {describeAction(t)}
                       </p>
+                      {t.enabled && nextChronosFireAt(t, sessionStartedAt, tick) != null ? (
+                        <p className="mt-0.5 text-[11px] text-ember">
+                          próximo disparo em{" "}
+                          {formatCountdown(
+                            (nextChronosFireAt(t, sessionStartedAt, tick) as number) - tick,
+                          )}
+                        </p>
+                      ) : null}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                         cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0} hoje
                         {s?.last
@@ -694,7 +737,39 @@ export function TriggersSection() {
                 checked={form.motionOff}
                 onChange={(v) => setForm({ ...form, motionOff: v })}
               />
+              <CheckRow
+                label="Abrir Log de jornada"
+                checked={form.journeyLog}
+                onChange={(v) => setForm({ ...form, journeyLog: v })}
+              />
+              <CheckRow
+                label="Ação personalizada (IA)"
+                checked={!!form.customInstruction || form.customPlan != null}
+                onChange={(v) =>
+                  setForm({
+                    ...form,
+                    customInstruction: v ? form.customInstruction : "",
+                    customPlan: v ? form.customPlan : null,
+                    customAction: v ? form.customAction : null,
+                  })
+                }
+              />
             </div>
+            {form.customInstruction || form.customPlan != null ? (
+              <CustomActionBox
+                instruction={form.customInstruction}
+                plan={form.customPlan}
+                contextHint="Sessão Live do painel Executando (microfone, movimento, câmera, atuadores)."
+                onChange={(next) =>
+                  setForm((f) => ({
+                    ...f,
+                    customInstruction: next.instruction,
+                    customPlan: next.plan,
+                    customAction: next.action,
+                  }))
+                }
+              />
+            ) : null}
             <Field label="mensagem (opcional)">
               <input
                 value={form.message}
@@ -848,6 +923,35 @@ export function TriggersSection() {
           </ul>
         )}
       </section>
+
+      {speakOpen ? (
+        <SpeakTriggerSheet
+          onClose={() => setSpeakOpen(false)}
+          onUse={(d) => {
+            setForm({
+              ...EMPTY_FORM,
+              ...formFromTrigger({
+                id: "",
+                user_id: "",
+                name: d.name,
+                enabled: true,
+                position: 0,
+                trigger_type: d.trigger_type,
+                condition: d.condition,
+                action: d.action,
+                active_window: d.active_window ?? {},
+                cooldown_seconds: d.cooldown_seconds,
+                created_at: "",
+                updated_at: "",
+              }),
+              id: null,
+            });
+            setSpeakOpen(false);
+            setOpen(true);
+            toast("Rascunho pronto — revise e salve.");
+          }}
+        />
+      ) : null}
     </div>
   );
 }
