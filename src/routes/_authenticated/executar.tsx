@@ -10,7 +10,8 @@ import { Activity, CalendarPlus, MessageCircle } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { useActiveJourney, type JourneyBlock } from "@/hooks/useActiveJourney";
-import { JourneyTimeline, type TimelineItem } from "@/components/executar/JourneyTimeline";
+import { type TimelineItem } from "@/components/executar/JourneyTimeline";
+import { TodayTimeline } from "@/components/executar/TodayTimeline";
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { LivePanel } from "@/components/executar/LivePanel";
@@ -187,7 +188,7 @@ function ExecutarPage() {
                 <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   Timeline de hoje
                 </h2>
-                <JourneyTimeline items={timeline} />
+                <TodayTimeline planned={timeline} />
               </div>
             </>
           }
