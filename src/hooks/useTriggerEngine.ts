@@ -7,10 +7,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   MAX_CHAIN_DEPTH,
+  findKeyword,
   isWithinWindow,
-  keywordMatches,
   recordFiring,
   updateTrigger,
+  type ActionResult,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
@@ -20,10 +21,20 @@ export type LiveSignals = {
   active: boolean;
   sessionStartedAt: number;
   lastBlock: { id: string; text: string } | null;
+  /**
+   * TEXTO OUVIDO AO VIVO (final + parcial do reconhecedor). É AQUI que os
+   * comandos de voz casam — continuamente, sem esperar o bloco de 15s fechar.
+   * `epoch` muda a cada bloco fechado, reiniciando as âncoras de dedupe.
+   */
+  liveText?: { text: string; epoch: number };
 };
 
 export type TriggerControls = {
-  applyAction: (action: TriggerAction, trigger: TriggerDefinition) => void;
+  applyAction: (
+    action: TriggerAction,
+    trigger: TriggerDefinition,
+    meta?: { matched_text?: string },
+  ) => ActionResult[] | void;
 };
 
 export function useTriggerEngine(
@@ -72,8 +83,14 @@ export function useTriggerEngine(
           source_kind: sourceKind,
           source_ref: sourceRef,
           result: "suppressed_cooldown",
-          meta,
+          meta: {
+            ...meta,
+            action_results: [],
+            cooldown_seconds: t.cooldown_seconds,
+            cooldown_remaining_ms: (t.cooldown_seconds ?? 30) * 1000 - (now - last),
+          },
         }).catch(() => {});
+
         onFired?.();
         return;
       }
@@ -81,17 +98,35 @@ export function useTriggerEngine(
       lastFireRef.current[t.id] = now;
       const action = t.action ?? {};
       let result: "executed" | "failed" = "executed";
+      let actionResults: ActionResult[] = [];
       try {
-        controlsRef.current.applyAction(action, t);
-      } catch {
+        actionResults =
+          controlsRef.current.applyAction(action, t, {
+            matched_text: typeof meta.matched_text === "string" ? meta.matched_text : undefined,
+          }) || [];
+      } catch (e) {
         result = "failed";
+        actionResults = [
+          {
+            action: "execução",
+            success: false,
+            detail: e instanceof Error ? e.message : "erro desconhecido",
+          },
+        ];
       }
+      if (actionResults.some((r) => !r.success)) result = "failed";
       void recordFiring({
         trigger_id: t.id,
         source_kind: sourceKind,
         source_ref: sourceRef,
         result,
-        meta,
+        meta: {
+          ...meta,
+          action_results: actionResults,
+          cooldown_seconds: t.cooldown_seconds,
+          cooldown_remaining_ms: 0,
+          fired_client_at: new Date(now).toISOString(),
+        },
       }).catch(() => {});
 
       // ------------------------------------------- encadeamento entre gatilhos
@@ -142,17 +177,30 @@ export function useTriggerEngine(
     [],
   );
 
-  // --------------------------------------------------- eventos de ÁUDIO
+  // --------------------------------------------------- COMANDOS DE VOZ
+  //
+  // Casamento CONTÍNUO no texto parcial do reconhecedor: assim que a frase
+  // aparece no interim, o comando dispara (<2s). Dedupe pela âncora
+  // `epoch:índice da ocorrência` — a mesma ocorrência nunca dispara duas
+  // vezes, mas repetir a frase mais tarde (novo índice/epoch) dispara de novo.
+  const liveEpoch = signals.liveText?.epoch ?? 0;
+  const liveTextValue = signals.liveText?.text ?? "";
   useEffect(() => {
-    if (!signals.active || !signals.lastBlock) return;
-    const block = signals.lastBlock;
+    if (!signals.active || !liveTextValue.trim()) return;
     for (const t of enabled()) {
       const c = t.condition as Record<string, unknown>;
       if (c?.source !== "audio" || typeof c.keyword !== "string") continue;
-      if (!keywordMatches(block.text, c.keyword)) continue;
-      fire(t, "audio", `block:${block.id}`, { keyword: c.keyword, text: block.text.slice(0, 300) });
+      const hit = findKeyword(liveTextValue, c.keyword);
+      if (!hit) continue;
+      fire(t, "audio", `voice:${liveEpoch}:${hit.index}`, {
+        keyword: c.keyword,
+        matched_text: hit.matched_text,
+        heard_text: liveTextValue.slice(-300),
+        heard_at: new Date().toISOString(),
+        stage: "interim",
+      });
     }
-  }, [signals.active, signals.lastBlock, enabled, fire]);
+  }, [signals.active, liveTextValue, liveEpoch, enabled, fire]);
 
   // ------------------------------------------------------------ CHRONOS
   useEffect(() => {

@@ -52,7 +52,6 @@ export function triggerFamily(t: Pick<TriggerDefinition, "condition">): TriggerF
   return c?.source === "audio" ? "command" : "agent";
 }
 
-
 /** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
 export const MAX_CHAIN_DEPTH = 3;
 
@@ -347,12 +346,140 @@ function normalize(s: string) {
     .trim();
 }
 
+/**
+ * Normalização POSICIONAL: devolve o texto normalizado + o mapa de índices para
+ * o texto original. Serve para achar a palavra-chave no texto parcial e ainda
+ * conseguir recortar o trecho exato que o usuário falou (matched_text).
+ */
+function normalizeWithMap(text: string): { norm: string; map: number[] } {
+  let norm = "";
+  const map: number[] = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const piece = text[i]
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    for (let j = 0; j < piece.length; j += 1) {
+      norm += piece[j];
+      map.push(i);
+    }
+  }
+  return { norm, map };
+}
+
+export type KeywordMatch = {
+  /** índice (no texto normalizado) da ÚLTIMA ocorrência — âncora do dedupe */
+  index: number;
+  /** trecho exato ouvido, recortado do texto original */
+  matched_text: string;
+};
+
+/**
+ * Acha a última ocorrência da palavra-chave no texto (case/acento-insensitive,
+ * igual para PT, EN e ES) e devolve a posição + o trecho original ouvido.
+ */
+export function findKeyword(text: string, keyword: string): KeywordMatch | null {
+  const k = normalize(keyword).replace(/\s+/g, " ");
+  if (!k) return null;
+  const { norm, map } = normalizeWithMap(text);
+  const flat = norm.replace(/\s+/g, " ");
+  // reindexa espaços colapsados
+  const flatMap: number[] = [];
+  let prevSpace = false;
+  for (let i = 0; i < norm.length; i += 1) {
+    const isSpace = /\s/.test(norm[i]);
+    if (isSpace && prevSpace) continue;
+    flatMap.push(map[i]);
+    prevSpace = isSpace;
+  }
+  const idx = flat.lastIndexOf(k);
+  if (idx < 0) return null;
+  const from = flatMap[idx] ?? 0;
+  const to = (flatMap[Math.min(idx + k.length - 1, flatMap.length - 1)] ?? from) + 1;
+  return { index: idx, matched_text: text.slice(from, to).trim() || keyword };
+}
+
 /** Match case/acento-insensitive — serve para PT, EN e ES do mesmo jeito. */
 export function keywordMatches(text: string, keyword: string): boolean {
-  const k = normalize(keyword);
-  if (!k) return false;
-  return normalize(text).includes(k);
+  return findKeyword(text, keyword) != null;
 }
+
+/** "45 s" / "2 min" / "1 h" — cooldown sempre com unidade explícita. */
+export function formatCooldown(seconds: number | null | undefined): string {
+  const s = Math.max(0, Math.round(Number(seconds ?? 0)));
+  if (s === 0) return "sem cooldown";
+  if (s < 60) return `${s} s`;
+  if (s < 3600) {
+    const m = s / 60;
+    return `${Number.isInteger(m) ? m : m.toFixed(1)} min`;
+  }
+  const h = s / 3600;
+  return `${Number.isInteger(h) ? h : h.toFixed(1)} h`;
+}
+
+/** Retorno de UMA ação executada num disparo — base do relatório. */
+export type ActionResult = {
+  action: string;
+  success: boolean;
+  detail?: string;
+};
+
+export function firingActionResults(f: TriggerFiring): ActionResult[] {
+  const raw = (f.meta as Record<string, unknown>)?.action_results;
+  return Array.isArray(raw) ? (raw as ActionResult[]) : [];
+}
+
+export function firingMatchedText(f: TriggerFiring): string | null {
+  const m = f.meta as Record<string, unknown>;
+  const t = m?.matched_text;
+  return typeof t === "string" && t.trim() ? t : null;
+}
+
+export type TriggerReport = {
+  trigger: TriggerDefinition;
+  firings: TriggerFiring[];
+  actionsOk: number;
+  actionsFail: number;
+  successRate: number | null;
+  lastAt: string | null;
+};
+
+/** Consolida os últimos disparos de cada gatilho para o relatório. */
+export function buildReports(
+  triggers: TriggerDefinition[],
+  firings: TriggerFiring[],
+  limitPerTrigger = 20,
+): TriggerReport[] {
+  return triggers.map((trigger) => {
+    const own = firings
+      .filter((f) => f.trigger_id === trigger.id)
+      .sort((a, b) => (a.fired_at < b.fired_at ? 1 : -1))
+      .slice(0, limitPerTrigger);
+    let ok = 0;
+    let fail = 0;
+    for (const f of own) {
+      for (const r of firingActionResults(f)) {
+        if (r.success) ok += 1;
+        else fail += 1;
+      }
+    }
+    return {
+      trigger,
+      firings: own,
+      actionsOk: ok,
+      actionsFail: fail,
+      successRate: ok + fail > 0 ? ok / (ok + fail) : null,
+      lastAt: own[0]?.fired_at ?? null,
+    };
+  });
+}
+
+export const FIRING_RESULT_LABEL: Record<FiringResult, string> = {
+  executed: "executado",
+  simulated: "simulado (teste)",
+  failed: "falhou",
+  suppressed_cooldown: "suprimido por cooldown",
+};
 
 export function describeCondition(t: TriggerDefinition): string {
   const c = t.condition as Record<string, unknown>;
@@ -610,9 +737,7 @@ export function upcomingActions(
   const eligible = triggers
     .filter(
       (t) =>
-        t.enabled &&
-        triggerFamily(t) === "agent" &&
-        isWithinWindow(t.active_window, new Date(now)),
+        t.enabled && triggerFamily(t) === "agent" && isWithinWindow(t.active_window, new Date(now)),
     )
     .sort((a, b) => a.position - b.position);
 
@@ -642,4 +767,3 @@ export function armedCommands(
       t.enabled && triggerFamily(t) === "command" && isWithinWindow(t.active_window, new Date(now)),
   );
 }
-

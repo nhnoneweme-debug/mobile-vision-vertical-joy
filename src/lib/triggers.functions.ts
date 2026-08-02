@@ -168,3 +168,38 @@ export const resolveTriggerProposal = createServerFn({ method: "POST" })
       .eq("user_id", userId);
     return { ok: true };
   });
+
+// ------------------------------------------------------ RELATÓRIO GERAL
+//
+// "Resumir com a WiMi": mesma pipeline de auditoria do ia-capture — a proposta
+// nasce como linha em ai_audit_log e é entregue em texto (e voz, no cliente).
+
+const REPORT_SYSTEM = `Você é a WiMi analisando o RELATÓRIO DE RETORNO dos gatilhos de execução do usuário.
+Receberá um JSON com gatilhos, últimos disparos, resultados por ação e taxas de sucesso.
+Responda em português, sem markdown, em no máximo 6 frases curtas:
+o que está funcionando, o que está falhando (e por quê, quando o detalhe permitir),
+e uma recomendação prática. Se não houver disparos, diga isso com honestidade.`;
+
+const reportSchema = z.object({ report_json: z.string().min(2).max(20000) });
+
+export const summarizeTriggerReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => reportSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const model = createChatModelWithFallback();
+    const { text } = await generateText({
+      model,
+      system: REPORT_SYSTEM,
+      prompt: `Relatório bruto:\n${data.report_json}`,
+    });
+    const message = text.trim();
+    const { supabase, userId } = context;
+    await supabase.from("ai_audit_log").insert({
+      user_id: userId,
+      table_name: "trigger_firings",
+      action: "trigger.report_summary",
+      status: "applied",
+      payload: { output: message } as never,
+    });
+    return { message };
+  });
