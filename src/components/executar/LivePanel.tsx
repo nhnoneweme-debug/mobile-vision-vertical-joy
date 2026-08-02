@@ -342,18 +342,43 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       }
 
       if (action.journey_log_prompt) {
-        setJourneyLog({
+        const elapsedMin = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000));
+        const recent = blocksRef.current.slice(-8);
+        const ctx: JourneyLogContext = {
           sessionId,
           missionId: missionId ?? null,
           missionTitle: null,
-          elapsedMin: Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000)),
-          recentTranscript: bufferRef.current.slice(-3),
+          elapsedMin,
+          recentTranscript: recent.slice(-3),
           triggerName: trigger.name,
-        });
+        };
+        setJourneyLog(ctx);
+        // MANIFESTAÇÃO FALADA COM CONTEXTO: a WiMi olha o que ouviu e pergunta
+        // algo específico, em vez de repetir a mesma frase genérica.
+        void runTriggerPrompt({
+          data: {
+            instruction:
+              "Faça UMA pergunta curta e específica ao usuário sobre o que ele está executando agora, usando o contexto abaixo. Se não houver contexto, pergunte de forma acolhedora o que ele está fazendo.",
+            context: [
+              `Sessão ao vivo há ${elapsedMin} min.`,
+              recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
+            ].join("\n"),
+            trigger_name: trigger.name,
+          },
+        })
+          .then((res: { message: string }) => {
+            setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
+            actuators.speak(res.message);
+          })
+          .catch(() => {
+            actuators.speak("O que você está executando agora?");
+          });
       }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? undefined,
       });
+      if (action.message) actuators.speak(action.message);
+
       void persist({
         mission_id: missionId ?? null,
         kind: "sensor_reading",
