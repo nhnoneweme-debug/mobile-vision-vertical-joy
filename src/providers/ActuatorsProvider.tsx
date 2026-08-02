@@ -181,6 +181,10 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [speaking, setSpeaking] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // Timer único do áudio + trava anti-sobreposição (ver agendador abaixo).
+  const audioTimerRef = useRef<number | null>(null);
+  const audioStartedRef = useRef(false);
+  const lastAudioFireRef = useRef(0);
 
   // Suporte + config persistida (client-only).
   useEffect(() => {
