@@ -294,50 +294,82 @@ export function LivePanel({
 
 
   const applyAction = useCallback(
-    (action: TriggerAction, trigger: TriggerDefinition) => {
-      if (action.stop_actuators) actuators.stopAll();
-      if (action.vibrate) {
-        actuators.setVibrationConfig({
-          onSec: action.vibrate.onSec,
-          everySec: action.vibrate.everySec ?? 30,
-          mode: action.vibrate.continuous ? "continuous" : "timed",
-        });
-        actuators.setVibration(true);
-      }
-      if (action.audio_tone) {
-        actuators.setAudioConfig({
-          onSec: action.audio_tone.onSec,
-          everySec: action.audio_tone.everySec ?? 60,
-          mode: action.audio_tone.continuous ? "continuous" : "timed",
-        });
-        actuators.setAudio(true);
-      }
-      if (action.sensors) {
-        const { mic, camera: cam } = action.sensors;
-        if (mic === false && speech.listening) {
-          speech.stop();
-          flushTranscript();
+    (action: TriggerAction, trigger: TriggerDefinition, info?: { matched_text?: string }) => {
+      const results: import("@/lib/triggers").ActionResult[] = [];
+      const ok = (label: string, detail?: string) =>
+        results.push({ action: label, success: true, detail });
+      const fail = (label: string, detail: string) =>
+        results.push({ action: label, success: false, detail });
+
+      try {
+        if (action.stop_actuators) {
+          actuators.stopAll();
+          ok("desligar atuadores");
         }
-        if (mic === true && !speech.listening) speech.start();
-        if (cam === false) camera.stop();
-        if (cam === true && !camera.live) void camera.toggle();
+        if (action.vibrate) {
+          actuators.setVibrationConfig({
+            onSec: action.vibrate.onSec,
+            everySec: action.vibrate.everySec ?? 30,
+            mode: action.vibrate.continuous ? "continuous" : "timed",
+          });
+          actuators.setVibration(true);
+          const supported = typeof navigator !== "undefined" && "vibrate" in navigator;
+          results.push({
+            action: "vibrar",
+            success: supported,
+            detail: supported ? `${action.vibrate.onSec}s` : "aparelho sem API de vibração",
+          });
+        }
+        if (action.audio_tone) {
+          actuators.setAudioConfig({
+            onSec: action.audio_tone.onSec,
+            everySec: action.audio_tone.everySec ?? 60,
+            mode: action.audio_tone.continuous ? "continuous" : "timed",
+          });
+          actuators.setAudio(true);
+          ok("tom de áudio", `${action.audio_tone.onSec}s`);
+        }
+        if (action.sensors) {
+          const { mic, camera: cam } = action.sensors;
+          if (mic === false && speech.listening) {
+            speech.stop();
+            flushTranscript();
+          }
+          if (mic === true && !speech.listening) speech.start();
+          if (cam === false) camera.stop();
+          if (cam === true && !camera.live) void camera.toggle();
+          ok(
+            "sensores",
+            Object.entries(action.sensors)
+              .map(([k, v]) => `${k}=${v ? "on" : "off"}`)
+              .join(" "),
+          );
+        }
+
+        if (action.custom?.plan || action.custom?.instruction) {
+          toast(`gatilho: ${trigger.name}`, {
+            description: action.custom.plan ?? action.custom.instruction,
+            duration: 8000,
+          });
+          ok("ação personalizada", action.custom.plan ?? action.custom.instruction);
+        }
+      } catch (e) {
+        fail("primitivas", e instanceof Error ? e.message : "erro ao aplicar ações");
       }
 
-      if (action.custom?.plan || action.custom?.instruction) {
-        toast(`gatilho: ${trigger.name}`, {
-          description: action.custom.plan ?? action.custom.instruction,
-          duration: 8000,
-        });
-      }
       // ELEMENTO PROMPT — instrução em linguagem natural executada pela LLM.
       if (action.prompt?.instruction) {
+        ok("prompt", "enviado à WiMi");
         const elapsedMin = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000));
         const contextText = [
           `Sessão ao vivo há ${elapsedMin} min.`,
+          info?.matched_text ? `Frase que acionou o comando: "${info.matched_text}"` : "",
           bufferRef.current.length
             ? `Últimas falas transcritas:\n${bufferRef.current.slice(-8).join("\n")}`
             : "Sem transcrição recente.",
-        ].join("\n");
+        ]
+          .filter(Boolean)
+          .join("\n");
         void runTriggerPrompt({
           data: {
             instruction: action.prompt.instruction,
@@ -368,6 +400,7 @@ export function LivePanel({
       }
 
       if (action.journey_log_prompt) {
+        ok("abrir log de jornada");
         const elapsedMin = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000));
         const recent = blocksRef.current.slice(-8);
         const ctx: JourneyLogContext = {
@@ -401,9 +434,12 @@ export function LivePanel({
           });
       }
       toast(`gatilho: ${trigger.name}`, {
-        description: action.message ?? undefined,
+        description: action.message ?? info?.matched_text ?? undefined,
       });
-      if (action.message) actuators.speak(action.message);
+      if (action.message) {
+        actuators.speak(action.message);
+        ok("mensagem falada", action.message);
+      }
 
       void persist({
         mission_id: missionId ?? null,
@@ -415,11 +451,21 @@ export function LivePanel({
           type: "trigger_fired",
           trigger_id: trigger.id,
           trigger_name: trigger.name,
+          matched_text: info?.matched_text ?? null,
         },
       });
+
+      return results;
     },
     [actuators, camera, flushTranscript, missionId, persist, sessionId, sessionStartedAt, speech],
   );
+
+  // Época da escuta: muda a cada bloco fechado, reiniciando as âncoras de
+  // dedupe do casamento por palavra-chave.
+  const [heardEpoch, setHeardEpoch] = useState(0);
+  useEffect(() => {
+    setHeardEpoch((n) => n + 1);
+  }, [blocks.length]);
 
   useTriggerEngine(
     (triggersQ.data ?? []) as TriggerDefinition[],
@@ -427,9 +473,11 @@ export function LivePanel({
       active: !offline,
       sessionStartedAt,
       lastBlock,
+      liveText: { text: currentLine, epoch: heardEpoch },
     },
     { applyAction },
   );
+
 
   const pauseAll = useCallback(() => {
     if (speech.listening) {
