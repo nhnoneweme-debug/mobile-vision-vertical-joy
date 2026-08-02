@@ -906,7 +906,7 @@ function AssistantPage() {
           status: "done",
           ctas: [
             { to: "/agenda", label: "Ver na Agenda" },
-            { to: "/executar", label: "Executar agora" },
+            { to: "/executar", label: "Executando agora" },
           ],
         });
       } else if (p.kind === "treino") {
