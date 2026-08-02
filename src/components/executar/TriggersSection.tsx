@@ -53,21 +53,13 @@ import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
 import { CustomActionBox } from "./CustomActionBox";
 import { DualInput } from "./DualInput";
 
-type CondKind =
-  | "at_time"
-  | "every"
-  | "after_session"
-  | "audio"
-  | "motion_spike"
-  | "motion_angle"
-  | "video";
+type CondKind = "at_time" | "every" | "after_session" | "audio" | "video";
 
-type Source = "chronos" | "audio" | "motion" | "video";
+type Source = "chronos" | "audio" | "video";
 
 const SOURCE_LABEL: Record<Source, string> = {
   chronos: "Cronos",
   audio: "Áudio",
-  motion: "Movimento",
   video: "Vídeo (em breve)",
 };
 
@@ -76,8 +68,6 @@ const COND_LABEL: Record<CondKind, string> = {
   every: "a cada X min de Live",
   after_session: "após X min de sessão",
   audio: "palavra-chave no áudio",
-  motion_spike: "movimento brusco (pico)",
-  motion_angle: "mudança de ângulo",
   video: "detecção por vídeo",
 };
 
@@ -91,8 +81,6 @@ type FormState = {
   time: string;
   minutes: number;
   keyword: string;
-  magnitude: number;
-  degrees: number;
   cooldown: number;
   vibrate: boolean;
   vibrateSec: number;
@@ -101,7 +89,6 @@ type FormState = {
   stopActuators: boolean;
   micOff: boolean;
   cameraOff: boolean;
-  motionOff: boolean;
   message: string;
   journeyLog: boolean;
   customInstruction: string;
@@ -125,8 +112,6 @@ const EMPTY_FORM: FormState = {
   time: "08:00",
   minutes: 25,
   keyword: "",
-  magnitude: 8,
-  degrees: 45,
   cooldown: DEFAULT_COOLDOWN,
   vibrate: false,
   vibrateSec: 2,
@@ -135,7 +120,6 @@ const EMPTY_FORM: FormState = {
   stopActuators: false,
   micOff: false,
   cameraOff: false,
-  motionOff: false,
   message: "",
   journeyLog: false,
   customInstruction: "",
@@ -154,7 +138,6 @@ const EMPTY_FORM: FormState = {
 function kindsFor(source: Source): CondKind[] {
   if (source === "chronos") return ["at_time", "every", "after_session"];
   if (source === "audio") return ["audio"];
-  if (source === "motion") return ["motion_spike", "motion_angle"];
   return ["video"];
 }
 
@@ -166,10 +149,6 @@ function buildCondition(f: FormState): TriggerCondition {
       return { mode: "every", seconds: Math.max(1, f.minutes) * 60 };
     case "after_session":
       return { mode: "after_session", seconds: Math.max(1, f.minutes) * 60 };
-    case "motion_spike":
-      return { source: "motion", kind: "spike", min_magnitude: f.magnitude };
-    case "motion_angle":
-      return { source: "motion", kind: "angle_change", min_degrees: f.degrees };
     case "video":
       return { source: "video" };
     default:
@@ -185,7 +164,6 @@ function buildAction(f: FormState): TriggerAction {
   const sensors: Record<string, boolean> = {};
   if (f.micOff) sensors.mic = false;
   if (f.cameraOff) sensors.camera = false;
-  if (f.motionOff) sensors.motion = false;
   if (Object.keys(sensors).length) a.sensors = sensors;
   if (f.journeyLog) a.journey_log_prompt = true;
   if (f.customInstruction.trim()) {
@@ -230,9 +208,6 @@ function formFromTrigger(t: TriggerDefinition): FormState {
   if (c.mode) {
     source = "chronos";
     kind = c.mode as CondKind;
-  } else if (c.source === "motion") {
-    source = "motion";
-    kind = c.kind === "angle_change" ? "motion_angle" : "motion_spike";
   } else if (c.source === "video") {
     source = "video";
     kind = "video";
@@ -246,8 +221,6 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     time: typeof c.time === "string" ? c.time : "08:00",
     minutes: c.seconds ? Math.round(Number(c.seconds) / 60) : 25,
     keyword: typeof c.keyword === "string" ? c.keyword : "",
-    magnitude: Number(c.min_magnitude ?? 8),
-    degrees: Number(c.min_degrees ?? 45),
     cooldown: t.cooldown_seconds,
     vibrate: !!a.vibrate,
     vibrateSec: a.vibrate?.onSec ?? 2,
@@ -256,7 +229,6 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     stopActuators: !!a.stop_actuators,
     micOff: a.sensors?.mic === false,
     cameraOff: a.sensors?.camera === false,
-    motionOff: a.sensors?.motion === false,
     message: a.message ?? "",
     journeyLog: !!a.journey_log_prompt,
     customInstruction: a.custom?.instruction ?? "",
@@ -459,7 +431,6 @@ export function TriggersSection() {
           </div>
         </div>
 
-
         {libOpen ? (
           <ul className="mt-3 space-y-2">
             {TRIGGER_TEMPLATES.map((tpl) => (
@@ -521,7 +492,8 @@ export function TriggersSection() {
                         </p>
                       ) : null}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0} hoje
+                        cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0}{" "}
+                        hoje
                         {s?.last
                           ? ` · último ${new Date(s.last).toLocaleTimeString("pt-BR", {
                               hour: "2-digit",
@@ -683,30 +655,6 @@ export function TriggersSection() {
                 />
               </Field>
             ) : null}
-            {form.kind === "motion_spike" ? (
-              <Field label="magnitude mínima (m/s²)">
-                <input
-                  type="number"
-                  min={1}
-                  max={40}
-                  value={form.magnitude}
-                  onChange={(e) => setForm({ ...form, magnitude: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
-                />
-              </Field>
-            ) : null}
-            {form.kind === "motion_angle" ? (
-              <Field label="variação mínima de ângulo (graus)">
-                <input
-                  type="number"
-                  min={5}
-                  max={180}
-                  value={form.degrees}
-                  onChange={(e) => setForm({ ...form, degrees: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
-                />
-              </Field>
-            ) : null}
           </Step>
 
           <Step n={4} title="Ações (pode combinar)">
@@ -753,11 +701,6 @@ export function TriggersSection() {
                 label="Desligar câmera"
                 checked={form.cameraOff}
                 onChange={(v) => setForm({ ...form, cameraOff: v })}
-              />
-              <CheckRow
-                label="Desligar movimento"
-                checked={form.motionOff}
-                onChange={(v) => setForm({ ...form, motionOff: v })}
               />
               <CheckRow
                 label="Abrir Log de jornada"
@@ -868,7 +811,6 @@ export function TriggersSection() {
                 ))}
               </ol>
             ) : null}
-
           </Step>
 
           <Step n={5} title="Cooldown">

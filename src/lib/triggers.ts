@@ -14,15 +14,13 @@ export type TriggerCondition =
   | { mode: "every"; seconds: number }
   | { mode: "after_session"; seconds: number }
   | { source: "audio"; keyword: string }
-  | { source: "motion"; kind: "spike"; min_magnitude: number }
-  | { source: "motion"; kind: "angle_change"; min_degrees: number }
   | { source: "video" };
 
 export type TriggerAction = {
   vibrate?: { onSec: number; everySec?: number; continuous?: boolean };
   audio_tone?: { onSec: number; everySec?: number; continuous?: boolean };
   stop_actuators?: boolean;
-  sensors?: { mic?: boolean; camera?: boolean; motion?: boolean };
+  sensors?: { mic?: boolean; camera?: boolean };
   message?: string;
   /** Abre o Log de Jornada ("o que você está executando agora?"). */
   journey_log_prompt?: boolean;
@@ -38,8 +36,6 @@ export type TriggerAction = {
 
 /** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
 export const MAX_CHAIN_DEPTH = 3;
-
-
 
 /** Janela de elegibilidade: horário e/ou dias da semana (0 = domingo). */
 export type ActiveWindow = {
@@ -85,7 +81,6 @@ export type TriggerRevision = {
 };
 
 export const DEFAULT_COOLDOWN = 30;
-
 
 // ------------------------------------------------------------------ leitura
 
@@ -246,7 +241,6 @@ export async function duplicateTrigger(t: TriggerDefinition, position: number) {
   );
 }
 
-
 export async function recordFiring(input: {
   trigger_id: string;
   source_kind: string;
@@ -279,7 +273,7 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
     trigger_type: "event",
     condition: { source: "audio", keyword: "código off" },
     action: {
-      sensors: { camera: false, motion: false },
+      sensors: { camera: false },
       stop_actuators: true,
       message: "sensores desligados — microfone segue ouvindo.",
     },
@@ -292,7 +286,7 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
     trigger_type: "event",
     condition: { source: "audio", keyword: "código off total" },
     action: {
-      sensors: { mic: false, camera: false, motion: false },
+      sensors: { mic: false, camera: false },
       stop_actuators: true,
       message: "tudo desligado — inclusive o microfone.",
     },
@@ -319,7 +313,6 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
 export async function seedExampleTriggers(existing: TriggerDefinition[]) {
   if (existing.length > 0) return false;
   for (let i = 0; i < SEED_TRIGGERS.length; i += 1) {
-
     await createTrigger(SEED_TRIGGERS[i], i);
   }
   return true;
@@ -349,10 +342,7 @@ export function describeCondition(t: TriggerDefinition): string {
   if (c.mode === "after_session")
     return `após ${Math.round(Number(c.seconds) / 60)} min de sessão Live`;
   if (c.source === "audio") return `quando ouvir "${String(c.keyword)}"`;
-  if (c.source === "motion" && c.kind === "spike")
-    return `movimento brusco acima de ${String(c.min_magnitude)} m/s²`;
-  if (c.source === "motion" && c.kind === "angle_change")
-    return `girar o aparelho mais de ${String(c.min_degrees)}°`;
+  if (c.source === "motion") return "movimento (sensor removido — gatilho inativo)";
   if (c.source === "video") return "detecção por vídeo (em breve)";
   return "condição desconhecida";
 }
@@ -387,9 +377,7 @@ export function actionElements(
   if (act.custom) parts.push(`ação personalizada: ${act.custom.plan ?? act.custom.instruction}`);
   if (act.prompt?.instruction) parts.push(`Prompt("${act.prompt.instruction}")`);
   if (act.trigger_fire?.trigger_id)
-    parts.push(
-      `acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`,
-    );
+    parts.push(`acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`);
   if (act.trigger_enable?.trigger_id)
     parts.push(
       `${act.trigger_enable.enabled ? "armar" : "desarmar"} "${
@@ -436,7 +424,13 @@ export function describeWindow(w: ActiveWindow | null | undefined): string | nul
   const parts: string[] = [];
   if (w.start && w.end) parts.push(`entre ${w.start}–${w.end}`);
   if (w.days && w.days.length && w.days.length < 7) {
-    parts.push(`em ${w.days.slice().sort().map((d) => DAY_LABELS[d]).join("/")}`);
+    parts.push(
+      `em ${w.days
+        .slice()
+        .sort()
+        .map((d) => DAY_LABELS[d])
+        .join("/")}`,
+    );
   }
   return parts.length ? parts.join(", ") : null;
 }
@@ -470,7 +464,7 @@ export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
       enabled: false,
       trigger_type: "event",
       condition: { source: "audio", keyword: "código off" },
-      action: { sensors: { mic: false, camera: false, motion: false }, stop_actuators: true },
+      action: { sensors: { mic: false, camera: false }, stop_actuators: true },
       cooldown_seconds: 10,
     },
   },
@@ -483,7 +477,7 @@ export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
       enabled: false,
       trigger_type: "event",
       condition: { source: "audio", keyword: "só ouvidos" },
-      action: { sensors: { camera: false, motion: false } },
+      action: { sensors: { camera: false } },
       cooldown_seconds: 10,
     },
   },
@@ -511,19 +505,6 @@ export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
       condition: { mode: "every", seconds: 3600 },
       action: { audio_tone: { onSec: 1 }, message: "Bebe água." },
       cooldown_seconds: 300,
-    },
-  },
-  {
-    id: "sentinela",
-    label: "Sentinela de movimento",
-    hint: "pico ≥ 8 m/s²: mensagem + sino",
-    draft: {
-      name: "sentinela de movimento",
-      enabled: false,
-      trigger_type: "event",
-      condition: { source: "motion", kind: "spike", min_magnitude: 8 },
-      action: { audio_tone: { onSec: 1 }, message: "Movimento brusco detectado." },
-      cooldown_seconds: 30,
     },
   },
 ];
@@ -619,11 +600,7 @@ export function upcomingActions(
     } else {
       const c = t.condition as Record<string, unknown>;
       const when =
-        c?.source === "audio"
-          ? `aguardando: "${String(c.keyword)}"`
-          : c?.source === "motion"
-            ? "aguardando movimento"
-            : "aguardando sinal";
+        c?.source === "audio" ? `aguardando: "${String(c.keyword)}"` : "aguardando sinal";
       events.push({ trigger: t, etaMs: null, when });
     }
   }

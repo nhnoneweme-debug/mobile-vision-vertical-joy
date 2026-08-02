@@ -8,7 +8,9 @@ import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 import { getTodayExecutionLog, type ExecutionEventRow } from "@/lib/execution.functions";
 
 function labelFor(row: ExecutionEventRow): string {
-  const meta = (row.meta && typeof row.meta === "object" && !Array.isArray(row.meta) ? row.meta : {}) as {
+  const meta = (
+    row.meta && typeof row.meta === "object" && !Array.isArray(row.meta) ? row.meta : {}
+  ) as {
     title?: string;
   };
   const title = meta.title ?? "bloco";
@@ -46,7 +48,9 @@ export function ExecutionLogCard() {
   });
 
   const rows = (data ?? []).filter((r: ExecutionEventRow) =>
-    ["manifest_ack", "mission_done", "mission_skipped", "mission_extended", "voice_note"].includes(r.kind),
+    ["manifest_ack", "mission_done", "mission_skipped", "mission_extended", "voice_note"].includes(
+      r.kind,
+    ),
   );
 
   return (

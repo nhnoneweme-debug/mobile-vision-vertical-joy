@@ -1,8 +1,13 @@
-// Atuadores persistentes da WiMi (vibração + emissão de áudio).
+// Atuadores persistentes da WiMi (vibração + emissão de áudio + voz).
 //
 // Vivem acima das rotas (montados no MobileShell) pra que o padrão continue
 // rodando enquanto o usuário navega pelo app — só para quando ele desliga.
 // Config (N segundos a cada M segundos) persiste em localStorage.
+//
+// EMISSÃO DE ÁUDIO é UM ÚNICO BLOCO: um agendador só. Não existe mais um
+// "beacon" separado disparando o mesmo timbre em paralelo (isso dobrava o som).
+// O sinal periódico de presença é simplesmente a emissão de áudio no modo
+// temporizado com um dos intervalos预 predefinidos.
 
 import {
   createContext,
@@ -26,6 +31,9 @@ export const ACTUATOR_SOUNDS: { id: ActuatorSound; label: string; hint: string }
   { id: "tick", label: "Tique", hint: "clique discreto, ~80ms" },
 ];
 
+/** Intervalos rápidos para o sinal periódico de presença. */
+export const INTERVAL_PRESETS = [30, 60, 120, 300];
+
 export type ActuatorConfig = {
   /** duração do pulso, em segundos */
   onSec: number;
@@ -40,15 +48,6 @@ export type ActuatorConfig = {
   sound?: ActuatorSound;
 };
 
-/** Sinal sonoro periódico de presença ("estou aqui, ativa"). */
-export type BeaconConfig = {
-  enabled: boolean;
-  /** intervalo entre bipes, em segundos */
-  everySec: number;
-};
-
-export const BEACON_PRESETS = [30, 60, 120, 300];
-
 type ActuatorsCtx = {
   vibrationOn: boolean;
   audioOn: boolean;
@@ -56,9 +55,6 @@ type ActuatorsCtx = {
   audioSupported: boolean;
   vibrationConfig: ActuatorConfig;
   audioConfig: ActuatorConfig;
-  beacon: BeaconConfig;
-  beaconPulsing: boolean;
-  setBeacon: (c: BeaconConfig) => void;
   pulsing: { vibration: boolean; audio: boolean };
   toggleVibration: () => void;
   toggleAudio: () => void;
@@ -66,16 +62,19 @@ type ActuatorsCtx = {
   setAudio: (on: boolean) => void;
   setVibrationConfig: (c: ActuatorConfig) => void;
   setAudioConfig: (c: ActuatorConfig) => void;
+  /** voz das manifestações (a WiMi fala o que se manifesta) */
+  speechOn: boolean;
+  speechSupported: boolean;
+  toggleSpeech: () => void;
+  speaking: boolean;
+  /** fala um texto se a voz estiver ligada; no-op caso contrário */
+  speak: (text: string) => void;
   stopAll: () => void;
-
 };
 
 const STORAGE_KEY = "wimi.actuators.v1";
 
 const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed", sound: "soft" };
-
-const DEFAULT_BEACON: BeaconConfig = { enabled: false, everySec: 60 };
-
 
 /** intervalo de repetição do padrão sonoro no modo contínuo (ms) */
 const CONTINUOUS_PATTERN_MS = 2500;
@@ -89,19 +88,9 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
     Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_CONFIG.everySec))),
   );
   const mode: ActuatorMode = c?.mode === "continuous" ? "continuous" : "timed";
-  const sound: ActuatorSound =
-    c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
+  const sound: ActuatorSound = c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
   return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
 }
-
-function clampBeacon(c: Partial<BeaconConfig> | undefined): BeaconConfig {
-  const everySec = Math.min(
-    3600,
-    Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_BEACON.everySec))),
-  );
-  return { enabled: !!c?.enabled, everySec };
-}
-
 
 /**
  * Toca um timbre curto e agradável. Sempre com envelope (attack/release) para
@@ -151,7 +140,6 @@ function playSound(ctx: AudioContext, sound: ActuatorSound): number {
   return 0.42;
 }
 
-
 export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [vibrationOn, setVibrationOn] = useState(false);
   const [audioOn, setAudioOn] = useState(false);
@@ -160,12 +148,14 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     onSec: 1,
     everySec: 60,
     mode: "timed",
+    sound: "soft",
   });
   const [vibrationSupported, setVibrationSupported] = useState(false);
   const [audioSupported, setAudioSupported] = useState(false);
   const [pulsing, setPulsing] = useState({ vibration: false, audio: false });
-  const [beacon, setBeaconState] = useState<BeaconConfig>(DEFAULT_BEACON);
-  const [beaconPulsing, setBeaconPulsing] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [speechOn, setSpeechOn] = useState(true);
+  const [speaking, setSpeaking] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -181,28 +171,26 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
           (window as unknown as { webkitAudioContext?: unknown }).webkitAudioContext
         ),
     );
+    setSpeechSupported(typeof window !== "undefined" && "speechSynthesis" in window);
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
         vibration?: Partial<ActuatorConfig>;
         audio?: Partial<ActuatorConfig>;
-        beacon?: Partial<BeaconConfig>;
+        speech?: boolean;
       };
       setVibrationConfigState(clampConfig(parsed.vibration));
       setAudioConfigState(clampConfig(parsed.audio));
-      setBeaconState(clampBeacon(parsed.beacon));
+      if (typeof parsed.speech === "boolean") setSpeechOn(parsed.speech);
     } catch {
       /* config opcional */
     }
   }, []);
 
-  const persist = useCallback((vib: ActuatorConfig, aud: ActuatorConfig, bea: BeaconConfig) => {
+  const persist = useCallback((vib: ActuatorConfig, aud: ActuatorConfig, speech: boolean) => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ vibration: vib, audio: aud, beacon: bea }),
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ vibration: vib, audio: aud, speech }));
     } catch {
       /* storage indisponível */
     }
@@ -212,29 +200,56 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     (c: ActuatorConfig) => {
       const next = clampConfig(c);
       setVibrationConfigState(next);
-      persist(next, audioConfig, beacon);
+      persist(next, audioConfig, speechOn);
     },
-    [audioConfig, beacon, persist],
+    [audioConfig, persist, speechOn],
   );
 
   const setAudioConfig = useCallback(
     (c: ActuatorConfig) => {
       const next = clampConfig(c);
       setAudioConfigState(next);
-      persist(vibrationConfig, next, beacon);
+      persist(vibrationConfig, next, speechOn);
     },
-    [beacon, persist, vibrationConfig],
+    [persist, speechOn, vibrationConfig],
   );
 
-  const setBeacon = useCallback(
-    (c: BeaconConfig) => {
-      const next = clampBeacon(c);
-      setBeaconState(next);
+  const toggleSpeech = useCallback(() => {
+    setSpeechOn((prev) => {
+      const next = !prev;
       persist(vibrationConfig, audioConfig, next);
-    },
-    [audioConfig, persist, vibrationConfig],
-  );
+      if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch {
+          /* noop */
+        }
+      }
+      return next;
+    });
+  }, [audioConfig, persist, vibrationConfig]);
 
+  const speak = useCallback(
+    (text: string) => {
+      const clean = text.replace(/\s+/g, " ").trim().slice(0, 600);
+      if (!clean || !speechOn || !speechSupported) return;
+      try {
+        const synth = window.speechSynthesis;
+        synth.cancel();
+        const u = new SpeechSynthesisUtterance(clean);
+        u.lang = "pt-BR";
+        u.rate = 1.02;
+        u.pitch = 1;
+        u.onstart = () => setSpeaking(true);
+        u.onend = () => setSpeaking(false);
+        u.onerror = () => setSpeaking(false);
+        synth.speak(u);
+      } catch {
+        setSpeaking(false);
+      }
+    },
+    [speechOn, speechSupported],
+  );
 
   // Loop da vibração.
   useEffect(() => {
@@ -294,9 +309,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [vibrationOn, vibrationSupported, vibrationConfig]);
 
-  // Loop do áudio (timbre curto e agradável via Web Audio).
-  // Contínuo = atuador armado indefinidamente, repetindo o padrão — nunca uma
-  // senoide infinita (que soava como tom de discar).
+  // AGENDADOR ÚNICO DE ÁUDIO — um só timer, um só timbre por vez.
   useEffect(() => {
     if (!audioOn || !audioSupported) return;
     let cancelled = false;
@@ -341,41 +354,6 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [audioOn, audioSupported, audioConfig]);
 
-  // Beacon: sinal periódico de presença, independente dos gatilhos.
-  useEffect(() => {
-    if (!beacon.enabled || !audioSupported) return;
-    let cancelled = false;
-
-    const sound = audioConfig.sound ?? "soft";
-
-    const ping = () => {
-      if (cancelled) return;
-      if (!audioCtxRef.current) {
-        const Ctor =
-          (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
-          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (!Ctor) return;
-        audioCtxRef.current = new Ctor();
-      }
-      const ctx = audioCtxRef.current;
-      void ctx.resume().catch(() => {});
-      const dur = playSound(ctx, sound);
-      setBeaconPulsing(true);
-      window.setTimeout(() => {
-        if (!cancelled) setBeaconPulsing(false);
-      }, dur * 1000);
-    };
-
-    ping();
-    const id = window.setInterval(ping, Math.max(5000, beacon.everySec * 1000));
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-      setBeaconPulsing(false);
-    };
-  }, [beacon, audioSupported, audioConfig.sound]);
-
-
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;
     setVibrationOn((v) => !v);
@@ -405,7 +383,14 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const stopAll = useCallback(() => {
     setVibrationOn(false);
     setAudioOn(false);
-    setBeaconState((b) => (b.enabled ? { ...b, enabled: false } : b));
+    try {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    } catch {
+      /* noop */
+    }
+    setSpeaking(false);
   }, []);
 
   const value = useMemo<ActuatorsCtx>(
@@ -416,9 +401,6 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       audioSupported,
       vibrationConfig,
       audioConfig,
-      beacon,
-      beaconPulsing,
-      setBeacon,
       pulsing,
       toggleVibration,
       toggleAudio,
@@ -426,6 +408,11 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       setAudio,
       setVibrationConfig,
       setAudioConfig,
+      speechOn,
+      speechSupported,
+      toggleSpeech,
+      speaking,
+      speak,
       stopAll,
     }),
     [
@@ -435,9 +422,6 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       audioSupported,
       vibrationConfig,
       audioConfig,
-      beacon,
-      beaconPulsing,
-      setBeacon,
       pulsing,
       toggleVibration,
       toggleAudio,
@@ -445,6 +429,11 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       setAudio,
       setVibrationConfig,
       setAudioConfig,
+      speechOn,
+      speechSupported,
+      toggleSpeech,
+      speaking,
+      speak,
       stopAll,
     ],
   );
@@ -462,9 +451,6 @@ export function useActuators(): ActuatorsCtx {
       audioSupported: false,
       vibrationConfig: DEFAULT_CONFIG,
       audioConfig: DEFAULT_CONFIG,
-      beacon: DEFAULT_BEACON,
-      beaconPulsing: false,
-      setBeacon: () => {},
       pulsing: { vibration: false, audio: false },
       toggleVibration: () => {},
       toggleAudio: () => {},
@@ -472,6 +458,11 @@ export function useActuators(): ActuatorsCtx {
       setAudio: () => {},
       setVibrationConfig: () => {},
       setAudioConfig: () => {},
+      speechOn: false,
+      speechSupported: false,
+      toggleSpeech: () => {},
+      speaking: false,
+      speak: () => {},
       stopAll: () => {},
     };
   }

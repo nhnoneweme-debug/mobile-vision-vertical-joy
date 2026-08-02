@@ -18,7 +18,11 @@ export function CustomActionBox({
 }: {
   instruction: string;
   plan: string | null;
-  onChange: (next: { instruction: string; plan: string | null; action: TriggerAction | null }) => void;
+  onChange: (next: {
+    instruction: string;
+    plan: string | null;
+    action: TriggerAction | null;
+  }) => void;
   contextHint?: string;
 }) {
   const [loading, setLoading] = useState(false);

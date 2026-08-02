@@ -4,7 +4,18 @@
 // Toda ação relevante gera um execution_event via server function.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Loader2, Mic, MicOff, MessageCircle, Play, Plus, Sparkles, X, Flame } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Mic,
+  MicOff,
+  MessageCircle,
+  Play,
+  Plus,
+  Sparkles,
+  X,
+  Flame,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { vibrateFor, playPing } from "@/components/assistente/JourneyManifestFX";
@@ -48,8 +59,10 @@ export function ManifestPanel({
     if (!intent) return;
     if (intent.kind === "done") void ackAndResolve({ kind: "done" }, "voice");
     else if (intent.kind === "skip") void ackAndResolve({ kind: "skip" }, "voice");
-    else if (intent.kind === "extend") void ackAndResolve({ kind: "extend", minutes: intent.minutes }, "voice");
-    else if (intent.kind === "note") void ackAndResolve({ kind: "note", text: intent.text }, "voice");
+    else if (intent.kind === "extend")
+      void ackAndResolve({ kind: "extend", minutes: intent.minutes }, "voice");
+    else if (intent.kind === "note")
+      void ackAndResolve({ kind: "note", text: intent.text }, "voice");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -122,18 +135,28 @@ export function ManifestPanel({
         const { data: u } = await supabase.auth.getUser();
         if (u.user) await markMissionToday(mission, u.user.id, true);
         await logExecutionEvent({
-          data: { mission_id: manifestation.block.id, kind: "mission_done", channel: source === "voice" ? "voice" : "manual" },
+          data: {
+            mission_id: manifestation.block.id,
+            kind: "mission_done",
+            channel: source === "voice" ? "voice" : "manual",
+          },
         });
         toast.success("Feito. +XP");
       } else if (action.kind === "skip" && mission) {
         const { data: u } = await supabase.auth.getUser();
         if (u.user) await markMissionToday(mission, u.user.id, false);
         await logExecutionEvent({
-          data: { mission_id: manifestation.block.id, kind: "mission_skipped", channel: source === "voice" ? "voice" : "manual" },
+          data: {
+            mission_id: manifestation.block.id,
+            kind: "mission_skipped",
+            channel: source === "voice" ? "voice" : "manual",
+          },
         });
         toast("Bloco pulado.");
       } else if (action.kind === "extend") {
-        await extendMissionToday({ data: { mission_id: manifestation.block.id, minutes: action.minutes } });
+        await extendMissionToday({
+          data: { mission_id: manifestation.block.id, minutes: action.minutes },
+        });
         toast.success(`+${action.minutes}min pro bloco.`);
       } else if (action.kind === "start") {
         await logExecutionEvent({
@@ -147,7 +170,12 @@ export function ManifestPanel({
         toast.success("Bora. Tô contigo.");
       } else if (action.kind === "note") {
         await logExecutionEvent({
-          data: { mission_id: manifestation.block.id, kind: "voice_note", channel: "voice", note: action.text },
+          data: {
+            mission_id: manifestation.block.id,
+            kind: "voice_note",
+            channel: "voice",
+            note: action.text,
+          },
         });
       }
     } catch (err) {
@@ -184,7 +212,13 @@ export function ManifestPanel({
           </span>
         </div>
 
-        <p className={isKickoff ? "text-base font-medium leading-snug text-foreground" : "text-sm text-foreground"}>
+        <p
+          className={
+            isKickoff
+              ? "text-base font-medium leading-snug text-foreground"
+              : "text-sm text-foreground"
+          }
+        >
           {manifestation.message}
         </p>
 
@@ -210,7 +244,8 @@ export function ManifestPanel({
                 onClick={() => void ackAndResolve({ kind: "start" }, "click")}
                 className="flex items-center gap-1 rounded-full bg-ember px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-charcoal-900 disabled:opacity-60"
               >
-                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />} Iniciar
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}{" "}
+                Iniciar
               </button>
               <button
                 type="button"
@@ -238,7 +273,12 @@ export function ManifestPanel({
                 onClick={() => void ackAndResolve({ kind: "done" }, "click")}
                 className="flex items-center gap-1 rounded-full bg-ember px-3 py-1.5 text-xs font-medium text-charcoal-900 disabled:opacity-60"
               >
-                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Feito
+                {busy ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3" />
+                )}{" "}
+                Feito
               </button>
               {[5, 10, 20].map((m) => (
                 <button
