@@ -20,14 +20,12 @@ Formato:
      {"mode":"at_time","time":"HH:MM"}
    | {"mode":"every","seconds":N}
    | {"mode":"after_session","seconds":N}
-   | {"source":"audio","keyword":"palavra"}
-   | {"source":"motion","kind":"spike","min_magnitude":N}
-   | {"source":"motion","kind":"angle_change","min_degrees":N},
+   | {"source":"audio","keyword":"palavra"},
   "action": {
      "vibrate": {"onSec":1..10} (opcional),
      "audio_tone": {"onSec":1..10} (opcional),
      "stop_actuators": true (opcional),
-     "sensors": {"mic":bool,"camera":bool,"motion":bool} (opcional),
+     "sensors": {"mic":bool,"camera":bool} (opcional),
      "journey_log_prompt": true (opcional — abrir o log de jornada),
      "message": "texto curto que a WiMi mostra" (opcional)
   },
@@ -42,7 +40,7 @@ const CUSTOM_SYSTEM = `Você é a WiMi convertendo uma AÇÃO PERSONALIZADA desc
 em ações primitivas de um app de execução. Responda SEMPRE apenas com JSON válido:
 {
   "action": { "vibrate": {"onSec":N}, "audio_tone": {"onSec":N}, "stop_actuators": true,
-              "sensors": {"mic":bool,"camera":bool,"motion":bool},
+              "sensors": {"mic":bool,"camera":bool},
               "journey_log_prompt": true, "message": "texto que a WiMi diz no disparo" },
   "plan": "uma frase em português descrevendo o plano de ação interpretado"
 }

@@ -347,10 +347,7 @@ export function describeCondition(t: TriggerDefinition): string {
   if (c.mode === "after_session")
     return `após ${Math.round(Number(c.seconds) / 60)} min de sessão Live`;
   if (c.source === "audio") return `quando ouvir "${String(c.keyword)}"`;
-  if (c.source === "motion" && c.kind === "spike")
-    return `movimento brusco acima de ${String(c.min_magnitude)} m/s²`;
-  if (c.source === "motion" && c.kind === "angle_change")
-    return `girar o aparelho mais de ${String(c.min_degrees)}°`;
+  if (c.source === "motion") return "movimento (sensor removido — gatilho inativo)";
   if (c.source === "video") return "detecção por vídeo (em breve)";
   return "condição desconhecida";
 }
@@ -511,19 +508,6 @@ export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
       cooldown_seconds: 300,
     },
   },
-  {
-    id: "sentinela",
-    label: "Sentinela de movimento",
-    hint: "pico ≥ 8 m/s²: mensagem + sino",
-    draft: {
-      name: "sentinela de movimento",
-      enabled: false,
-      trigger_type: "event",
-      condition: { source: "motion", kind: "spike", min_magnitude: 8 },
-      action: { audio_tone: { onSec: 1 }, message: "Movimento brusco detectado." },
-      cooldown_seconds: 30,
-    },
-  },
 ];
 
 // -------------------------------------------------------- estatísticas
@@ -619,9 +603,7 @@ export function upcomingActions(
       const when =
         c?.source === "audio"
           ? `aguardando: "${String(c.keyword)}"`
-          : c?.source === "motion"
-            ? "aguardando movimento"
-            : "aguardando sinal";
+          : "aguardando sinal";
       events.push({ trigger: t, etaMs: null, when });
     }
   }
