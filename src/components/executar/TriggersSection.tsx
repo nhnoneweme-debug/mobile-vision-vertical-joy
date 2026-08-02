@@ -789,7 +789,25 @@ export function TriggersSection() {
                 />
               </Field>
             ) : null}
+            {form.kind === "event" ? (
+              <Field label="evento da sessão Live">
+                <select
+                  value={form.liveEvent}
+                  onChange={(e) =>
+                    setForm({ ...form, liveEvent: e.target.value as LiveEventName })
+                  }
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                >
+                  {(Object.keys(LIVE_EVENT_LABEL) as LiveEventName[]).map((ev) => (
+                    <option key={ev} value={ev}>
+                      {LIVE_EVENT_LABEL[ev]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
           </Step>
+
 
           <Step n={4} title="Ações (pode combinar)">
             <div className="space-y-2">
