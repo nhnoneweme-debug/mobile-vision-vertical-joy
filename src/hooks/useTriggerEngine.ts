@@ -15,7 +15,6 @@ import {
   type TriggerDefinition,
 } from "@/lib/triggers";
 
-
 export type LiveSignals = {
   /** avaliador ativo (Live aberto e não pausado) */
   active: boolean;
@@ -111,7 +110,12 @@ export function useTriggerEngine(
               source_kind: "chain",
               source_ref: `chain:${sourceRef}:${depth + 1}`,
               result: "failed",
-              meta: { reason: "chain_limit", chained_from: t.id, chained_from_name: t.name, depth: depth + 1 },
+              meta: {
+                reason: "chain_limit",
+                chained_from: t.id,
+                chained_from_name: t.name,
+                depth: depth + 1,
+              },
             }).catch(() => {});
           } else {
             fireRef.current(
@@ -130,7 +134,6 @@ export function useTriggerEngine(
   );
   fireRef.current = fire;
 
-
   const enabled = useCallback(
     () =>
       triggersRef.current
@@ -138,7 +141,6 @@ export function useTriggerEngine(
         .sort((a, b) => a.position - b.position),
     [],
   );
-
 
   // --------------------------------------------------- eventos de ÁUDIO
   useEffect(() => {

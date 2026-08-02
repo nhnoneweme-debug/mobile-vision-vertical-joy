@@ -89,17 +89,13 @@ export function NextActionsOverlay({
         <Row
           tag="próxima"
           title={next ? next.trigger.name : "nenhum gatilho elegível"}
-          when={
-            next ? (next.etaMs != null ? formatCountdown(next.etaMs) : next.when) : "—"
-          }
+          when={next ? (next.etaMs != null ? formatCountdown(next.etaMs) : next.when) : "—"}
           trigger={next?.trigger}
         />
         <Row
           tag="depois"
           title={after ? after.trigger.name : "—"}
-          when={
-            after ? (after.etaMs != null ? formatCountdown(after.etaMs) : after.when) : ""
-          }
+          when={after ? (after.etaMs != null ? formatCountdown(after.etaMs) : after.when) : ""}
           trigger={after?.trigger}
         />
       </div>
@@ -116,7 +112,9 @@ export function NextActionsOverlay({
             <h3 className="font-display text-base tracking-wide">{open.name}</h3>
             <dl className="mt-2 space-y-1 text-[12px] text-muted-foreground">
               <div>
-                <dt className="inline font-display uppercase tracking-wide text-ember">quando · </dt>
+                <dt className="inline font-display uppercase tracking-wide text-ember">
+                  quando ·{" "}
+                </dt>
                 <dd className="inline">{describeCondition(open)}</dd>
               </div>
               <div>
@@ -124,7 +122,9 @@ export function NextActionsOverlay({
                 <dd className="inline">{describeAction(open)}</dd>
               </div>
               <div>
-                <dt className="inline font-display uppercase tracking-wide text-ember">janela · </dt>
+                <dt className="inline font-display uppercase tracking-wide text-ember">
+                  janela ·{" "}
+                </dt>
                 <dd className="inline">{describeWindow(open.active_window) ?? "sempre"}</dd>
               </div>
               <div>

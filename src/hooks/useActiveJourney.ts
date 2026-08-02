@@ -32,7 +32,6 @@ export type ActiveJourney = {
   refresh: () => void;
 };
 
-
 function parseHM(s: string | null | undefined): number | null {
   if (!s) return null;
   const [h, m] = s.split(":").map((x) => Number(x));
@@ -117,7 +116,10 @@ export function useActiveJourney(): ActiveJourney {
   const progressPct = current
     ? Math.max(
         0,
-        Math.min(100, Math.round(((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100)),
+        Math.min(
+          100,
+          Math.round(((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100),
+        ),
       )
     : 0;
 
@@ -133,4 +135,3 @@ export function useActiveJourney(): ActiveJourney {
     refresh,
   };
 }
-

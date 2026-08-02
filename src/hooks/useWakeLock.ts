@@ -121,11 +121,7 @@ export function useWakeLock() {
   // Reaquisição em qualquer retomada de foco/visibilidade.
   useEffect(() => {
     const retry = () => {
-      if (
-        document.visibilityState === "visible" &&
-        desiredRef.current &&
-        !sentinelRef.current
-      ) {
+      if (document.visibilityState === "visible" && desiredRef.current && !sentinelRef.current) {
         void acquireRef.current();
       }
     };

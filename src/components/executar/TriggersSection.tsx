@@ -53,12 +53,7 @@ import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
 import { CustomActionBox } from "./CustomActionBox";
 import { DualInput } from "./DualInput";
 
-type CondKind =
-  | "at_time"
-  | "every"
-  | "after_session"
-  | "audio"
-  | "video";
+type CondKind = "at_time" | "every" | "after_session" | "audio" | "video";
 
 type Source = "chronos" | "audio" | "video";
 
@@ -436,7 +431,6 @@ export function TriggersSection() {
           </div>
         </div>
 
-
         {libOpen ? (
           <ul className="mt-3 space-y-2">
             {TRIGGER_TEMPLATES.map((tpl) => (
@@ -498,7 +492,8 @@ export function TriggersSection() {
                         </p>
                       ) : null}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0} hoje
+                        cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0}{" "}
+                        hoje
                         {s?.last
                           ? ` · último ${new Date(s.last).toLocaleTimeString("pt-BR", {
                               hour: "2-digit",
@@ -816,7 +811,6 @@ export function TriggersSection() {
                 ))}
               </ol>
             ) : null}
-
           </Step>
 
           <Step n={5} title="Cooldown">

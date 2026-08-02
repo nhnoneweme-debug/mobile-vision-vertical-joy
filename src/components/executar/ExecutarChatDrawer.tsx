@@ -169,7 +169,8 @@ export function ExecutarChatDrawer({
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
           {messages.length === 0 ? (
             <p className="text-[12px] text-muted-foreground">
-              Diga algo — a WiMi lê o que está rolando agora e responde sem tirar você da tela de execução.
+              Diga algo — a WiMi lê o que está rolando agora e responde sem tirar você da tela de
+              execução.
             </p>
           ) : (
             messages.map((m, i) => (

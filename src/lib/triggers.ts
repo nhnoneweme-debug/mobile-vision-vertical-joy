@@ -37,8 +37,6 @@ export type TriggerAction = {
 /** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
 export const MAX_CHAIN_DEPTH = 3;
 
-
-
 /** Janela de elegibilidade: horário e/ou dias da semana (0 = domingo). */
 export type ActiveWindow = {
   start?: string; // "HH:MM"
@@ -83,7 +81,6 @@ export type TriggerRevision = {
 };
 
 export const DEFAULT_COOLDOWN = 30;
-
 
 // ------------------------------------------------------------------ leitura
 
@@ -244,7 +241,6 @@ export async function duplicateTrigger(t: TriggerDefinition, position: number) {
   );
 }
 
-
 export async function recordFiring(input: {
   trigger_id: string;
   source_kind: string;
@@ -317,7 +313,6 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
 export async function seedExampleTriggers(existing: TriggerDefinition[]) {
   if (existing.length > 0) return false;
   for (let i = 0; i < SEED_TRIGGERS.length; i += 1) {
-
     await createTrigger(SEED_TRIGGERS[i], i);
   }
   return true;
@@ -382,9 +377,7 @@ export function actionElements(
   if (act.custom) parts.push(`ação personalizada: ${act.custom.plan ?? act.custom.instruction}`);
   if (act.prompt?.instruction) parts.push(`Prompt("${act.prompt.instruction}")`);
   if (act.trigger_fire?.trigger_id)
-    parts.push(
-      `acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`,
-    );
+    parts.push(`acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`);
   if (act.trigger_enable?.trigger_id)
     parts.push(
       `${act.trigger_enable.enabled ? "armar" : "desarmar"} "${
@@ -431,7 +424,13 @@ export function describeWindow(w: ActiveWindow | null | undefined): string | nul
   const parts: string[] = [];
   if (w.start && w.end) parts.push(`entre ${w.start}–${w.end}`);
   if (w.days && w.days.length && w.days.length < 7) {
-    parts.push(`em ${w.days.slice().sort().map((d) => DAY_LABELS[d]).join("/")}`);
+    parts.push(
+      `em ${w.days
+        .slice()
+        .sort()
+        .map((d) => DAY_LABELS[d])
+        .join("/")}`,
+    );
   }
   return parts.length ? parts.join(", ") : null;
 }
@@ -601,9 +600,7 @@ export function upcomingActions(
     } else {
       const c = t.condition as Record<string, unknown>;
       const when =
-        c?.source === "audio"
-          ? `aguardando: "${String(c.keyword)}"`
-          : "aguardando sinal";
+        c?.source === "audio" ? `aguardando: "${String(c.keyword)}"` : "aguardando sinal";
       events.push({ trigger: t, etaMs: null, when });
     }
   }

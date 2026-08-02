@@ -33,8 +33,6 @@ import {
   type ActuatorConfig,
 } from "@/providers/ActuatorsProvider";
 
-
-
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
@@ -264,8 +262,6 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     });
   }, [blocks, draft, editingId, lang, missionId, persist, sessionId]);
 
-
-
   // -------------------------------------------------- MOTOR DE GATILHOS
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
 
@@ -337,7 +333,9 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             });
           })
           .catch((e: unknown) => {
-            toast.error(e instanceof Error ? e.message : "A WiMi não conseguiu responder ao prompt.");
+            toast.error(
+              e instanceof Error ? e.message : "A WiMi não conseguiu responder ao prompt.",
+            );
           });
       }
 
@@ -392,16 +390,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         },
       });
     },
-    [
-      actuators,
-      camera,
-      flushTranscript,
-      missionId,
-      persist,
-      sessionId,
-      sessionStartedAt,
-      speech,
-    ],
+    [actuators, camera, flushTranscript, missionId, persist, sessionId, sessionStartedAt, speech],
   );
 
   useTriggerEngine(
@@ -490,37 +479,37 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   if (station) {
     return (
       <>
-      {journeyLog ? (
-        <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
-      ) : null}
-      <StationMode
-        listening={speech.listening}
-        micSupported={speech.supported}
-        onToggleListening={toggleListening}
-        vibrationOn={actuators.vibrationOn}
-        audioOn={actuators.audioOn}
-        wakeActive={wake.active}
-        transcriptLines={[...blocks.slice(-3).map((b) => b.text), currentLine].filter(Boolean)}
-        blocksSaved={blocksSaved}
-        offline={offline}
-        cameraLive={camera.live}
-        cameraNode={camera.live ? cameraVideo : null}
-        onToggleCamera={() => void camera.toggle()}
-        onFlipCamera={() => void camera.flip()}
-        onExit={() => setStation(false)}
-        onPauseAll={pauseAll}
-        overlay={
-          <NextActionsOverlay
-          triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
-          sessionStartedAt={sessionStartedAt}
-          now={{
-            label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
-            detail: `${blocksSaved} blocos`,
-          }}
-            big
-          />
-        }
-      />
+        {journeyLog ? (
+          <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
+        ) : null}
+        <StationMode
+          listening={speech.listening}
+          micSupported={speech.supported}
+          onToggleListening={toggleListening}
+          vibrationOn={actuators.vibrationOn}
+          audioOn={actuators.audioOn}
+          wakeActive={wake.active}
+          transcriptLines={[...blocks.slice(-3).map((b) => b.text), currentLine].filter(Boolean)}
+          blocksSaved={blocksSaved}
+          offline={offline}
+          cameraLive={camera.live}
+          cameraNode={camera.live ? cameraVideo : null}
+          onToggleCamera={() => void camera.toggle()}
+          onFlipCamera={() => void camera.flip()}
+          onExit={() => setStation(false)}
+          onPauseAll={pauseAll}
+          overlay={
+            <NextActionsOverlay
+              triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
+              sessionStartedAt={sessionStartedAt}
+              now={{
+                label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
+                detail: `${blocksSaved} blocos`,
+              }}
+              big
+            />
+          }
+        />
       </>
     );
   }
@@ -528,12 +517,12 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   return (
     <div className="space-y-4">
       <NextActionsOverlay
-          triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
-          sessionStartedAt={sessionStartedAt}
-          now={{
-            label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
-            detail: `${blocksSaved} blocos`,
-          }}
+        triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
+        sessionStartedAt={sessionStartedAt}
+        now={{
+          label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
+          detail: `${blocksSaved} blocos`,
+        }}
       />
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
@@ -702,7 +691,6 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             onToggle={actuators.toggleAudio}
             onConfig={actuators.setAudioConfig}
             showSound
-
           />
         </div>
         <VoiceRow

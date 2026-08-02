@@ -57,7 +57,9 @@ export function JourneyTimeline({ items }: { items: TimelineItem[] }) {
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className={`truncate text-sm ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+              <p
+                className={`truncate text-sm ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}
+              >
                 {block.title}
               </p>
               <p className="mt-0.5 font-display text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
