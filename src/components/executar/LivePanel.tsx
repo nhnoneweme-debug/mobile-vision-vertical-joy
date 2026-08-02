@@ -56,6 +56,9 @@ import { ExecutionLogCard } from "./ExecutionLogCard";
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
+/** silêncio que dá o turno à WiMi no Live Dinâmico */
+const DYNAMIC_SILENCE_MS = 8_000;
+
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
