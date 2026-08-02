@@ -173,17 +173,31 @@ export function useTriggerEngine(
     [],
   );
 
-  // --------------------------------------------------- eventos de ÁUDIO
+  // --------------------------------------------------- COMANDOS DE VOZ
+  //
+  // Casamento CONTÍNUO no texto parcial do reconhecedor: assim que a frase
+  // aparece no interim, o comando dispara (<2s). Dedupe pela âncora
+  // `epoch:índice da ocorrência` — a mesma ocorrência nunca dispara duas
+  // vezes, mas repetir a frase mais tarde (novo índice/epoch) dispara de novo.
+  const liveEpoch = signals.liveText?.epoch ?? 0;
+  const liveTextValue = signals.liveText?.text ?? "";
   useEffect(() => {
-    if (!signals.active || !signals.lastBlock) return;
-    const block = signals.lastBlock;
+    if (!signals.active || !liveTextValue.trim()) return;
     for (const t of enabled()) {
       const c = t.condition as Record<string, unknown>;
       if (c?.source !== "audio" || typeof c.keyword !== "string") continue;
-      if (!keywordMatches(block.text, c.keyword)) continue;
-      fire(t, "audio", `block:${block.id}`, { keyword: c.keyword, text: block.text.slice(0, 300) });
+      const hit = findKeyword(liveTextValue, c.keyword);
+      if (!hit) continue;
+      fire(t, "audio", `voice:${liveEpoch}:${hit.index}`, {
+        keyword: c.keyword,
+        matched_text: hit.matched_text,
+        heard_text: liveTextValue.slice(-300),
+        heard_at: new Date().toISOString(),
+        stage: "interim",
+      });
     }
-  }, [signals.active, signals.lastBlock, enabled, fire]);
+  }, [signals.active, liveTextValue, liveEpoch, enabled, fire]);
+
 
   // ------------------------------------------------------------ CHRONOS
   useEffect(() => {
