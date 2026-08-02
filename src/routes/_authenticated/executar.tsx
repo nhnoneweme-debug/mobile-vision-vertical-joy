@@ -185,11 +185,23 @@ function ExecutarPage() {
               </div>
 
               <div className="mt-4">
-                <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Timeline de hoje
-                </h2>
-                <TodayTimeline planned={timeline} />
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Timeline de hoje · executado
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterOpen(true)}
+                    className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-1 text-[11px] text-ember active:scale-95"
+                  >
+                    <PlusCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">Registrar</span>
+                  </button>
+                </div>
+                <RitualShortcuts onNight={() => setDayReviewOpen(true)} />
+                <TodayTimeline onRegister={() => setRegisterOpen(true)} />
               </div>
+
             </>
           }
         />
