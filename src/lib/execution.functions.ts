@@ -19,6 +19,8 @@ const EVENT_KINDS = [
   "negotiation",
   "live_transcript",
   "sensor_reading",
+  "journey_log",
+  "journey_log_declined",
 ] as const;
 
 const PHASES = ["preEnd", "atEnd", "preStart", "atStart"] as const;
@@ -109,4 +111,30 @@ export const getTodayExecutionLog = createServerFn({ method: "GET" })
       .limit(200);
     if (error) throw new Error(error.message);
     return (data ?? []) as ExecutionEventRow[];
+  });
+
+/**
+ * Eventos do usuário num intervalo arbitrário — usado pela Timeline de hoje,
+ * que precisa do DIA LOCAL do aparelho (event_date é UTC e não serve).
+ */
+const rangeSchema = z.object({
+  from: z.string().min(10),
+  to: z.string().min(10),
+});
+
+export const getExecutionLogRange = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => rangeSchema.parse(data))
+  .handler(async ({ data, context }): Promise<ExecutionEventRow[]> => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("execution_events")
+      .select("id, mission_id, kind, phase, channel, delta_min, note, meta, occurred_at")
+      .eq("user_id", userId)
+      .gte("occurred_at", data.from)
+      .lte("occurred_at", data.to)
+      .order("occurred_at", { ascending: true })
+      .limit(400);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ExecutionEventRow[];
   });
