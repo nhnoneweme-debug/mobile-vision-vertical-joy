@@ -17,6 +17,15 @@ import {
 
 export type ActuatorMode = "timed" | "continuous";
 
+/** Timbres sintetizados via Web Audio para o atuador de áudio. */
+export type ActuatorSound = "soft" | "bell" | "tick";
+
+export const ACTUATOR_SOUNDS: { id: ActuatorSound; label: string; hint: string }[] = [
+  { id: "soft", label: "Suave", hint: "duas notas em quinta, ~400ms" },
+  { id: "bell", label: "Sino", hint: "harmônicos com decay, ~600ms" },
+  { id: "tick", label: "Tique", hint: "clique discreto, ~80ms" },
+];
+
 export type ActuatorConfig = {
   /** duração do pulso, em segundos */
   onSec: number;
@@ -27,7 +36,10 @@ export type ActuatorConfig = {
    * "continuous" = indefinido: fica ativo até o usuário desligar.
    */
   mode: ActuatorMode;
+  /** timbre usado pelo atuador de áudio (ignorado na vibração) */
+  sound?: ActuatorSound;
 };
+
 
 type ActuatorsCtx = {
   vibrationOn: boolean;
@@ -49,7 +61,10 @@ type ActuatorsCtx = {
 
 const STORAGE_KEY = "wimi.actuators.v1";
 
-const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed" };
+const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed", sound: "soft" };
+
+/** intervalo de repetição do padrão sonoro no modo contínuo (ms) */
+const CONTINUOUS_PATTERN_MS = 2500;
 
 const ActuatorsContext = createContext<ActuatorsCtx | null>(null);
 
@@ -60,8 +75,59 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
     Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_CONFIG.everySec))),
   );
   const mode: ActuatorMode = c?.mode === "continuous" ? "continuous" : "timed";
-  return { onSec, everySec: Math.max(everySec, onSec + 1), mode };
+  const sound: ActuatorSound =
+    c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
+  return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
 }
+
+/**
+ * Toca um timbre curto e agradável. Sempre com envelope (attack/release) para
+ * evitar clique de corte seco. Retorna a duração aproximada, em segundos.
+ */
+function playSound(ctx: AudioContext, sound: ActuatorSound): number {
+  const t0 = ctx.currentTime + 0.01;
+  const out = ctx.createGain();
+  out.gain.value = 1;
+  out.connect(ctx.destination);
+
+  const tone = (
+    freq: number,
+    start: number,
+    dur: number,
+    peak: number,
+    type: OscillatorType = "sine",
+  ) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(peak, start + Math.min(0.05, dur * 0.25));
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    osc.connect(g).connect(out);
+    osc.start(start);
+    osc.stop(start + dur + 0.03);
+  };
+
+  if (sound === "tick") {
+    tone(1400, t0, 0.05, 0.07, "triangle");
+    tone(2600, t0, 0.03, 0.03, "sine");
+    return 0.08;
+  }
+
+  if (sound === "bell") {
+    tone(880, t0, 0.6, 0.09);
+    tone(1760, t0, 0.35, 0.03);
+    tone(2640, t0, 0.18, 0.015);
+    return 0.6;
+  }
+
+  // "soft": duas notas em quinta (528Hz → 792Hz)
+  tone(528, t0, 0.24, 0.08);
+  tone(792, t0 + 0.18, 0.24, 0.07);
+  return 0.42;
+}
+
 
 export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [vibrationOn, setVibrationOn] = useState(false);
@@ -188,7 +254,9 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [vibrationOn, vibrationSupported, vibrationConfig]);
 
-  // Loop do áudio (tom suave via Web Audio).
+  // Loop do áudio (timbre curto e agradável via Web Audio).
+  // Contínuo = atuador armado indefinidamente, repetindo o padrão — nunca uma
+  // senoide infinita (que soava como tom de discar).
   useEffect(() => {
     if (!audioOn || !audioSupported) return;
     let cancelled = false;
@@ -204,60 +272,28 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       return audioCtxRef.current;
     };
 
+    const sound = audioConfig.sound ?? "soft";
+
     const fire = () => {
       if (cancelled) return;
       const ctx = getCtx();
       if (!ctx) return;
       void ctx.resume().catch(() => {});
-      const dur = audioConfig.onSec;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 432;
-      const t0 = ctx.currentTime;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.08);
-      gain.gain.setValueAtTime(0.12, t0 + Math.max(0.1, dur - 0.15));
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t0);
-      osc.stop(t0 + dur + 0.05);
+      const dur = playSound(ctx, sound);
       setPulsing((p) => ({ ...p, audio: true }));
       window.setTimeout(() => {
         if (!cancelled) setPulsing((p) => ({ ...p, audio: false }));
       }, dur * 1000);
     };
 
-    if (audioConfig.mode === "continuous") {
-      const ctx = getCtx();
-      if (!ctx) return;
-      void ctx.resume().catch(() => {});
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 432;
-      const t0 = ctx.currentTime;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.3);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t0);
-      setPulsing((p) => ({ ...p, audio: true }));
-      return () => {
-        cancelled = true;
-        try {
-          gain.gain.cancelScheduledValues(ctx.currentTime);
-          gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
-          osc.stop(ctx.currentTime + 0.2);
-        } catch {
-          /* já parado */
-        }
-        setPulsing((p) => ({ ...p, audio: false }));
-      };
-    }
+    const periodMs =
+      audioConfig.mode === "continuous"
+        ? CONTINUOUS_PATTERN_MS
+        : Math.max(1000, audioConfig.everySec * 1000);
 
     fire();
-    const id = window.setInterval(fire, audioConfig.everySec * 1000);
+    const id = window.setInterval(fire, periodMs);
+
     return () => {
       cancelled = true;
       window.clearInterval(id);
