@@ -116,6 +116,42 @@ export const interpretCustomAction = createServerFn({ method: "POST" })
     return { parsed_json, audit_id: (audit?.id as string | undefined) ?? null };
   });
 
+const PROMPT_SYSTEM = `Você é a WiMi se manifestando durante uma sessão de execução ao vivo.
+Recebe uma INSTRUÇÃO escrita pelo próprio usuário (elemento "Prompt" de um gatilho) e o
+contexto da sessão. Responda em português, direto, no máximo 3 frases curtas, sem markdown,
+como uma fala que será mostrada e lida em voz alta no momento do disparo.`;
+
+const runPromptSchema = z.object({
+  instruction: z.string().min(3).max(2000),
+  context: z.string().max(4000).optional(),
+  trigger_name: z.string().max(120).optional(),
+});
+
+/** Adendo D — ELEMENTO PROMPT: executa a instrução em linguagem natural no disparo. */
+export const runTriggerPrompt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => runPromptSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const model = createChatModelWithFallback();
+    const prompt = [
+      `Instrução do gatilho${data.trigger_name ? ` "${data.trigger_name}"` : ""}: ${data.instruction}`,
+      data.context ? `Contexto da sessão ao vivo:\n${data.context}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    const { text } = await generateText({ model, system: PROMPT_SYSTEM, prompt });
+    const message = text.trim();
+    const { supabase, userId } = context;
+    await supabase.from("ai_audit_log").insert({
+      user_id: userId,
+      table_name: "trigger_definitions",
+      action: "trigger.prompt_run",
+      status: "applied",
+      payload: { instruction: data.instruction, output: message } as never,
+    });
+    return { message };
+  });
+
 const resolveSchema = z.object({
   audit_id: z.string().uuid(),
   status: z.enum(["applied", "rejected"]),

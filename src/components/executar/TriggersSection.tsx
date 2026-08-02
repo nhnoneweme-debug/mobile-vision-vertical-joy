@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import {
   DEFAULT_COOLDOWN,
   TRIGGER_TEMPLATES,
+  actionElements,
   computeStats,
   createTrigger,
   deleteTrigger,
@@ -50,6 +51,7 @@ import { useActuators } from "@/providers/ActuatorsProvider";
 import { useLiveSessionStart, useSecondsTick } from "@/hooks/useLiveSession";
 import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
 import { CustomActionBox } from "./CustomActionBox";
+import { DualInput } from "./DualInput";
 
 type CondKind =
   | "at_time"
@@ -105,6 +107,10 @@ type FormState = {
   customInstruction: string;
   customPlan: string | null;
   customAction: TriggerAction | null;
+  promptInstruction: string;
+  chainFireId: string;
+  chainEnableId: string;
+  chainEnableValue: boolean;
   useWindow: boolean;
   winStart: string;
   winEnd: string;
@@ -135,6 +141,10 @@ const EMPTY_FORM: FormState = {
   customInstruction: "",
   customPlan: null,
   customAction: null,
+  promptInstruction: "",
+  chainFireId: "",
+  chainEnableId: "",
+  chainEnableValue: true,
   useWindow: false,
   winStart: "08:00",
   winEnd: "18:00",
@@ -184,6 +194,10 @@ function buildAction(f: FormState): TriggerAction {
     Object.assign(a, f.customAction ?? {});
     a.custom = { instruction: f.customInstruction.trim(), plan: f.customPlan ?? undefined };
   }
+  if (f.promptInstruction.trim()) a.prompt = { instruction: f.promptInstruction.trim() };
+  if (f.chainFireId) a.trigger_fire = { trigger_id: f.chainFireId };
+  if (f.chainEnableId)
+    a.trigger_enable = { trigger_id: f.chainEnableId, enabled: f.chainEnableValue };
   if (f.message.trim()) a.message = f.message.trim();
   return a;
 }
@@ -248,6 +262,10 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     customInstruction: a.custom?.instruction ?? "",
     customPlan: a.custom?.plan ?? null,
     customAction: null,
+    promptInstruction: a.prompt?.instruction ?? "",
+    chainFireId: a.trigger_fire?.trigger_id ?? "",
+    chainEnableId: a.trigger_enable?.trigger_id ?? "",
+    chainEnableValue: a.trigger_enable?.enabled ?? true,
     useWindow: !!(w.start && w.end),
     winStart: w.start ?? "08:00",
     winEnd: w.end ?? "18:00",
@@ -492,7 +510,7 @@ export function TriggersSection() {
                       <p className="truncate text-sm text-foreground">{t.name}</p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {describeCondition(t)}
-                        {win ? `, ${win}` : ""} → {describeAction(t)}
+                        {win ? `, ${win}` : ""} → {describeAction(t, nameById)}
                       </p>
                       {t.enabled && nextChronosFireAt(t, sessionStartedAt, tick) != null ? (
                         <p className="mt-0.5 text-[11px] text-ember">
@@ -781,6 +799,76 @@ export function TriggersSection() {
                 className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
               />
             </Field>
+
+            {/* ---------------------------------------- ELEMENTO PROMPT */}
+            <Field label='prompt — "fale com a WiMi no disparo" (opcional)'>
+              <DualInput
+                value={form.promptInstruction}
+                onChange={(v) => setForm((f) => ({ ...f, promptInstruction: v }))}
+                placeholder="ex.: me lembre por que comecei e sugira o próximo passo"
+              />
+            </Field>
+
+            {/* ------------------------------------ ENCADEAMENTO ENTRE GATILHOS */}
+            <Field label="acionar outro gatilho (opcional)">
+              <select
+                value={form.chainFireId}
+                onChange={(e) => setForm({ ...form, chainFireId: e.target.value })}
+                className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">nenhum</option>
+                {triggers
+                  .filter((t) => t.id !== form.id)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <Field label="armar/desarmar outro gatilho (opcional)">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <select
+                  value={form.chainEnableId}
+                  onChange={(e) => setForm({ ...form, chainEnableId: e.target.value })}
+                  className="min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground sm:col-span-2"
+                >
+                  <option value="">nenhum</option>
+                  {triggers
+                    .filter((t) => t.id !== form.id)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  value={form.chainEnableValue ? "on" : "off"}
+                  onChange={(e) => setForm({ ...form, chainEnableValue: e.target.value === "on" })}
+                  className="min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="on">armar</option>
+                  <option value="off">desarmar</option>
+                </select>
+              </div>
+            </Field>
+            <p className="text-[10px] text-muted-foreground">
+              Encadeamento tem profundidade máxima de 3 — cadeias mais longas são interrompidas e
+              registradas no histórico.
+            </p>
+
+            {/* -------------------------------- LISTA ORDENADA DE ELEMENTOS */}
+            {actionElements(buildAction(form), nameById).length ? (
+              <ol className="space-y-1 rounded-xl border border-border bg-charcoal-950/40 p-3">
+                {actionElements(buildAction(form), nameById).map((el, i) => (
+                  <li key={i} className="flex gap-2 text-[11px] text-muted-foreground">
+                    <span className="font-display text-ember">{i + 1}.</span>
+                    <span className="min-w-0 break-words">{el}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
           </Step>
 
           <Step n={5} title="Cooldown">
@@ -852,11 +940,14 @@ export function TriggersSection() {
               preview
             </p>
             <p className="mt-1 text-[12px] text-foreground">
-              {describeTrigger({
-                condition: buildCondition(form),
-                action: buildAction(form),
-                active_window: buildWindow(form),
-              })}
+              {describeTrigger(
+                {
+                  condition: buildCondition(form),
+                  action: buildAction(form),
+                  active_window: buildWindow(form),
+                },
+                nameById,
+              )}
             </p>
           </div>
 

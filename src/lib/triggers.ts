@@ -28,7 +28,17 @@ export type TriggerAction = {
   journey_log_prompt?: boolean;
   /** Ação personalizada descrita em linguagem natural e interpretada pela IA. */
   custom?: { instruction: string; plan?: string };
+  /** ELEMENTO PROMPT — instrução em linguagem natural executada pela LLM no disparo. */
+  prompt?: { instruction: string };
+  /** ENCADEAMENTO — executa as ações de outro gatilho imediatamente. */
+  trigger_fire?: { trigger_id: string };
+  /** ENCADEAMENTO — arma/desarma outro gatilho. */
+  trigger_enable?: { trigger_id: string; enabled: boolean };
 };
+
+/** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
+export const MAX_CHAIN_DEPTH = 3;
+
 
 
 /** Janela de elegibilidade: horário e/ou dias da semana (0 = domingo). */
@@ -347,16 +357,23 @@ export function describeCondition(t: TriggerDefinition): string {
   return "condição desconhecida";
 }
 
-export function describeAction(t: TriggerDefinition): string {
-  const a = t.action ?? {};
+/**
+ * Elementos de execução do gatilho, na ordem em que o motor os aplica.
+ * Primitivas + Prompt (LLM) + encadeamentos, tudo na mesma lista.
+ */
+export function actionElements(
+  a: TriggerAction | null | undefined,
+  names: Record<string, string> = {},
+): string[] {
+  const act = a ?? {};
   const parts: string[] = [];
-  if (a.vibrate)
-    parts.push(a.vibrate.continuous ? "vibrar contínuo" : `vibrar ${a.vibrate.onSec}s`);
-  if (a.audio_tone)
-    parts.push(a.audio_tone.continuous ? "tom contínuo" : `tom de ${a.audio_tone.onSec}s`);
-  if (a.stop_actuators) parts.push("desligar atuadores");
-  if (a.sensors) {
-    const s = a.sensors;
+  if (act.vibrate)
+    parts.push(act.vibrate.continuous ? "vibrar contínuo" : `vibrar ${act.vibrate.onSec}s`);
+  if (act.audio_tone)
+    parts.push(act.audio_tone.continuous ? "tom contínuo" : `tom de ${act.audio_tone.onSec}s`);
+  if (act.stop_actuators) parts.push("desligar atuadores");
+  if (act.sensors) {
+    const s = act.sensors;
     const on = Object.entries(s)
       .filter(([, v]) => v === true)
       .map(([k]) => k);
@@ -366,9 +383,28 @@ export function describeAction(t: TriggerDefinition): string {
     if (on.length) parts.push(`ligar ${on.join("/")}`);
     if (off.length) parts.push(`desligar ${off.join("/")}`);
   }
-  if (a.journey_log_prompt) parts.push("abrir log de jornada");
-  if (a.custom) parts.push(`ação personalizada: ${a.custom.plan ?? a.custom.instruction}`);
-  if (a.message) parts.push(`avisar "${a.message}"`);
+  if (act.journey_log_prompt) parts.push("abrir log de jornada");
+  if (act.custom) parts.push(`ação personalizada: ${act.custom.plan ?? act.custom.instruction}`);
+  if (act.prompt?.instruction) parts.push(`Prompt("${act.prompt.instruction}")`);
+  if (act.trigger_fire?.trigger_id)
+    parts.push(
+      `acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`,
+    );
+  if (act.trigger_enable?.trigger_id)
+    parts.push(
+      `${act.trigger_enable.enabled ? "armar" : "desarmar"} "${
+        names[act.trigger_enable.trigger_id] ?? "outro gatilho"
+      }"`,
+    );
+  if (act.message) parts.push(`avisar "${act.message}"`);
+  return parts;
+}
+
+export function describeAction(
+  t: Pick<TriggerDefinition, "action">,
+  names: Record<string, string> = {},
+): string {
+  const parts = actionElements(t.action, names);
   return parts.length ? parts.join(" + ") : "nenhuma ação";
 }
 
@@ -406,15 +442,18 @@ export function describeWindow(w: ActiveWindow | null | undefined): string | nul
 }
 
 /** Resumo legível completo, usado no preview ao vivo do Studio. */
-export function describeTrigger(t: {
-  condition: TriggerCondition;
-  action: TriggerAction;
-  active_window?: ActiveWindow;
-  cooldown_seconds?: number;
-}): string {
+export function describeTrigger(
+  t: {
+    condition: TriggerCondition;
+    action: TriggerAction;
+    active_window?: ActiveWindow;
+    cooldown_seconds?: number;
+  },
+  names: Record<string, string> = {},
+): string {
   const fake = t as TriggerDefinition;
   const win = describeWindow(t.active_window);
-  return `${describeCondition(fake)}${win ? `, ${win}` : ""} → ${describeAction(fake)}`;
+  return `${describeCondition(fake)}${win ? `, ${win}` : ""} → ${describeAction(fake, names)}`;
 }
 
 // -------------------------------------------------------- biblioteca
