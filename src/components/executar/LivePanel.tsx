@@ -816,6 +816,35 @@ export function LivePanel({
           ))}
         </div>
 
+        {/* LIVE DINÂMICO — silêncio prolongado vira turno da WiMi. */}
+        <button
+          type="button"
+          onClick={() => setDynamic((v) => !v)}
+          aria-pressed={dynamic}
+          className={`mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left active:scale-[0.99] ${
+            dynamic ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
+          }`}
+        >
+          <Radio className={`h-4 w-4 shrink-0 ${dynamic ? "text-ember" : "text-muted-foreground"}`} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm text-foreground">Live dinâmico</span>
+            <span className="block text-[11px] text-muted-foreground">
+              {dynamic
+                ? "após ~8s de silêncio a WiMi toma a palavra (gatilhos de evento “silêncio”)."
+                : "conversa por turnos com a WiMi durante a escuta."}
+            </span>
+          </span>
+          <span
+            className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+              dynamic ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+            }`}
+          >
+            {dynamic ? "on" : "off"}
+          </span>
+        </button>
+
+
+
         {transcriptView}
 
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
