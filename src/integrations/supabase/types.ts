@@ -2579,6 +2579,7 @@ export type Database = {
       trigger_definitions: {
         Row: {
           action: Json
+          active_window: Json
           condition: Json
           cooldown_seconds: number
           created_at: string
@@ -2592,6 +2593,7 @@ export type Database = {
         }
         Insert: {
           action?: Json
+          active_window?: Json
           condition?: Json
           cooldown_seconds?: number
           created_at?: string
@@ -2605,6 +2607,7 @@ export type Database = {
         }
         Update: {
           action?: Json
+          active_window?: Json
           condition?: Json
           cooldown_seconds?: number
           created_at?: string
@@ -2655,6 +2658,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "trigger_firings_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "trigger_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trigger_revisions: {
+        Row: {
+          change_note: string | null
+          changed_at: string
+          id: string
+          revision: number
+          snapshot: Json
+          trigger_id: string
+          user_id: string
+        }
+        Insert: {
+          change_note?: string | null
+          changed_at?: string
+          id?: string
+          revision: number
+          snapshot?: Json
+          trigger_id: string
+          user_id?: string
+        }
+        Update: {
+          change_note?: string | null
+          changed_at?: string
+          id?: string
+          revision?: number
+          snapshot?: Json
+          trigger_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trigger_revisions_trigger_id_fkey"
             columns: ["trigger_id"]
             isOneToOne: false
             referencedRelation: "trigger_definitions"
