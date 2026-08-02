@@ -765,7 +765,11 @@ export function LivePanel({
           Manter a tela ligada (wake lock)
         </button>
       ) : null}
+
+      {/* REGISTRO — o log do antigo Palco, colapsável dentro do Live. */}
+      <ExecutionLogCard />
     </div>
+
   );
 }
 
