@@ -429,7 +429,7 @@ function ActuatorRow({
         <span
           className={`flex h-10 w-10 items-center justify-center rounded-full ${
             on ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
-          } ${pulsing ? "animate-ping-slow ring-2 ring-ember" : ""}`}
+          } ${pulsing ? "animate-pulse ring-2 ring-ember" : ""}`}
         >
           {icon}
         </span>
