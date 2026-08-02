@@ -48,7 +48,7 @@ em ações primitivas de um app de execução. Responda SEMPRE apenas com JSON v
 }
 Inclua apenas as chaves relevantes. Se nada primitivo servir, use somente "message".`;
 
-function parseJson(text: string): Record<string, unknown> {
+function parseJson(text: string): string {
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?/i, "")
@@ -57,7 +57,9 @@ function parseJson(text: string): Record<string, unknown> {
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("A IA não devolveu um plano legível.");
-  return JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
+  const slice = cleaned.slice(start, end + 1);
+  JSON.parse(slice); // valida antes de devolver
+  return slice;
 }
 
 const promptSchema = z.object({
@@ -76,7 +78,7 @@ export const interpretTriggerSpeech = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => promptSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const draft = await ask(SYSTEM, data.text);
+    const draft_json = await ask(SYSTEM, data.text);
     const { supabase, userId } = context;
     const { data: audit } = await supabase
       .from("ai_audit_log")
@@ -85,11 +87,11 @@ export const interpretTriggerSpeech = createServerFn({ method: "POST" })
         table_name: "trigger_definitions",
         action: "trigger.propose",
         status: "pending",
-        payload: { input: data.text, draft } as never,
+        payload: { input: data.text, draft: JSON.parse(draft_json) } as never,
       })
       .select("id")
       .maybeSingle();
-    return { draft, audit_id: audit?.id ?? null };
+    return { draft_json, audit_id: (audit?.id as string | undefined) ?? null };
   });
 
 /** D1 — instrução de ação personalizada → combinação de primitivas + plano. */
@@ -98,7 +100,7 @@ export const interpretCustomAction = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => promptSchema.parse(d))
   .handler(async ({ data, context }) => {
     const prompt = data.context ? `${data.text}\n\nContexto da sessão: ${data.context}` : data.text;
-    const parsed = await ask(CUSTOM_SYSTEM, prompt);
+    const parsed_json = await ask(CUSTOM_SYSTEM, prompt);
     const { supabase, userId } = context;
     const { data: audit } = await supabase
       .from("ai_audit_log")
@@ -107,11 +109,11 @@ export const interpretCustomAction = createServerFn({ method: "POST" })
         table_name: "trigger_definitions",
         action: "trigger.custom_action",
         status: "pending",
-        payload: { input: data.text, parsed } as never,
+        payload: { input: data.text, parsed: JSON.parse(parsed_json) } as never,
       })
       .select("id")
       .maybeSingle();
-    return { parsed, audit_id: audit?.id ?? null };
+    return { parsed_json, audit_id: (audit?.id as string | undefined) ?? null };
   });
 
 const resolveSchema = z.object({
