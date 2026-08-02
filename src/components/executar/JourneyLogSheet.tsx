@@ -17,6 +17,8 @@ export type JourneyLogContext = {
   elapsedMin: number;
   recentTranscript: string[];
   triggerName?: string | null;
+  /** pergunta contextual gerada pela WiMi (falada em voz alta quando ligada) */
+  question?: string | null;
 };
 
 export function JourneyLogSheet({
@@ -82,7 +84,7 @@ export function JourneyLogSheet({
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-lg tracking-wide">LOG DE JORNADA</h2>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              O que você está executando agora? É isso mesmo?
+              {context.question ?? "O que você está executando agora? É isso mesmo?"}
             </p>
           </div>
           <button
