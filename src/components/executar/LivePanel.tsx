@@ -26,7 +26,12 @@ import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import { listTriggers, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
 import { useDeviceMotionAggregator, type MotionAggregate } from "@/hooks/useDeviceMotion";
 import { useCamera } from "@/hooks/useCamera";
-import { useActuators, type ActuatorConfig } from "@/providers/ActuatorsProvider";
+import {
+  useActuators,
+  ACTUATOR_SOUNDS,
+  type ActuatorConfig,
+} from "@/providers/ActuatorsProvider";
+
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
