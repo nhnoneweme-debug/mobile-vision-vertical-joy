@@ -104,6 +104,7 @@ export function useSpeechToText(
   options: UseSpeechToTextOptions = {},
 ) {
   const continuous = options.continuous !== false;
+  const lang = options.lang || "pt-BR";
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -119,6 +120,7 @@ export function useSpeechToText(
   const finalResultKeysRef = useRef<Set<string>>(new Set());
   const onFinalRef = useRef(onFinalText);
   onFinalRef.current = onFinalText;
+  const langRef = useRef(lang);
 
   const appendPreview = useCallback((text: string) => {
     const t = cleanTranscript(text);
@@ -176,7 +178,7 @@ export function useSpeechToText(
     finalResultKeysRef.current = new Set();
 
     const rec = new SR();
-    rec.lang = "pt-BR";
+    rec.lang = langRef.current;
     rec.continuous = continuous;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
@@ -314,6 +316,18 @@ export function useSpeechToText(
   useEffect(() => {
     setSupported(!!getSpeechRecognition());
   }, []);
+
+  // Troca de idioma a quente: reinicia só o reconhecedor, mantendo a sessão
+  // (buffer/committed) intacta — o usuário continua falando sem interrupção.
+  useEffect(() => {
+    if (langRef.current === lang) return;
+    langRef.current = lang;
+    if (!activeRef.current || mutedRef.current) return;
+    sessionRef.current += 1;
+    stopRecognition();
+    const t = window.setTimeout(() => createAndStart(), 120);
+    return () => window.clearTimeout(t);
+  }, [createAndStart, lang, stopRecognition]);
 
   useEffect(() => stop, [stop]);
 
