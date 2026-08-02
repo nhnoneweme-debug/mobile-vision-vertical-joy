@@ -94,6 +94,15 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
   return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
 }
 
+function clampBeacon(c: Partial<BeaconConfig> | undefined): BeaconConfig {
+  const everySec = Math.min(
+    3600,
+    Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_BEACON.everySec))),
+  );
+  return { enabled: !!c?.enabled, everySec };
+}
+
+
 /**
  * Toca um timbre curto e agradável. Sempre com envelope (attack/release) para
  * evitar clique de corte seco. Retorna a duração aproximada, em segundos.
