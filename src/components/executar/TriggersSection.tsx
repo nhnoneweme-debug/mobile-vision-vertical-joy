@@ -401,29 +401,31 @@ export function TriggersSection() {
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Zap className="h-3.5 w-3.5" /> Gatilho Studio
+              <Zap className="h-3.5 w-3.5 shrink-0" /> Gatilho Studio
             </h3>
             <p className="mt-1 text-[12px] text-muted-foreground">
               Avaliados na ordem, de cima pra baixo, enquanto o painel Live está aberto.
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0">
             <button
               type="button"
               onClick={() => setSpeakOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-2 text-xs text-ember active:scale-95"
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-2 py-2 text-[11px] text-ember active:scale-95 sm:px-3 sm:text-xs"
             >
-              <Sparkles className="h-3.5 w-3.5" /> Criar falando
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Falando</span>
             </button>
             <button
               type="button"
               onClick={() => setLibOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs text-muted-foreground active:scale-95"
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-2 py-2 text-[11px] text-muted-foreground active:scale-95 sm:px-3 sm:text-xs"
             >
-              <LibraryBig className="h-3.5 w-3.5" /> Modelos
+              <LibraryBig className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Modelos</span>
             </button>
             <button
               type="button"
@@ -431,12 +433,14 @@ export function TriggersSection() {
                 setForm(EMPTY_FORM);
                 setOpen(true);
               }}
-              className="flex items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-2 text-xs text-ember active:scale-95"
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-2 py-2 text-[11px] text-ember active:scale-95 sm:px-3 sm:text-xs"
             >
-              <Plus className="h-3.5 w-3.5" /> Novo
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Novo</span>
             </button>
           </div>
         </div>
+
 
         {libOpen ? (
           <ul className="mt-3 space-y-2">

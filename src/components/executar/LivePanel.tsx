@@ -13,6 +13,7 @@ import {
   Mic,
   MicOff,
   Pencil,
+  Radio,
   SwitchCamera,
   Vibrate,
   Volume2,
@@ -29,8 +30,11 @@ import { useCamera } from "@/hooks/useCamera";
 import {
   useActuators,
   ACTUATOR_SOUNDS,
+  BEACON_PRESETS,
   type ActuatorConfig,
+  type BeaconConfig,
 } from "@/providers/ActuatorsProvider";
+
 
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
@@ -778,6 +782,16 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
 
           />
         </div>
+        <BeaconRow
+          beacon={actuators.beacon}
+          pulsing={actuators.beaconPulsing}
+          supported={actuators.audioSupported}
+          soundLabel={
+            ACTUATOR_SOUNDS.find((s) => s.id === (actuators.audioConfig.sound ?? "soft"))?.label ??
+            "Suave"
+          }
+          onChange={actuators.setBeacon}
+        />
         <p className="mt-3 text-[11px] text-muted-foreground">
           Os padrões continuam rodando enquanto você navega no app, até desligar aqui.
         </p>
@@ -966,6 +980,98 @@ function ActuatorRow({
             </div>
           )}
         </>
+      ) : null}
+    </div>
+  );
+}
+
+function BeaconRow({
+  beacon,
+  pulsing,
+  supported,
+  soundLabel,
+  onChange,
+}: {
+  beacon: BeaconConfig;
+  pulsing: boolean;
+  supported: boolean;
+  soundLabel: string;
+  onChange: (c: BeaconConfig) => void;
+}) {
+  return (
+    <div
+      className={`mt-3 rounded-xl border p-3 ${
+        beacon.enabled ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
+      }`}
+    >
+      <button
+        type="button"
+        disabled={!supported}
+        aria-pressed={beacon.enabled}
+        onClick={() => onChange({ ...beacon, enabled: !beacon.enabled })}
+        className="flex w-full items-center gap-3 text-left disabled:opacity-40 active:scale-[0.99]"
+      >
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+            beacon.enabled ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          } ${pulsing ? "animate-pulse ring-2 ring-ember" : ""}`}
+        >
+          <Radio className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm text-foreground">Beacon de presença</span>
+          <span className="block text-[11px] text-muted-foreground">
+            {!supported
+              ? "Web Audio indisponível neste navegador."
+              : beacon.enabled
+                ? `beacon ativo · a cada ${beacon.everySec}s · som ${soundLabel}`
+                : "desligado · sinal periódico de \"estou aqui\""}
+          </span>
+        </span>
+        <span
+          className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+            beacon.enabled ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          }`}
+        >
+          {beacon.enabled ? "on" : "off"}
+        </span>
+      </button>
+
+      {supported ? (
+        <div className="mt-3">
+          <p className="text-[11px] text-muted-foreground">Intervalo</p>
+          <div className="mt-1.5 grid grid-cols-4 gap-2">
+            {BEACON_PRESETS.map((sec) => {
+              const active = beacon.everySec === sec;
+              return (
+                <button
+                  key={sec}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChange({ ...beacon, everySec: sec })}
+                  className={`min-w-0 rounded-lg border px-1 py-1.5 text-[11px] active:scale-95 ${
+                    active
+                      ? "border-ember bg-ember/15 text-ember"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {sec < 60 ? `${sec}s` : `${sec / 60}min`}
+                </button>
+              );
+            })}
+          </div>
+          <label className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+            personalizado (s)
+            <input
+              type="number"
+              min={5}
+              max={3600}
+              value={beacon.everySec}
+              onChange={(e) => onChange({ ...beacon, everySec: Number(e.target.value) })}
+              className="w-20 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
+            />
+          </label>
+        </div>
       ) : null}
     </div>
   );

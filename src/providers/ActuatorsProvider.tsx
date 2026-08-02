@@ -40,6 +40,14 @@ export type ActuatorConfig = {
   sound?: ActuatorSound;
 };
 
+/** Sinal sonoro periódico de presença ("estou aqui, ativa"). */
+export type BeaconConfig = {
+  enabled: boolean;
+  /** intervalo entre bipes, em segundos */
+  everySec: number;
+};
+
+export const BEACON_PRESETS = [30, 60, 120, 300];
 
 type ActuatorsCtx = {
   vibrationOn: boolean;
@@ -48,6 +56,9 @@ type ActuatorsCtx = {
   audioSupported: boolean;
   vibrationConfig: ActuatorConfig;
   audioConfig: ActuatorConfig;
+  beacon: BeaconConfig;
+  beaconPulsing: boolean;
+  setBeacon: (c: BeaconConfig) => void;
   pulsing: { vibration: boolean; audio: boolean };
   toggleVibration: () => void;
   toggleAudio: () => void;
@@ -62,6 +73,9 @@ type ActuatorsCtx = {
 const STORAGE_KEY = "wimi.actuators.v1";
 
 const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed", sound: "soft" };
+
+const DEFAULT_BEACON: BeaconConfig = { enabled: false, everySec: 60 };
+
 
 /** intervalo de repetição do padrão sonoro no modo contínuo (ms) */
 const CONTINUOUS_PATTERN_MS = 2500;
@@ -79,6 +93,15 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
     c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
   return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
 }
+
+function clampBeacon(c: Partial<BeaconConfig> | undefined): BeaconConfig {
+  const everySec = Math.min(
+    3600,
+    Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_BEACON.everySec))),
+  );
+  return { enabled: !!c?.enabled, everySec };
+}
+
 
 /**
  * Toca um timbre curto e agradável. Sempre com envelope (attack/release) para
@@ -141,6 +164,8 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [vibrationSupported, setVibrationSupported] = useState(false);
   const [audioSupported, setAudioSupported] = useState(false);
   const [pulsing, setPulsing] = useState({ vibration: false, audio: false });
+  const [beacon, setBeaconState] = useState<BeaconConfig>(DEFAULT_BEACON);
+  const [beaconPulsing, setBeaconPulsing] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -162,17 +187,22 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(raw) as {
         vibration?: Partial<ActuatorConfig>;
         audio?: Partial<ActuatorConfig>;
+        beacon?: Partial<BeaconConfig>;
       };
       setVibrationConfigState(clampConfig(parsed.vibration));
       setAudioConfigState(clampConfig(parsed.audio));
+      setBeaconState(clampBeacon(parsed.beacon));
     } catch {
       /* config opcional */
     }
   }, []);
 
-  const persist = useCallback((vib: ActuatorConfig, aud: ActuatorConfig) => {
+  const persist = useCallback((vib: ActuatorConfig, aud: ActuatorConfig, bea: BeaconConfig) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ vibration: vib, audio: aud }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ vibration: vib, audio: aud, beacon: bea }),
+      );
     } catch {
       /* storage indisponível */
     }
@@ -182,19 +212,29 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     (c: ActuatorConfig) => {
       const next = clampConfig(c);
       setVibrationConfigState(next);
-      persist(next, audioConfig);
+      persist(next, audioConfig, beacon);
     },
-    [audioConfig, persist],
+    [audioConfig, beacon, persist],
   );
 
   const setAudioConfig = useCallback(
     (c: ActuatorConfig) => {
       const next = clampConfig(c);
       setAudioConfigState(next);
-      persist(vibrationConfig, next);
+      persist(vibrationConfig, next, beacon);
     },
-    [persist, vibrationConfig],
+    [beacon, persist, vibrationConfig],
   );
+
+  const setBeacon = useCallback(
+    (c: BeaconConfig) => {
+      const next = clampBeacon(c);
+      setBeaconState(next);
+      persist(vibrationConfig, audioConfig, next);
+    },
+    [audioConfig, persist, vibrationConfig],
+  );
+
 
   // Loop da vibração.
   useEffect(() => {
@@ -301,6 +341,41 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [audioOn, audioSupported, audioConfig]);
 
+  // Beacon: sinal periódico de presença, independente dos gatilhos.
+  useEffect(() => {
+    if (!beacon.enabled || !audioSupported) return;
+    let cancelled = false;
+
+    const sound = audioConfig.sound ?? "soft";
+
+    const ping = () => {
+      if (cancelled) return;
+      if (!audioCtxRef.current) {
+        const Ctor =
+          (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctor) return;
+        audioCtxRef.current = new Ctor();
+      }
+      const ctx = audioCtxRef.current;
+      void ctx.resume().catch(() => {});
+      const dur = playSound(ctx, sound);
+      setBeaconPulsing(true);
+      window.setTimeout(() => {
+        if (!cancelled) setBeaconPulsing(false);
+      }, dur * 1000);
+    };
+
+    ping();
+    const id = window.setInterval(ping, Math.max(5000, beacon.everySec * 1000));
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      setBeaconPulsing(false);
+    };
+  }, [beacon, audioSupported, audioConfig.sound]);
+
+
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;
     setVibrationOn((v) => !v);
@@ -330,6 +405,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const stopAll = useCallback(() => {
     setVibrationOn(false);
     setAudioOn(false);
+    setBeaconState((b) => (b.enabled ? { ...b, enabled: false } : b));
   }, []);
 
   const value = useMemo<ActuatorsCtx>(
@@ -340,6 +416,9 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       audioSupported,
       vibrationConfig,
       audioConfig,
+      beacon,
+      beaconPulsing,
+      setBeacon,
       pulsing,
       toggleVibration,
       toggleAudio,
@@ -356,6 +435,9 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       audioSupported,
       vibrationConfig,
       audioConfig,
+      beacon,
+      beaconPulsing,
+      setBeacon,
       pulsing,
       toggleVibration,
       toggleAudio,
@@ -380,6 +462,9 @@ export function useActuators(): ActuatorsCtx {
       audioSupported: false,
       vibrationConfig: DEFAULT_CONFIG,
       audioConfig: DEFAULT_CONFIG,
+      beacon: DEFAULT_BEACON,
+      beaconPulsing: false,
+      setBeacon: () => {},
       pulsing: { vibration: false, audio: false },
       toggleVibration: () => {},
       toggleAudio: () => {},
