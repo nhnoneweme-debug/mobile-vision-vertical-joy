@@ -1,19 +1,17 @@
-// Palco de execução da WiMi.
-// Relógio ao vivo + timeline da jornada + manifestação in-place (voz + mic +
-// negociação) + log persistente. O JourneyAgent local dispara as manifestações
-// e o ManifestPanel é a interface viva. Toda ação relevante grava um
-// execution_event no banco.
+// Palco de execução da WiMi — AMBIENTE AGENTE.
+// Fusão Palco + Live: existe uma tela única (Live) com relógio, jornada,
+// registro colapsável e os sensores/atuadores. A aba Gatilhos separa
+// AGENTES (proativos) de COMANDOS (reativos). O ambiente reagente
+// (planejar/conversar) fica a um atalho de distância.
 
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, MessageCircle } from "lucide-react";
+import { Activity, CalendarPlus, MessageCircle } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { useActiveJourney, type JourneyBlock } from "@/hooks/useActiveJourney";
-import { LiveClock } from "@/components/executar/LiveClock";
 import { JourneyTimeline, type TimelineItem } from "@/components/executar/JourneyTimeline";
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
-import { ExecutionLogCard } from "@/components/executar/ExecutionLogCard";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { LivePanel } from "@/components/executar/LivePanel";
 import { TriggersSection } from "@/components/executar/TriggersSection";
@@ -23,6 +21,7 @@ import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
 
 type SeedSearch = { seed?: string };
+
 
 export const Route = createFileRoute("/_authenticated/executar")({
   validateSearch: (s: Record<string, unknown>): SeedSearch => ({
