@@ -122,7 +122,7 @@ export function HomeStudio({
               })}
             </div>
             <p className="mt-4 text-[11px] leading-snug text-muted-foreground">
-              Novos painéis (Executar em kanban, Descansar dedicado, Grupos familiares) chegam nas
+              Novos painéis (Executando em kanban, Descansar dedicado, Grupos familiares) chegam nas
               próximas versões — o estúdio já está preparado para recebê-los.
             </p>
           </SheetContent>
