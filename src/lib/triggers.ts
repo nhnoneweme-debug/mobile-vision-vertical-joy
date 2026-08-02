@@ -262,12 +262,39 @@ export async function recordFiring(input: {
 
 export const SEED_TRIGGERS: TriggerDraft[] = [
   {
+    // Nível 1: fecha os sensores "de fora", mas mantém os ouvidos abertos
+    // para poder receber o próximo código.
     name: "código off",
-    enabled: false,
+    enabled: true,
     trigger_type: "event",
     condition: { source: "audio", keyword: "código off" },
-    action: { sensors: { mic: false, camera: false, motion: false }, stop_actuators: true },
+    action: {
+      sensors: { camera: false, motion: false },
+      stop_actuators: true,
+      message: "sensores desligados — microfone segue ouvindo.",
+    },
     cooldown_seconds: 10,
+  },
+  {
+    // Nível 2: silêncio total, o microfone morre por último.
+    name: "código off total",
+    enabled: true,
+    trigger_type: "event",
+    condition: { source: "audio", keyword: "código off total" },
+    action: {
+      sensors: { mic: false, camera: false, motion: false },
+      stop_actuators: true,
+      message: "tudo desligado — inclusive o microfone.",
+    },
+    cooldown_seconds: 10,
+  },
+  {
+    name: "Log de jornada",
+    enabled: true,
+    trigger_type: "chronos",
+    condition: { mode: "every", seconds: 1800 },
+    action: { journey_log_prompt: true, vibrate: { onSec: 1 } },
+    cooldown_seconds: 300,
   },
   {
     name: "lembrete a cada 25 min",
@@ -279,8 +306,6 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
   },
 ];
 
-export async function seedExampleTriggers(existing: TriggerDefinition[]) {
-  if (existing.length > 0) return false;
   for (let i = 0; i < SEED_TRIGGERS.length; i += 1) {
     await createTrigger(SEED_TRIGGERS[i], i);
   }
