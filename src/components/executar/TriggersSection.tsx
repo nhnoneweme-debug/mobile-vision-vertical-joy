@@ -914,6 +914,23 @@ export function TriggersSection() {
               />
             </Field>
 
+            {/* ------------------------------------------ INTERAÇÃO LIVRE */}
+            <CheckRow
+              label="Interação livre (a WiMi toma a palavra)"
+              checked={form.freeInteraction}
+              onChange={(v) => setForm({ ...form, freeInteraction: v })}
+            />
+            {form.freeInteraction ? (
+              <Field label="como ela deve conduzir a conversa (opcional)">
+                <DualInput
+                  value={form.freeInteractionInstruction}
+                  onChange={(v) => setForm((f) => ({ ...f, freeInteractionInstruction: v }))}
+                  placeholder="ex.: puxe assunto sobre o bloco atual e devolva o turno com uma pergunta"
+                />
+              </Field>
+            ) : null}
+
+
             {/* ------------------------------------ ENCADEAMENTO ENTRE GATILHOS */}
             <Field label="acionar outro gatilho (opcional)">
               <select
