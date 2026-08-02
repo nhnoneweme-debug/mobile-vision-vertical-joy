@@ -45,6 +45,9 @@ import { StationMode } from "./StationMode";
 import { NextActionsOverlay } from "./NextActionsOverlay";
 import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
+import { LiveClock } from "./LiveClock";
+import { ExecutionLogCard } from "./ExecutionLogCard";
+
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
