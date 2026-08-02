@@ -57,10 +57,16 @@ export function useDeviceMotionAggregator({
 }: Options) {
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<PermissionState>("unknown");
-  const [live, setLive] = useState<{ magnitude: number; dominant: MotionAggregate["dominant"] }>({
-    magnitude: 0,
-    dominant: "indefinido",
-  });
+  // Leitura ao vivo (só UI — nada disso vai pro banco): magnitude instantânea,
+  // nível 0..1 suavizado e orientação dominante reagindo em tempo real.
+  const [live, setLive] = useState<{
+    magnitude: number;
+    level: number;
+    dominant: MotionAggregate["dominant"];
+    beta: number | null;
+    gamma: number | null;
+    updatedAt: number;
+  }>({ magnitude: 0, level: 0, dominant: "indefinido", beta: null, gamma: null, updatedAt: 0 });
   const [error, setError] = useState<string | null>(null);
 
   const bucket = useRef({
@@ -77,6 +83,14 @@ export function useDeviceMotionAggregator({
     startedAt: Date.now(),
   });
   const lastSpikeRef = useRef(0);
+  const liveRef = useRef({
+    magnitude: 0,
+    level: 0,
+    dominant: "indefinido" as MotionAggregate["dominant"],
+    beta: null as number | null,
+    gamma: null as number | null,
+  });
+  const lastPaintRef = useRef(0);
   const onAggRef = useRef(onAggregate);
   const onSpikeRef = useRef(onSpike);
   onAggRef.current = onAggregate;
@@ -131,6 +145,25 @@ export function useDeviceMotionAggregator({
       startedAt: Date.now(),
     };
 
+    // Repinta a UI no máximo ~10x/s: tempo real na tela, sem travar o render.
+    const paint = () => {
+      const now = Date.now();
+      if (now - lastPaintRef.current < 100) return;
+      lastPaintRef.current = now;
+      setLive({ ...liveRef.current, updatedAt: now });
+    };
+
+    // Decaimento do nível quando o aparelho fica parado.
+    const decay = window.setInterval(() => {
+      if (cancelled) return;
+      if (liveRef.current.level > 0.005) {
+        liveRef.current.level *= 0.75;
+        liveRef.current.magnitude *= 0.75;
+        lastPaintRef.current = 0;
+        paint();
+      }
+    }, 250);
+
     const onOrientation = (ev: DeviceOrientationEvent) => {
       const b = bucket.current;
       if (ev.alpha == null && ev.beta == null && ev.gamma == null) return;
@@ -141,6 +174,10 @@ export function useDeviceMotionAggregator({
       b.lastAlpha = ev.alpha;
       b.lastBeta = ev.beta;
       b.lastGamma = ev.gamma;
+      liveRef.current.beta = ev.beta;
+      liveRef.current.gamma = ev.gamma;
+      liveRef.current.dominant = dominantFrom(ev.beta, ev.gamma);
+      paint();
     };
 
     const onMotion = (ev: DeviceMotionEvent) => {
@@ -153,9 +190,9 @@ export function useDeviceMotionAggregator({
       b.accelSum += net;
       b.accelN += 1;
       if (net > b.peak) b.peak = net;
-      setLive((prev) =>
-        Math.abs(prev.magnitude - net) > 0.3 ? { ...prev, magnitude: net } : prev,
-      );
+      liveRef.current.magnitude = net;
+      liveRef.current.level = Math.min(1, liveRef.current.level * 0.7 + (net / 12) * 0.6);
+      paint();
       const now = Date.now();
       if (net >= spikeThreshold && now - lastSpikeRef.current > 4000) {
         lastSpikeRef.current = now;
@@ -171,7 +208,6 @@ export function useDeviceMotionAggregator({
       const beta = b.n ? Number((b.beta / b.n).toFixed(1)) : null;
       const gamma = b.n ? Number((b.gamma / b.n).toFixed(1)) : null;
       const dominant = dominantFrom(beta, gamma);
-      setLive((p) => ({ ...p, dominant }));
       if (b.n > 0 || b.accelN > 0) {
         onAggRef.current({
           startedAt: new Date(b.startedAt).toISOString(),
@@ -209,6 +245,7 @@ export function useDeviceMotionAggregator({
       window.removeEventListener("deviceorientation", onOrientation);
       window.removeEventListener("devicemotion", onMotion);
       window.clearInterval(id);
+      window.clearInterval(decay);
     };
   }, [enabled, supported, spikeThreshold, windowMs]);
 

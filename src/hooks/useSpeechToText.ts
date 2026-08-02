@@ -17,6 +17,8 @@ type UseSpeechToTextOptions = {
    * para manter a conversa fluida sem precisar reiniciar a cada palavra.
    */
   continuous?: boolean;
+  /** BCP-47 do reconhecimento (pt-BR, en-US, es-ES). Troca a quente. */
+  lang?: string;
 };
 
 type RecentCommit = { norm: string; at: number };
@@ -101,6 +103,7 @@ export function useSpeechToText(
   options: UseSpeechToTextOptions = {},
 ) {
   const continuous = options.continuous !== false;
+  const lang = options.lang || "pt-BR";
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -116,6 +119,7 @@ export function useSpeechToText(
   const finalResultKeysRef = useRef<Set<string>>(new Set());
   const onFinalRef = useRef(onFinalText);
   onFinalRef.current = onFinalText;
+  const langRef = useRef(lang);
 
   const appendPreview = useCallback((text: string) => {
     const t = cleanTranscript(text);
@@ -129,7 +133,10 @@ export function useSpeechToText(
   const commitFinalText = useCallback(
     (raw: string) => {
       let text = collapseImmediateEcho(raw);
-      text = subtractAlreadyCommitted(text, lastWords(committedTextRef.current, TAIL_WORDS_TO_COMPARE));
+      text = subtractAlreadyCommitted(
+        text,
+        lastWords(committedTextRef.current, TAIL_WORDS_TO_COMPARE),
+      );
       text = collapseImmediateEcho(text);
       if (!text) return;
 
@@ -173,7 +180,7 @@ export function useSpeechToText(
     finalResultKeysRef.current = new Set();
 
     const rec = new SR();
-    rec.lang = "pt-BR";
+    rec.lang = langRef.current;
     rec.continuous = continuous;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
@@ -311,6 +318,18 @@ export function useSpeechToText(
   useEffect(() => {
     setSupported(!!getSpeechRecognition());
   }, []);
+
+  // Troca de idioma a quente: reinicia só o reconhecedor, mantendo a sessão
+  // (buffer/committed) intacta — o usuário continua falando sem interrupção.
+  useEffect(() => {
+    if (langRef.current === lang) return;
+    langRef.current = lang;
+    if (!activeRef.current || mutedRef.current) return;
+    sessionRef.current += 1;
+    stopRecognition();
+    const t = window.setTimeout(() => createAndStart(), 120);
+    return () => window.clearTimeout(t);
+  }, [createAndStart, lang, stopRecognition]);
 
   useEffect(() => stop, [stop]);
 
