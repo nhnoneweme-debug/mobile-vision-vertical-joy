@@ -5,8 +5,9 @@ import { Vibrate, Volume2 } from "lucide-react";
 import { useActuators } from "@/providers/ActuatorsProvider";
 
 export function ActuatorsIndicator() {
-  const { vibrationOn, audioOn, pulsing, stopAll } = useActuators();
+  const { vibrationOn, audioOn, pulsing, stopAll, audioConfig } = useActuators();
   if (!vibrationOn && !audioOn) return null;
+  const beacon = audioOn && audioConfig.beacon?.on ? audioConfig.beacon : null;
   return (
     <button
       type="button"
@@ -20,7 +21,7 @@ export function ActuatorsIndicator() {
       {audioOn ? (
         <Volume2 className={`h-3.5 w-3.5 ${pulsing.audio ? "animate-pulse" : ""}`} />
       ) : null}
-      on
+      {beacon ? `${beacon.value}${beacon.unit}` : "on"}
     </button>
   );
 }

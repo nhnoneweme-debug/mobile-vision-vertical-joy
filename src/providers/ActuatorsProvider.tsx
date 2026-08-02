@@ -34,6 +34,14 @@ export const ACTUATOR_SOUNDS: { id: ActuatorSound; label: string; hint: string }
 /** Intervalos rápidos para o sinal periódico de presença. */
 export const INTERVAL_PRESETS = [30, 60, 120, 300];
 
+/** Unidade do intervalo do beacon de presença. */
+export type BeaconUnit = "s" | "min";
+
+export function beaconIntervalSec(b: { value: number; unit: BeaconUnit }): number {
+  const raw = b.unit === "min" ? b.value * 60 : b.value;
+  return Math.min(3600, Math.max(5, Math.round(raw)));
+}
+
 export type ActuatorConfig = {
   /** duração do pulso, em segundos */
   onSec: number;
@@ -44,6 +52,12 @@ export type ActuatorConfig = {
    * "continuous" = indefinido: fica ativo até o usuário desligar.
    */
   mode: ActuatorMode;
+  /**
+   * BEACON DE PRESENÇA — camada de timer DENTRO do bloco de áudio.
+   * Quando ligado, o agendador ÚNICO passa a usar este intervalo (número +
+   * unidade). Não nasce um segundo emissor: o beacon É a emissão periódica.
+   */
+  beacon?: { on: boolean; value: number; unit: BeaconUnit };
   /** timbre usado pelo atuador de áudio (ignorado na vibração) */
   sound?: ActuatorSound;
 };
@@ -89,7 +103,14 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
   );
   const mode: ActuatorMode = c?.mode === "continuous" ? "continuous" : "timed";
   const sound: ActuatorSound = c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
-  return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
+  const rawBeacon = c?.beacon;
+  const unit: BeaconUnit = rawBeacon?.unit === "min" ? "min" : "s";
+  const value = Math.min(
+    999,
+    Math.max(1, Math.round(Number(rawBeacon?.value ?? (unit === "min" ? 2 : 60)))),
+  );
+  const beacon = { on: !!rawBeacon?.on, value, unit };
+  return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound, beacon };
 }
 
 /**
@@ -339,8 +360,11 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       }, dur * 1000);
     };
 
-    const periodMs =
-      audioConfig.mode === "continuous"
+    // ANTI-DUPLICAÇÃO: um só timer. Se o beacon está ligado, ele MANDA no
+    // intervalo — o padrão temporizado não abre um segundo fluxo de emissão.
+    const periodMs = audioConfig.beacon?.on
+      ? beaconIntervalSec(audioConfig.beacon) * 1000
+      : audioConfig.mode === "continuous"
         ? CONTINUOUS_PATTERN_MS
         : Math.max(1000, audioConfig.everySec * 1000);
 

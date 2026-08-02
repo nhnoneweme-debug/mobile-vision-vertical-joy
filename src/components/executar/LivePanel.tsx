@@ -36,6 +36,8 @@ import {
   useActuators,
   ACTUATOR_SOUNDS,
   INTERVAL_PRESETS,
+  beaconIntervalSec,
+  type BeaconUnit,
   type ActuatorConfig,
 } from "@/providers/ActuatorsProvider";
 
@@ -824,9 +826,11 @@ function ActuatorRow({
             {!supported
               ? unsupportedHint
               : on
-                ? continuous
-                  ? "ativo · contínuo indefinido (até desligar)"
-                  : `ativo · ${config.onSec}s a cada ${config.everySec}s`
+                ? config.beacon?.on
+                  ? `beacon · a cada ${config.beacon.value} ${config.beacon.unit}`
+                  : continuous
+                    ? "ativo · contínuo indefinido (até desligar)"
+                    : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
         </span>
@@ -895,6 +899,9 @@ function ActuatorRow({
             </div>
           ) : null}
 
+          {showSound ? <BeaconConfig config={config} onConfig={onConfig} /> : null}
+
+
           {continuous ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
               Sem duração definida: o padrão se repete a cada ~2,5s até você desligar.
@@ -949,6 +956,113 @@ function ActuatorRow({
               ) : null}
             </>
           )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * BEACON DE PRESENÇA — camada de timer dentro do bloco de áudio.
+ * Não cria emissor novo: quando ligado, o agendador único de áudio passa a
+ * usar este intervalo (número livre + unidade s/min).
+ */
+function BeaconConfig({
+  config,
+  onConfig,
+}: {
+  config: ActuatorConfig;
+  onConfig: (c: ActuatorConfig) => void;
+}) {
+  const beacon = config.beacon ?? { on: false, value: 60, unit: "s" as BeaconUnit };
+  const set = (patch: Partial<typeof beacon>) =>
+    onConfig({ ...config, beacon: { ...beacon, ...patch } });
+
+  return (
+    <div
+      className={`mt-3 rounded-xl border p-3 ${
+        beacon.on ? "border-ember/40 bg-ember/5" : "border-border/70"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => set({ on: !beacon.on })}
+        aria-pressed={beacon.on}
+        className="flex w-full items-center gap-2 text-left active:scale-[0.99]"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12px] text-foreground">Beacon de presença</span>
+          <span className="block text-[11px] text-muted-foreground">
+            {beacon.on
+              ? `sinal a cada ${beacon.value} ${beacon.unit} — emissão única`
+              : "sinal periódico discreto, desligado"}
+          </span>
+        </span>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+            beacon.on ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          }`}
+        >
+          {beacon.on ? "on" : "off"}
+        </span>
+      </button>
+
+      {beacon.on ? (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={999}
+              value={beacon.value}
+              onChange={(e) => set({ value: Number(e.target.value) })}
+              aria-label="Intervalo do beacon"
+              className="w-20 shrink-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
+            />
+            {(["s", "min"] as BeaconUnit[]).map((u) => (
+              <button
+                key={u}
+                type="button"
+                aria-pressed={beacon.unit === u}
+                onClick={() => set({ unit: u })}
+                className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] active:scale-95 ${
+                  beacon.unit === u
+                    ? "border-ember bg-ember/15 text-ember"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {u === "s" ? "segundos" : "minutos"}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            {INTERVAL_PRESETS.map((sec: number) => {
+              const preset =
+                sec < 60
+                  ? { value: sec, unit: "s" as BeaconUnit }
+                  : { value: sec / 60, unit: "min" as BeaconUnit };
+              const active = beaconIntervalSec(beacon) === sec;
+              return (
+                <button
+                  key={sec}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => set(preset)}
+                  className={`min-w-0 rounded-lg border px-1 py-1.5 text-[11px] active:scale-95 ${
+                    active
+                      ? "border-ember bg-ember/15 text-ember"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {sec < 60 ? `${sec}s` : `${sec / 60}min`}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Enquanto ligado, o beacon manda no intervalo da emissão de áudio — não existe um
+            segundo som em paralelo.
+          </p>
         </>
       ) : null}
     </div>
