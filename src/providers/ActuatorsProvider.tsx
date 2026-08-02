@@ -371,6 +371,14 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [vibrationOn, vibrationSupported, vibrationConfig]);
 
+  // Primitivas derivadas: o efeito depende delas, não do objeto de config
+  // inteiro — assim editar um campo irrelevante não reinicia o agendador.
+  const beaconOn = audioConfig.beacon?.on === true;
+  const beaconSec = beaconIntervalSec(audioConfig.beacon ?? { value: 60, unit: "s" });
+  const audioMode = audioConfig.mode;
+  const audioEverySec = audioConfig.everySec;
+  const audioSound = audioConfig.sound;
+
   // AGENDADOR ÚNICO DE ÁUDIO — um só timer, um só timbre por vez.
   //
   // FATIA 3.5.1 — o beacon agora é um PORTÃO, não só um seletor de intervalo:
