@@ -252,9 +252,57 @@ function ExecutarPage() {
       ) : null}
 
       <ExecutarChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} seed={chatSeed} />
+
+      {registerOpen ? (
+        <RegisterSheet
+          missionId={journey.current?.id ?? null}
+          onClose={() => setRegisterOpen(false)}
+        />
+      ) : null}
+
+      {dayReviewOpen ? (
+        <DayReviewSheet entries={reviewEntries} onClose={() => setDayReviewOpen(false)} />
+      ) : null}
     </MobileShell>
   );
 }
+
+/**
+ * Atalhos discretos que aparecem conforme a hora: de noite, registrar o dia
+ * (ancorado na timeline); de manhã, registrar o sonho no fluxo já existente
+ * de /despertar/sonho (dream_logs).
+ */
+function RitualShortcuts({ onNight }: { onNight: () => void }) {
+  const hour = new Date().getHours();
+  const night = hour >= 20 || hour < 3;
+  const morning = hour >= 4 && hour < 11;
+  if (!night && !morning) return null;
+  return (
+    <div className="mb-2 flex flex-wrap gap-2">
+      {night ? (
+        <button
+          type="button"
+          onClick={onNight}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-1 text-[11px] text-ember active:scale-95"
+        >
+          <MoonStar className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Registrar meu dia</span>
+        </button>
+      ) : null}
+      {morning ? (
+        <Link
+          to="/despertar/sonho"
+          search={{ session: "" }}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground active:scale-95"
+        >
+          <Sunrise className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Registrar sonho</span>
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
 
 function phaseText(p: JourneyManifestation["phase"]): string {
   if (p === "preEnd") return "faltando pouco pra fechar";
