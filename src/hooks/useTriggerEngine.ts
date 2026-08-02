@@ -6,9 +6,11 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import {
+  MAX_CHAIN_DEPTH,
   isWithinWindow,
   keywordMatches,
   recordFiring,
+  updateTrigger,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
