@@ -526,6 +526,7 @@ export function LivePanel({
                 label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
                 detail: `${blocksSaved} blocos`,
               }}
+              commandsCount={commandsArmed}
               big
             />
           }
@@ -536,6 +537,12 @@ export function LivePanel({
 
   return (
     <div className="space-y-4">
+      {/* RELÓGIO — herdado do antigo Palco, agora topo do Live. */}
+      <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
+        <LiveClock />
+        {header}
+      </section>
+
       <NextActionsOverlay
         triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
         sessionStartedAt={sessionStartedAt}
@@ -543,7 +550,10 @@ export function LivePanel({
           label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
           detail: `${blocksSaved} blocos`,
         }}
+        commandsCount={commandsArmed}
+        onOpenCommands={onOpenCommands}
       />
+
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
       ) : null}
