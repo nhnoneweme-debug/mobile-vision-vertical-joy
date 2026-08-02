@@ -27,11 +27,18 @@ export const Route = createFileRoute("/_authenticated/executar")({
   }),
   head: () => ({
     meta: [
-      { title: "Executar — WiMi" },
+      { title: "Executando — WiMi" },
       {
         name: "description",
         content: "Palco vivo com relógio, timeline da jornada e a WiMi se manifestando pra te acompanhar.",
       },
+      { property: "og:title", content: "Executando — WiMi" },
+      {
+        property: "og:description",
+        content: "Painel live: microfone, movimento e atuadores acompanhando sua execução.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ExecutarPage,
