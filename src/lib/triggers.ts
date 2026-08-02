@@ -442,15 +442,18 @@ export function describeWindow(w: ActiveWindow | null | undefined): string | nul
 }
 
 /** Resumo legível completo, usado no preview ao vivo do Studio. */
-export function describeTrigger(t: {
-  condition: TriggerCondition;
-  action: TriggerAction;
-  active_window?: ActiveWindow;
-  cooldown_seconds?: number;
-}): string {
+export function describeTrigger(
+  t: {
+    condition: TriggerCondition;
+    action: TriggerAction;
+    active_window?: ActiveWindow;
+    cooldown_seconds?: number;
+  },
+  names: Record<string, string> = {},
+): string {
   const fake = t as TriggerDefinition;
   const win = describeWindow(t.active_window);
-  return `${describeCondition(fake)}${win ? `, ${win}` : ""} → ${describeAction(fake)}`;
+  return `${describeCondition(fake)}${win ? `, ${win}` : ""} → ${describeAction(fake, names)}`;
 }
 
 // -------------------------------------------------------- biblioteca
