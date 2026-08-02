@@ -103,10 +103,27 @@ export function LivePanel({
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
+  // LIVE DINÂMICO — a WiMi toma a palavra sozinha quando o silêncio se estende.
+  const [dynamic, setDynamic] = useState(false);
+  const [liveEvent, setLiveEvent] = useState<{
+    name: LiveEventName;
+    ref: string;
+    meta?: Record<string, unknown>;
+  } | null>(null);
+
+  const emitEvent = useCallback((name: LiveEventName, meta?: Record<string, unknown>) => {
+    setLiveEvent({ name, ref: `${name}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`, meta });
+  }, []);
+
   // Um único relógio de sessão para motor, overlay e Studio.
   useEffect(() => {
     setLiveSessionStart(sessionStartedAt);
   }, [sessionStartedAt]);
+
+  // O início da sessão é um evento de primeira classe (gatilhos podem escutar).
+  useEffect(() => {
+    emitEvent("session_start", { session_started_at: new Date(sessionStartedAt).toISOString() });
+  }, [emitEvent, sessionStartedAt]);
 
   const actuators = useActuators();
   const wake = useWakeLockContext();
@@ -117,7 +134,9 @@ export function LivePanel({
   const silenceTimerRef = useRef<number | null>(null);
   const flushTimerRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastSpeechAtRef = useRef<number>(Date.now());
   const [liveLine, setLiveLine] = useState("");
+
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
 
