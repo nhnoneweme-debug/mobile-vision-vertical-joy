@@ -33,6 +33,7 @@ import {
   duplicateTrigger,
   formatCooldown,
   formatCountdown,
+  LIVE_EVENT_LABEL,
   listFirings,
   listRevisions,
   listTriggers,
@@ -50,6 +51,7 @@ import {
   type TriggerDraft,
   type TriggerRevision,
   type ActionResult,
+  type LiveEventName,
 } from "@/lib/triggers";
 import { GeneralReportSheet, TriggerReportSheet } from "./TriggerReport";
 import { useActuators } from "@/providers/ActuatorsProvider";
@@ -58,13 +60,14 @@ import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
 import { CustomActionBox } from "./CustomActionBox";
 import { DualInput } from "./DualInput";
 
-type CondKind = "at_time" | "every" | "after_session" | "audio" | "video";
+type CondKind = "at_time" | "every" | "after_session" | "audio" | "event" | "video";
 
-type Source = "chronos" | "audio" | "video";
+type Source = "chronos" | "audio" | "event" | "video";
 
 const SOURCE_LABEL: Record<Source, string> = {
   chronos: "Cronos",
   audio: "Áudio",
+  event: "Evento",
   video: "Vídeo (em breve)",
 };
 
@@ -73,6 +76,7 @@ const COND_LABEL: Record<CondKind, string> = {
   every: "a cada X min de Live",
   after_session: "após X min de sessão",
   audio: "palavra-chave no áudio",
+  event: "evento da sessão Live",
   video: "detecção por vídeo",
 };
 
@@ -99,7 +103,9 @@ type FormState = {
   time: string;
   minutes: number;
   keyword: string;
+  liveEvent: LiveEventName;
   cooldown: number;
+
   vibrate: boolean;
   vibrateSec: number;
   tone: boolean;
@@ -114,6 +120,8 @@ type FormState = {
   customPlan: string | null;
   customAction: TriggerAction | null;
   promptInstruction: string;
+  freeInteraction: boolean;
+  freeInteractionInstruction: string;
   chainFireId: string;
   chainEnableId: string;
   chainEnableValue: boolean;
@@ -131,6 +139,7 @@ const EMPTY_FORM: FormState = {
   time: "08:00",
   minutes: 25,
   keyword: "",
+  liveEvent: "silence",
   cooldown: DEFAULT_COOLDOWN,
   vibrate: false,
   vibrateSec: 2,
@@ -146,6 +155,8 @@ const EMPTY_FORM: FormState = {
   customPlan: null,
   customAction: null,
   promptInstruction: "",
+  freeInteraction: false,
+  freeInteractionInstruction: "",
   chainFireId: "",
   chainEnableId: "",
   chainEnableValue: true,
@@ -158,6 +169,7 @@ const EMPTY_FORM: FormState = {
 function kindsFor(source: Source): CondKind[] {
   if (source === "chronos") return ["at_time", "every", "after_session"];
   if (source === "audio") return ["audio"];
+  if (source === "event") return ["event"];
   return ["video"];
 }
 
@@ -169,6 +181,8 @@ function buildCondition(f: FormState): TriggerCondition {
       return { mode: "every", seconds: Math.max(1, f.minutes) * 60 };
     case "after_session":
       return { mode: "after_session", seconds: Math.max(1, f.minutes) * 60 };
+    case "event":
+      return { source: "event", event: f.liveEvent };
     case "video":
       return { source: "video" };
     default:
@@ -193,6 +207,10 @@ function buildAction(f: FormState): TriggerAction {
     a.custom = { instruction: f.customInstruction.trim(), plan: f.customPlan ?? undefined };
   }
   if (f.promptInstruction.trim()) a.prompt = { instruction: f.promptInstruction.trim() };
+  if (f.freeInteraction)
+    a.free_interaction = f.freeInteractionInstruction.trim()
+      ? { instruction: f.freeInteractionInstruction.trim() }
+      : {};
   if (f.chainFireId) a.trigger_fire = { trigger_id: f.chainFireId };
   if (f.chainEnableId)
     a.trigger_enable = { trigger_id: f.chainEnableId, enabled: f.chainEnableValue };
@@ -229,6 +247,9 @@ function formFromTrigger(t: TriggerDefinition): FormState {
   if (c.mode) {
     source = "chronos";
     kind = c.mode as CondKind;
+  } else if (c.source === "event") {
+    source = "event";
+    kind = "event";
   } else if (c.source === "video") {
     source = "video";
     kind = "video";
@@ -242,6 +263,7 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     time: typeof c.time === "string" ? c.time : "08:00",
     minutes: c.seconds ? Math.round(Number(c.seconds) / 60) : 25,
     keyword: typeof c.keyword === "string" ? c.keyword : "",
+    liveEvent: typeof c.event === "string" ? (c.event as LiveEventName) : "silence",
     cooldown: t.cooldown_seconds,
     vibrate: !!a.vibrate,
     vibrateSec: a.vibrate?.onSec ?? 2,
@@ -257,6 +279,8 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     customPlan: a.custom?.plan ?? null,
     customAction: null,
     promptInstruction: a.prompt?.instruction ?? "",
+    freeInteraction: !!a.free_interaction,
+    freeInteractionInstruction: a.free_interaction?.instruction ?? "",
     chainFireId: a.trigger_fire?.trigger_id ?? "",
     chainEnableId: a.trigger_enable?.trigger_id ?? "",
     chainEnableValue: a.trigger_enable?.enabled ?? true,
@@ -764,6 +788,21 @@ export function TriggersSection() {
                 />
               </Field>
             ) : null}
+            {form.kind === "event" ? (
+              <Field label="evento da sessão Live">
+                <select
+                  value={form.liveEvent}
+                  onChange={(e) => setForm({ ...form, liveEvent: e.target.value as LiveEventName })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                >
+                  {(Object.keys(LIVE_EVENT_LABEL) as LiveEventName[]).map((ev) => (
+                    <option key={ev} value={ev}>
+                      {LIVE_EVENT_LABEL[ev]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
           </Step>
 
           <Step n={4} title="Ações (pode combinar)">
@@ -870,6 +909,22 @@ export function TriggersSection() {
                 placeholder="ex.: me lembre por que comecei e sugira o próximo passo"
               />
             </Field>
+
+            {/* ------------------------------------------ INTERAÇÃO LIVRE */}
+            <CheckRow
+              label="Interação livre (a WiMi toma a palavra)"
+              checked={form.freeInteraction}
+              onChange={(v) => setForm({ ...form, freeInteraction: v })}
+            />
+            {form.freeInteraction ? (
+              <Field label="como ela deve conduzir a conversa (opcional)">
+                <DualInput
+                  value={form.freeInteractionInstruction}
+                  onChange={(v) => setForm((f) => ({ ...f, freeInteractionInstruction: v }))}
+                  placeholder="ex.: puxe assunto sobre o bloco atual e devolva o turno com uma pergunta"
+                />
+              </Field>
+            ) : null}
 
             {/* ------------------------------------ ENCADEAMENTO ENTRE GATILHOS */}
             <Field label="acionar outro gatilho (opcional)">

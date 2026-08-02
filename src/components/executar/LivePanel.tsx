@@ -26,11 +26,14 @@ import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import {
   armedCommands,
   listTriggers,
+  recordFiring,
+  type LiveEventName,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
 
 import { runTriggerPrompt } from "@/lib/triggers.functions";
+
 import { useCamera } from "@/hooks/useCamera";
 import {
   useActuators,
@@ -53,6 +56,8 @@ import { ExecutionLogCard } from "./ExecutionLogCard";
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
+/** silêncio que dá o turno à WiMi no Live Dinâmico */
+const DYNAMIC_SILENCE_MS = 8_000;
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
@@ -100,10 +105,31 @@ export function LivePanel({
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
+  // LIVE DINÂMICO — a WiMi toma a palavra sozinha quando o silêncio se estende.
+  const [dynamic, setDynamic] = useState(false);
+  const [liveEvent, setLiveEvent] = useState<{
+    name: LiveEventName;
+    ref: string;
+    meta?: Record<string, unknown>;
+  } | null>(null);
+
+  const emitEvent = useCallback((name: LiveEventName, meta?: Record<string, unknown>) => {
+    setLiveEvent({
+      name,
+      ref: `${name}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+      meta,
+    });
+  }, []);
+
   // Um único relógio de sessão para motor, overlay e Studio.
   useEffect(() => {
     setLiveSessionStart(sessionStartedAt);
   }, [sessionStartedAt]);
+
+  // O início da sessão é um evento de primeira classe (gatilhos podem escutar).
+  useEffect(() => {
+    emitEvent("session_start", { session_started_at: new Date(sessionStartedAt).toISOString() });
+  }, [emitEvent, sessionStartedAt]);
 
   const actuators = useActuators();
   const wake = useWakeLockContext();
@@ -114,6 +140,7 @@ export function LivePanel({
   const silenceTimerRef = useRef<number | null>(null);
   const flushTimerRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastSpeechAtRef = useRef<number>(Date.now());
   const [liveLine, setLiveLine] = useState("");
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
@@ -196,11 +223,13 @@ export function LivePanel({
     }).then((ok) => {
       if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
     });
-  }, [lang, missionId, persist, sessionId]);
+    emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+  }, [emitEvent, lang, missionId, persist, sessionId]);
 
   const onFinalText = useCallback(
     (text: string) => {
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
+      lastSpeechAtRef.current = Date.now();
       bufferRef.current.push(text);
       setLiveLine(bufferRef.current.join(" "));
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
@@ -210,6 +239,23 @@ export function LivePanel({
   );
 
   const speech = useSpeechToText(onFinalText, { lang });
+
+  // Detector de silêncio do Live Dinâmico: passado o limite sem fala nova (e
+  // com a WiMi calada), emite o evento "silence" — quem escuta são os gatilhos.
+  useEffect(() => {
+    if (!dynamic || !speech.listening) return;
+    lastSpeechAtRef.current = Date.now();
+    const id = window.setInterval(() => {
+      if (actuators.speaking) {
+        lastSpeechAtRef.current = Date.now();
+        return;
+      }
+      if (Date.now() - lastSpeechAtRef.current < DYNAMIC_SILENCE_MS) return;
+      lastSpeechAtRef.current = Date.now();
+      emitEvent("silence", { silence_ms: DYNAMIC_SILENCE_MS });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [actuators.speaking, dynamic, emitEvent, speech.listening]);
 
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
@@ -376,6 +422,22 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
+            actuators.speak(res.message);
+            // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
+            // uma linha própria (append-only) para aparecer no relatório.
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "prompt_result",
+              source_ref: `prompt:${trigger.id}:${Date.now()}`,
+              result: "executed",
+              meta: {
+                type: "prompt_result",
+                instruction: action.prompt?.instruction ?? "",
+                action_results: [
+                  { action: "prompt (resposta da WiMi)", success: true, detail: res.message },
+                ],
+              },
+            }).catch(() => {});
             void persist({
               mission_id: missionId ?? null,
               kind: "sensor_reading",
@@ -390,9 +452,87 @@ export function LivePanel({
             });
           })
           .catch((e: unknown) => {
-            toast.error(
-              e instanceof Error ? e.message : "A WiMi não conseguiu responder ao prompt.",
-            );
+            const detail = e instanceof Error ? e.message : "falha ao responder";
+            toast.error(detail);
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "prompt_result",
+              source_ref: `prompt:${trigger.id}:${Date.now()}`,
+              result: "failed",
+              meta: {
+                type: "prompt_result",
+                action_results: [{ action: "prompt (resposta da WiMi)", success: false, detail }],
+              },
+            }).catch(() => {});
+          });
+      }
+
+      // INTERAÇÃO LIVRE — a WiMi toma a palavra e devolve o turno ao microfone.
+      if (action.free_interaction) {
+        ok("interação livre", "turno passado à WiMi");
+        const elapsedMin = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000));
+        const recent = blocksRef.current.slice(-8);
+        const wasListening = speech.listening;
+        // sinal de turno: a WiMi vai falar
+        actuators.chime("tick");
+        if (wasListening) speech.stop();
+        void runTriggerPrompt({
+          data: {
+            instruction:
+              action.free_interaction.instruction ??
+              "Continue a conversa ao vivo: comente o que ouviu e faça UMA pergunta curta que ajude a pessoa a seguir executando.",
+            context: [
+              `Sessão ao vivo há ${elapsedMin} min.`,
+              recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
+            ].join("\n"),
+            trigger_name: trigger.name,
+          },
+        })
+          .then((res: { message: string }) => {
+            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
+            actuators.speak(res.message, {
+              onEnd: () => {
+                // devolve o turno: toque curto e microfone de volta.
+                actuators.chime("soft");
+                if (wasListening) speech.start();
+              },
+            });
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "free_interaction",
+              source_ref: `free:${trigger.id}:${Date.now()}`,
+              result: "executed",
+              meta: {
+                type: "free_interaction",
+                action_results: [{ action: "interação livre", success: true, detail: res.message }],
+              },
+            }).catch(() => {});
+            void persist({
+              mission_id: missionId ?? null,
+              kind: "sensor_reading",
+              channel: "foreground",
+              note: res.message,
+              meta: {
+                session_id: sessionId,
+                type: "free_interaction",
+                trigger_id: trigger.id,
+              },
+            });
+          })
+          .catch((e: unknown) => {
+            if (wasListening) speech.start();
+            const detail = e instanceof Error ? e.message : "falha na interação livre";
+            toast.error(detail);
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "free_interaction",
+              source_ref: `free:${trigger.id}:${Date.now()}`,
+              result: "failed",
+              meta: {
+                type: "free_interaction",
+                action_results: [{ action: "interação livre", success: false, detail }],
+              },
+            }).catch(() => {});
           });
       }
 
@@ -471,6 +611,7 @@ export function LivePanel({
       sessionStartedAt,
       lastBlock,
       liveText: { text: currentLine, epoch: heardEpoch },
+      event: liveEvent,
     },
     { applyAction },
   );
@@ -669,6 +810,35 @@ export function LivePanel({
             </button>
           ))}
         </div>
+
+        {/* LIVE DINÂMICO — silêncio prolongado vira turno da WiMi. */}
+        <button
+          type="button"
+          onClick={() => setDynamic((v) => !v)}
+          aria-pressed={dynamic}
+          className={`mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left active:scale-[0.99] ${
+            dynamic ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
+          }`}
+        >
+          <Radio
+            className={`h-4 w-4 shrink-0 ${dynamic ? "text-ember" : "text-muted-foreground"}`}
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm text-foreground">Live dinâmico</span>
+            <span className="block text-[11px] text-muted-foreground">
+              {dynamic
+                ? "após ~8s de silêncio a WiMi toma a palavra (gatilhos de evento “silêncio”)."
+                : "conversa por turnos com a WiMi durante a escuta."}
+            </span>
+          </span>
+          <span
+            className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+              dynamic ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+            }`}
+          >
+            {dynamic ? "on" : "off"}
+          </span>
+        </button>
 
         {transcriptView}
 

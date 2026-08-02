@@ -27,6 +27,11 @@ export type LiveSignals = {
    * `epoch` muda a cada bloco fechado, reiniciando as âncoras de dedupe.
    */
   liveText?: { text: string; epoch: number };
+  /**
+   * ÚLTIMO EVENTO DISCRETO da sessão (início, bloco fechado, silêncio, registro
+   * manual). `ref` é único por ocorrência e serve de âncora de idempotência.
+   */
+  event?: { name: string; ref: string; meta?: Record<string, unknown> } | null;
 };
 
 export type TriggerControls = {
@@ -202,7 +207,27 @@ export function useTriggerEngine(
     }
   }, [signals.active, liveTextValue, liveEpoch, enabled, fire]);
 
+  // ------------------------------------------------ EVENTOS DA SESSÃO LIVE
+  //
+  // Sinais discretos (início, bloco fechado, silêncio, registro manual). O
+  // dedupe é pela `ref` da ocorrência, então o mesmo evento nunca dispara duas
+  // vezes o mesmo gatilho.
+  const eventName = signals.event?.name ?? null;
+  const eventRef = signals.event?.ref ?? null;
+  useEffect(() => {
+    if (!signals.active || !eventName || !eventRef) return;
+    for (const t of enabled()) {
+      const c = t.condition as Record<string, unknown>;
+      if (c?.source !== "event" || c.event !== eventName) continue;
+      fire(t, "event", eventRef, {
+        event: eventName,
+        ...(signalsRef.current.event?.meta ?? {}),
+      });
+    }
+  }, [signals.active, eventName, eventRef, enabled, fire]);
+
   // ------------------------------------------------------------ CHRONOS
+
   useEffect(() => {
     if (!signals.active) return;
     const tick = () => {

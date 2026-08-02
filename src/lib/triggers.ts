@@ -9,11 +9,25 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type TriggerType = "chronos" | "event";
 
+/**
+ * EVENTOS DA SESSÃO LIVE — sinais discretos emitidos pelo painel Live.
+ * São a família "evento" das condições (nada a ver com palavra-chave).
+ */
+export type LiveEventName = "session_start" | "transcript_block" | "silence" | "manual_log";
+
+export const LIVE_EVENT_LABEL: Record<LiveEventName, string> = {
+  session_start: "ao iniciar a sessão Live",
+  transcript_block: "a cada bloco de fala transcrito",
+  silence: "quando o silêncio se estende",
+  manual_log: "quando eu registro algo manualmente",
+};
+
 export type TriggerCondition =
   | { mode: "at_time"; time: string }
   | { mode: "every"; seconds: number }
   | { mode: "after_session"; seconds: number }
   | { source: "audio"; keyword: string }
+  | { source: "event"; event: LiveEventName }
   | { source: "video" };
 
 export type TriggerAction = {
@@ -28,6 +42,11 @@ export type TriggerAction = {
   custom?: { instruction: string; plan?: string };
   /** ELEMENTO PROMPT — instrução em linguagem natural executada pela LLM no disparo. */
   prompt?: { instruction: string };
+  /**
+   * INTERAÇÃO LIVRE — a WiMi toma a palavra: fala com base no contexto da
+   * sessão e devolve o turno para o microfone quando termina.
+   */
+  free_interaction?: { instruction?: string };
   /** ENCADEAMENTO — executa as ações de outro gatilho imediatamente. */
   trigger_fire?: { trigger_id: string };
   /** ENCADEAMENTO — arma/desarma outro gatilho. */
@@ -488,6 +507,9 @@ export function describeCondition(t: TriggerDefinition): string {
   if (c.mode === "after_session")
     return `após ${Math.round(Number(c.seconds) / 60)} min de sessão Live`;
   if (c.source === "audio") return `quando ouvir "${String(c.keyword)}"`;
+  if (c.source === "event")
+    return LIVE_EVENT_LABEL[c.event as LiveEventName] ?? "evento da sessão Live";
+
   if (c.source === "motion") return "movimento (sensor removido — gatilho inativo)";
   if (c.source === "video") return "detecção por vídeo (em breve)";
   return "condição desconhecida";
@@ -522,6 +544,13 @@ export function actionElements(
   if (act.journey_log_prompt) parts.push("abrir log de jornada");
   if (act.custom) parts.push(`ação personalizada: ${act.custom.plan ?? act.custom.instruction}`);
   if (act.prompt?.instruction) parts.push(`Prompt("${act.prompt.instruction}")`);
+  if (act.free_interaction)
+    parts.push(
+      act.free_interaction.instruction
+        ? `interação livre: ${act.free_interaction.instruction}`
+        : "interação livre com a WiMi",
+    );
+
   if (act.trigger_fire?.trigger_id)
     parts.push(`acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`);
   if (act.trigger_enable?.trigger_id)
