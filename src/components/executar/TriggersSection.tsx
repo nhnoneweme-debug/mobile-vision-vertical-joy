@@ -8,6 +8,7 @@ import {
   ArrowDown,
   ArrowUp,
   Copy,
+  FileText,
   History,
   LibraryBig,
   Pencil,
@@ -30,6 +31,7 @@ import {
   describeTrigger,
   describeWindow,
   duplicateTrigger,
+  formatCooldown,
   formatCountdown,
   listFirings,
   listRevisions,
@@ -48,7 +50,9 @@ import {
   type TriggerDefinition,
   type TriggerDraft,
   type TriggerRevision,
+  type ActionResult,
 } from "@/lib/triggers";
+import { GeneralReportSheet, TriggerReportSheet } from "./TriggerReport";
 import { useActuators } from "@/providers/ActuatorsProvider";
 import { useLiveSessionStart, useSecondsTick } from "@/hooks/useLiveSession";
 import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
@@ -272,6 +276,8 @@ export function TriggersSection() {
   const [libOpen, setLibOpen] = useState(false);
   const [versionsFor, setVersionsFor] = useState<string | null>(null);
   const [speakOpen, setSpeakOpen] = useState(false);
+  const [reportFor, setReportFor] = useState<string | null>(null);
+  const [generalOpen, setGeneralOpen] = useState(false);
   const sessionStartedAt = useLiveSessionStart();
   const tick = useSecondsTick();
 
@@ -378,12 +384,47 @@ export function TriggersSection() {
         if (a.sensors) {
           toast.info("Ações de sensor só têm efeito com o painel Live aberto.");
         }
+        // MESMA ESTRUTURA DE RETORNO DO DISPARO REAL, marcada como simulada.
+        const results: ActionResult[] = [];
+        if (a.stop_actuators) results.push({ action: "desligar atuadores", success: true });
+        if (a.vibrate)
+          results.push({
+            action: "vibrar",
+            success: typeof navigator !== "undefined" && "vibrate" in navigator,
+            detail: `${a.vibrate.onSec ?? 2}s (teste)`,
+          });
+        if (a.audio_tone)
+          results.push({
+            action: "tom de áudio",
+            success: true,
+            detail: `${a.audio_tone.onSec ?? 1}s (teste)`,
+          });
+        if (a.sensors)
+          results.push({
+            action: "sensores",
+            success: false,
+            detail: "só têm efeito com o painel Live aberto",
+          });
+        if (a.journey_log_prompt)
+          results.push({
+            action: "abrir log de jornada",
+            success: false,
+            detail: "abre apenas no painel Live",
+          });
+        if (a.prompt?.instruction)
+          results.push({ action: "prompt", success: false, detail: "não executado em teste" });
+        if (a.message)
+          results.push({ action: "mensagem", success: true, detail: a.message });
         await recordFiring({
           trigger_id: t.id,
           source_kind: "simulation",
           source_ref: `sim:${Date.now()}`,
           result: "simulated",
-          meta: { simulated: true },
+          meta: {
+            simulated: true,
+            action_results: results,
+            cooldown_seconds: t.cooldown_seconds,
+          },
         });
       } catch (e) {
         toast.error((e as Error).message);
@@ -419,7 +460,7 @@ export function TriggersSection() {
               Avaliados na ordem, de cima pra baixo, enquanto o painel Live está aberto.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <button
               type="button"
               onClick={() => setSpeakOpen(true)}
@@ -427,6 +468,14 @@ export function TriggersSection() {
             >
               <Sparkles className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Falando</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setGeneralOpen(true)}
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-2 py-2 text-[11px] text-muted-foreground active:scale-95 sm:px-3 sm:text-xs"
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Relatório</span>
             </button>
             <button
               type="button"
@@ -537,7 +586,7 @@ export function TriggersSection() {
                         </p>
                       ) : null}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0}{" "}
+                        cooldown {formatCooldown(t.cooldown_seconds)} · {s?.total ?? 0} total · {s?.today ?? 0}{" "}
                         hoje
                         {s?.last
                           ? ` · último ${new Date(s.last).toLocaleTimeString("pt-BR", {
@@ -598,6 +647,11 @@ export function TriggersSection() {
                         setForm(formFromTrigger(t));
                         setOpen(true);
                       }}
+                    />
+                    <MiniBtn
+                      icon={FileText}
+                      label="Relatório"
+                      onClick={() => setReportFor(t.id)}
                     />
                     <MiniBtn icon={Copy} label="Duplicar" onClick={() => dupM.mutate(t)} />
                     <MiniBtn
@@ -1021,6 +1075,27 @@ export function TriggersSection() {
           </ul>
         )}
       </section>
+
+      {reportFor ? (
+        (() => {
+          const t = triggers.find((x) => x.id === reportFor);
+          return t ? (
+            <TriggerReportSheet
+              trigger={t}
+              firings={firingsQ.data ?? []}
+              onClose={() => setReportFor(null)}
+            />
+          ) : null;
+        })()
+      ) : null}
+
+      {generalOpen ? (
+        <GeneralReportSheet
+          triggers={triggers}
+          firings={firingsQ.data ?? []}
+          onClose={() => setGeneralOpen(false)}
+        />
+      ) : null}
 
       {speakOpen ? (
         <SpeakTriggerSheet
