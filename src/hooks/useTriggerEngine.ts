@@ -93,18 +93,37 @@ export function useTriggerEngine(
       lastFireRef.current[t.id] = now;
       const action = t.action ?? {};
       let result: "executed" | "failed" = "executed";
+      let actionResults: ActionResult[] = [];
       try {
-        controlsRef.current.applyAction(action, t);
-      } catch {
+        actionResults =
+          controlsRef.current.applyAction(action, t, {
+            matched_text: typeof meta.matched_text === "string" ? meta.matched_text : undefined,
+          }) || [];
+      } catch (e) {
         result = "failed";
+        actionResults = [
+          {
+            action: "execução",
+            success: false,
+            detail: e instanceof Error ? e.message : "erro desconhecido",
+          },
+        ];
       }
+      if (actionResults.some((r) => !r.success)) result = "failed";
       void recordFiring({
         trigger_id: t.id,
         source_kind: sourceKind,
         source_ref: sourceRef,
         result,
-        meta,
+        meta: {
+          ...meta,
+          action_results: actionResults,
+          cooldown_seconds: t.cooldown_seconds,
+          cooldown_remaining_ms: 0,
+          fired_client_at: new Date(now).toISOString(),
+        },
       }).catch(() => {});
+
 
       // ------------------------------------------- encadeamento entre gatilhos
       if (action.trigger_enable?.trigger_id) {
