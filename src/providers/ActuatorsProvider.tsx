@@ -17,6 +17,15 @@ import {
 
 export type ActuatorMode = "timed" | "continuous";
 
+/** Timbres sintetizados via Web Audio para o atuador de áudio. */
+export type ActuatorSound = "soft" | "bell" | "tick";
+
+export const ACTUATOR_SOUNDS: { id: ActuatorSound; label: string; hint: string }[] = [
+  { id: "soft", label: "Suave", hint: "duas notas em quinta, ~400ms" },
+  { id: "bell", label: "Sino", hint: "harmônicos com decay, ~600ms" },
+  { id: "tick", label: "Tique", hint: "clique discreto, ~80ms" },
+];
+
 export type ActuatorConfig = {
   /** duração do pulso, em segundos */
   onSec: number;
@@ -27,7 +36,10 @@ export type ActuatorConfig = {
    * "continuous" = indefinido: fica ativo até o usuário desligar.
    */
   mode: ActuatorMode;
+  /** timbre usado pelo atuador de áudio (ignorado na vibração) */
+  sound?: ActuatorSound;
 };
+
 
 type ActuatorsCtx = {
   vibrationOn: boolean;
