@@ -9,11 +9,25 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type TriggerType = "chronos" | "event";
 
+/**
+ * EVENTOS DA SESSÃO LIVE — sinais discretos emitidos pelo painel Live.
+ * São a família "evento" das condições (nada a ver com palavra-chave).
+ */
+export type LiveEventName = "session_start" | "transcript_block" | "silence" | "manual_log";
+
+export const LIVE_EVENT_LABEL: Record<LiveEventName, string> = {
+  session_start: "ao iniciar a sessão Live",
+  transcript_block: "a cada bloco de fala transcrito",
+  silence: "quando o silêncio se estende",
+  manual_log: "quando eu registro algo manualmente",
+};
+
 export type TriggerCondition =
   | { mode: "at_time"; time: string }
   | { mode: "every"; seconds: number }
   | { mode: "after_session"; seconds: number }
   | { source: "audio"; keyword: string }
+  | { source: "event"; event: LiveEventName }
   | { source: "video" };
 
 export type TriggerAction = {
@@ -28,6 +42,11 @@ export type TriggerAction = {
   custom?: { instruction: string; plan?: string };
   /** ELEMENTO PROMPT — instrução em linguagem natural executada pela LLM no disparo. */
   prompt?: { instruction: string };
+  /**
+   * INTERAÇÃO LIVRE — a WiMi toma a palavra: fala com base no contexto da
+   * sessão e devolve o turno para o microfone quando termina.
+   */
+  free_interaction?: { instruction?: string };
   /** ENCADEAMENTO — executa as ações de outro gatilho imediatamente. */
   trigger_fire?: { trigger_id: string };
   /** ENCADEAMENTO — arma/desarma outro gatilho. */
@@ -39,6 +58,7 @@ export type TriggerAction = {
    */
   intended_outcome?: string;
 };
+
 
 /**
  * TAXONOMIA DERIVADA DA CONDIÇÃO — sem coluna nova.
