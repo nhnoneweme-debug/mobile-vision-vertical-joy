@@ -44,6 +44,12 @@ export type ActuatorConfig = {
    * "continuous" = indefinido: fica ativo até o usuário desligar.
    */
   mode: ActuatorMode;
+  /**
+   * BEACON DE PRESENÇA — camada de timer DENTRO do bloco de áudio.
+   * Quando ligado, o agendador ÚNICO passa a usar este intervalo (número +
+   * unidade). Não nasce um segundo emissor: o beacon É a emissão periódica.
+   */
+  beacon?: { on: boolean; value: number; unit: BeaconUnit };
   /** timbre usado pelo atuador de áudio (ignorado na vibração) */
   sound?: ActuatorSound;
 };
