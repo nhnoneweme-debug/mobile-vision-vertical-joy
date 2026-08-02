@@ -24,7 +24,12 @@ export type TriggerAction = {
   stop_actuators?: boolean;
   sensors?: { mic?: boolean; camera?: boolean; motion?: boolean };
   message?: string;
+  /** Abre o Log de Jornada ("o que você está executando agora?"). */
+  journey_log_prompt?: boolean;
+  /** Ação personalizada descrita em linguagem natural e interpretada pela IA. */
+  custom?: { instruction: string; plan?: string };
 };
+
 
 /** Janela de elegibilidade: horário e/ou dias da semana (0 = domingo). */
 export type ActiveWindow = {
