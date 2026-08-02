@@ -837,10 +837,38 @@ function ActuatorRow({
             </button>
           </div>
 
+          {showSound ? (
+            <div className="mt-3">
+              <p className="text-[11px] text-muted-foreground">Som</p>
+              <div className="mt-1.5 flex gap-2">
+                {ACTUATOR_SOUNDS.map((s) => {
+                  const active = (config.sound ?? "soft") === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      title={s.hint}
+                      onClick={() => onConfig({ ...config, sound: s.id })}
+                      aria-pressed={active}
+                      className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] active:scale-95 ${
+                        active
+                          ? "border-ember bg-ember/15 text-ember"
+                          : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           {continuous ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Sem duração definida: fica ativo até você desligar.
+              Sem duração definida: o padrão se repete a cada ~2,5s até você desligar.
             </p>
+
           ) : (
             <div className="mt-3 flex items-center gap-3">
               <label className="flex flex-1 items-center gap-2 text-[11px] text-muted-foreground">
