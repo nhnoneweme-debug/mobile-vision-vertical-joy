@@ -749,6 +749,18 @@ export function TriggersSection() {
               />
             </Field>
 
+            {/* RESULTADO PRETENDIDO — guardado no jsonb de action. */}
+            <Field label="resultado pretendido (opcional)">
+              <input
+                value={form.outcome}
+                onChange={(e) => setForm({ ...form, outcome: e.target.value })}
+                placeholder="ex.: ambiente em silêncio, só os ouvidos ligados"
+                className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              />
+            </Field>
+
+
+
             {/* ---------------------------------------- ELEMENTO PROMPT */}
             <Field label='prompt — "fale com a WiMi no disparo" (opcional)'>
               <DualInput
