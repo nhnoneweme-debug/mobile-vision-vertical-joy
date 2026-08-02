@@ -895,6 +895,9 @@ function ActuatorRow({
             </div>
           ) : null}
 
+          {showSound ? <BeaconConfig config={config} onConfig={onConfig} /> : null}
+
+
           {continuous ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
               Sem duração definida: o padrão se repete a cada ~2,5s até você desligar.
