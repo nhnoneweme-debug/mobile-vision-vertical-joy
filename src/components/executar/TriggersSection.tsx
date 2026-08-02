@@ -799,6 +799,76 @@ export function TriggersSection() {
                 className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
               />
             </Field>
+
+            {/* ---------------------------------------- ELEMENTO PROMPT */}
+            <Field label='prompt — "fale com a WiMi no disparo" (opcional)'>
+              <DualInput
+                value={form.promptInstruction}
+                onChange={(v) => setForm((f) => ({ ...f, promptInstruction: v }))}
+                placeholder="ex.: me lembre por que comecei e sugira o próximo passo"
+              />
+            </Field>
+
+            {/* ------------------------------------ ENCADEAMENTO ENTRE GATILHOS */}
+            <Field label="acionar outro gatilho (opcional)">
+              <select
+                value={form.chainFireId}
+                onChange={(e) => setForm({ ...form, chainFireId: e.target.value })}
+                className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">nenhum</option>
+                {triggers
+                  .filter((t) => t.id !== editing?.id)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <Field label="armar/desarmar outro gatilho (opcional)">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <select
+                  value={form.chainEnableId}
+                  onChange={(e) => setForm({ ...form, chainEnableId: e.target.value })}
+                  className="min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground sm:col-span-2"
+                >
+                  <option value="">nenhum</option>
+                  {triggers
+                    .filter((t) => t.id !== editing?.id)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  value={form.chainEnableValue ? "on" : "off"}
+                  onChange={(e) => setForm({ ...form, chainEnableValue: e.target.value === "on" })}
+                  className="min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="on">armar</option>
+                  <option value="off">desarmar</option>
+                </select>
+              </div>
+            </Field>
+            <p className="text-[10px] text-muted-foreground">
+              Encadeamento tem profundidade máxima de 3 — cadeias mais longas são interrompidas e
+              registradas no histórico.
+            </p>
+
+            {/* -------------------------------- LISTA ORDENADA DE ELEMENTOS */}
+            {actionElements(buildAction(form), nameById).length ? (
+              <ol className="space-y-1 rounded-xl border border-border bg-charcoal-950/40 p-3">
+                {actionElements(buildAction(form), nameById).map((el, i) => (
+                  <li key={i} className="flex gap-2 text-[11px] text-muted-foreground">
+                    <span className="font-display text-ember">{i + 1}.</span>
+                    <span className="min-w-0 break-words">{el}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
           </Step>
 
           <Step n={5} title="Cooldown">
