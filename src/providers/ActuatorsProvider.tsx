@@ -254,9 +254,12 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   }, [audioConfig, persist, vibrationConfig]);
 
   const speak = useCallback(
-    (text: string) => {
+    (text: string, opts?: { onEnd?: () => void }) => {
       const clean = text.replace(/\s+/g, " ").trim().slice(0, 600);
-      if (!clean || !speechOn || !speechSupported) return;
+      if (!clean || !speechOn || !speechSupported) {
+        opts?.onEnd?.();
+        return;
+      }
       try {
         const synth = window.speechSynthesis;
         synth.cancel();
@@ -265,15 +268,48 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
         u.rate = 1.02;
         u.pitch = 1;
         u.onstart = () => setSpeaking(true);
-        u.onend = () => setSpeaking(false);
-        u.onerror = () => setSpeaking(false);
+        u.onend = () => {
+          setSpeaking(false);
+          opts?.onEnd?.();
+        };
+        u.onerror = () => {
+          setSpeaking(false);
+          opts?.onEnd?.();
+        };
         synth.speak(u);
       } catch {
         setSpeaking(false);
+        opts?.onEnd?.();
       }
     },
     [speechOn, speechSupported],
   );
+
+  /**
+   * Toque curto de turno: usado pelo Live Dinâmico para sinalizar "sua vez de
+   * falar" / "minha vez". Não liga o loop de atuadores.
+   */
+  const chime = useCallback(
+    (sound: ActuatorSound = "tick") => {
+      if (!audioSupported) return;
+      try {
+        if (!audioCtxRef.current) {
+          const Ctor =
+            (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+            (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          if (!Ctor) return;
+          audioCtxRef.current = new Ctor();
+        }
+        const ctx = audioCtxRef.current;
+        void ctx.resume().catch(() => {});
+        playSound(ctx, sound);
+      } catch {
+        /* áudio bloqueado sem gesto do usuário */
+      }
+    },
+    [audioSupported],
+  );
+
 
   // Loop da vibração.
   useEffect(() => {
