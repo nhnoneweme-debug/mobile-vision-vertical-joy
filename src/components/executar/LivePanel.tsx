@@ -615,9 +615,11 @@ export function LivePanel({
       sessionStartedAt,
       lastBlock,
       liveText: { text: currentLine, epoch: heardEpoch },
+      event: liveEvent,
     },
     { applyAction },
   );
+
 
   const pauseAll = useCallback(() => {
     if (speech.listening) {
