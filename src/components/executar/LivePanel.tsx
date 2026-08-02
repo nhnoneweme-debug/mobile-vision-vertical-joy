@@ -26,15 +26,14 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import { listTriggers, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
 import { runTriggerPrompt } from "@/lib/triggers.functions";
-import { useDeviceMotionAggregator, type MotionAggregate } from "@/hooks/useDeviceMotion";
 import { useCamera } from "@/hooks/useCamera";
 import {
   useActuators,
   ACTUATOR_SOUNDS,
-  BEACON_PRESETS,
+  INTERVAL_PRESETS,
   type ActuatorConfig,
-  type BeaconConfig,
 } from "@/providers/ActuatorsProvider";
+
 
 
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
