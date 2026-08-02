@@ -32,7 +32,26 @@ export type TriggerAction = {
   trigger_fire?: { trigger_id: string };
   /** ENCADEAMENTO — arma/desarma outro gatilho. */
   trigger_enable?: { trigger_id: string; enabled: boolean };
+  /**
+   * RESULTADO PRETENDIDO (texto livre, opcional) — o que se espera do ambiente
+   * depois que o comando roda. Guardado dentro do jsonb de action, sem coluna
+   * nova no banco.
+   */
+  intended_outcome?: string;
 };
+
+/**
+ * TAXONOMIA DERIVADA DA CONDIÇÃO — sem coluna nova.
+ * - "command" (reativo): palavra-chave de áudio. Espera o usuário falar.
+ * - "agent" (proativo): chronos e demais métricas. Aciona o usuário.
+ */
+export type TriggerFamily = "agent" | "command";
+
+export function triggerFamily(t: Pick<TriggerDefinition, "condition">): TriggerFamily {
+  const c = t.condition as Record<string, unknown>;
+  return c?.source === "audio" ? "command" : "agent";
+}
+
 
 /** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
 export const MAX_CHAIN_DEPTH = 3;
@@ -586,8 +605,15 @@ export function upcomingActions(
   sessionStartedAt: number,
   now: number = Date.now(),
 ): UpcomingAction[] {
+  // SÓ AGENTES: comandos de voz são reativos (esperam o usuário) e por isso
+  // nunca entram na fila AGORA/PRÓXIMA/DEPOIS.
   const eligible = triggers
-    .filter((t) => t.enabled && isWithinWindow(t.active_window, new Date(now)))
+    .filter(
+      (t) =>
+        t.enabled &&
+        triggerFamily(t) === "agent" &&
+        isWithinWindow(t.active_window, new Date(now)),
+    )
     .sort((a, b) => a.position - b.position);
 
   const chronos: UpcomingAction[] = [];
@@ -598,13 +624,22 @@ export function upcomingActions(
     if (at != null) {
       chronos.push({ trigger: t, etaMs: at - now, when: `em ${formatCountdown(at - now)}` });
     } else {
-      const c = t.condition as Record<string, unknown>;
-      const when =
-        c?.source === "audio" ? `aguardando: "${String(c.keyword)}"` : "aguardando sinal";
-      events.push({ trigger: t, etaMs: null, when });
+      events.push({ trigger: t, etaMs: null, when: "aguardando sinal" });
     }
   }
 
   chronos.sort((a, b) => (a.etaMs ?? 0) - (b.etaMs ?? 0));
   return [...chronos, ...events];
 }
+
+/** Comandos de voz armados (habilitados e dentro da janela ativa). */
+export function armedCommands(
+  triggers: TriggerDefinition[],
+  now: number = Date.now(),
+): TriggerDefinition[] {
+  return triggers.filter(
+    (t) =>
+      t.enabled && triggerFamily(t) === "command" && isWithinWindow(t.active_window, new Date(now)),
+  );
+}
+

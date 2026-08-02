@@ -23,7 +23,13 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
-import { listTriggers, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
+import {
+  armedCommands,
+  listTriggers,
+  type TriggerAction,
+  type TriggerDefinition,
+} from "@/lib/triggers";
+
 import { runTriggerPrompt } from "@/lib/triggers.functions";
 import { useCamera } from "@/hooks/useCamera";
 import {
@@ -39,6 +45,9 @@ import { StationMode } from "./StationMode";
 import { NextActionsOverlay } from "./NextActionsOverlay";
 import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
+import { LiveClock } from "./LiveClock";
+import { ExecutionLogCard } from "./ExecutionLogCard";
+
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
@@ -66,7 +75,18 @@ function newId(prefix: string) {
   }
 }
 
-export function LivePanel({ missionId }: { missionId?: string | null }) {
+export function LivePanel({
+  missionId,
+  onOpenCommands,
+  header,
+}: {
+  missionId?: string | null;
+  /** Abre a área de Comandos (aba Gatilhos) a partir do contador do overlay. */
+  onOpenCommands?: () => void;
+  /** Conteúdo da jornada renderizado logo abaixo do relógio. */
+  header?: React.ReactNode;
+}) {
+
   const [sessionId] = useState(() => newId("sess"));
   const [station, setStation] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -264,6 +284,12 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
 
   // -------------------------------------------------- MOTOR DE GATILHOS
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+  // Comandos de voz armados — contador discreto no overlay, nunca na fila.
+  const commandsArmed = useMemo(
+    () => armedCommands((triggersQ.data ?? []) as TriggerDefinition[]).length,
+    [triggersQ.data],
+  );
+
 
   const applyAction = useCallback(
     (action: TriggerAction, trigger: TriggerDefinition) => {
@@ -506,6 +532,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
                 label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
                 detail: `${blocksSaved} blocos`,
               }}
+              commandsCount={commandsArmed}
               big
             />
           }
@@ -516,6 +543,12 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
 
   return (
     <div className="space-y-4">
+      {/* RELÓGIO — herdado do antigo Palco, agora topo do Live. */}
+      <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
+        <LiveClock />
+        {header}
+      </section>
+
       <NextActionsOverlay
         triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
         sessionStartedAt={sessionStartedAt}
@@ -523,7 +556,10 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
           detail: `${blocksSaved} blocos`,
         }}
+        commandsCount={commandsArmed}
+        onOpenCommands={onOpenCommands}
       />
+
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
       ) : null}
@@ -729,7 +765,11 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           Manter a tela ligada (wake lock)
         </button>
       ) : null}
+
+      {/* REGISTRO — o log do antigo Palco, colapsável dentro do Live. */}
+      <ExecutionLogCard />
     </div>
+
   );
 }
 

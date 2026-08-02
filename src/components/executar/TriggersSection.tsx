@@ -38,7 +38,9 @@ import {
   recordFiring,
   reorderTriggers,
   restoreRevision,
+  triggerFamily,
   updateTrigger,
+
   updateTriggerVersioned,
   type ActiveWindow,
   type TriggerAction,
@@ -71,6 +73,19 @@ const COND_LABEL: Record<CondKind, string> = {
   video: "detecção por vídeo",
 };
 
+const FAMILIES = [
+  {
+    key: "agent" as const,
+    label: "Agentes",
+    hint: "proativos: cronos e métricas — acionam você e entram na fila de próximas ações.",
+  },
+  {
+    key: "command" as const,
+    label: "Comandos",
+    hint: "reativos: códigos de voz que esperam você falar — nunca aparecem como próxima ação.",
+  },
+];
+
 const DAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 type FormState = {
@@ -90,6 +105,7 @@ type FormState = {
   micOff: boolean;
   cameraOff: boolean;
   message: string;
+  outcome: string;
   journeyLog: boolean;
   customInstruction: string;
   customPlan: string | null;
@@ -121,6 +137,7 @@ const EMPTY_FORM: FormState = {
   micOff: false,
   cameraOff: false,
   message: "",
+  outcome: "",
   journeyLog: false,
   customInstruction: "",
   customPlan: null,
@@ -177,6 +194,7 @@ function buildAction(f: FormState): TriggerAction {
   if (f.chainEnableId)
     a.trigger_enable = { trigger_id: f.chainEnableId, enabled: f.chainEnableValue };
   if (f.message.trim()) a.message = f.message.trim();
+  if (f.outcome.trim()) a.intended_outcome = f.outcome.trim();
   return a;
 }
 
@@ -230,6 +248,7 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     micOff: a.sensors?.mic === false,
     cameraOff: a.sensors?.camera === false,
     message: a.message ?? "",
+    outcome: a.intended_outcome ?? "",
     journeyLog: !!a.journey_log_prompt,
     customInstruction: a.custom?.instruction ?? "",
     customPlan: a.custom?.plan ?? null,
@@ -462,10 +481,23 @@ export function TriggersSection() {
             construtor.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
-            {triggers.map((t, i) => {
+          <ul className="mt-3 space-y-4">
+            {FAMILIES.map((fam) => {
+              const items = triggers
+                .map((t, i) => ({ t, i }))
+                .filter(({ t }) => triggerFamily(t) === fam.key);
+              if (!items.length) return null;
+              return (
+                <li key={fam.key} className="list-none">
+                  <p className="font-display text-[10px] uppercase tracking-[0.18em] text-ember">
+                    {fam.label}
+                  </p>
+                  <p className="mb-2 text-[11px] text-muted-foreground">{fam.hint}</p>
+                  <ul className="space-y-2">
+            {items.map(({ t, i }) => {
               const s = stats[t.id];
               const win = describeWindow(t.active_window);
+              const armed = fam.key === "command" && t.enabled;
               return (
                 <li
                   key={t.id}
@@ -489,6 +521,19 @@ export function TriggersSection() {
                           {formatCountdown(
                             (nextChronosFireAt(t, sessionStartedAt, tick) as number) - tick,
                           )}
+                        </p>
+                      ) : null}
+                      {t.action?.intended_outcome ? (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          <span className="font-display uppercase tracking-wide text-ember">
+                            resultado pretendido ·{" "}
+                          </span>
+                          {t.action.intended_outcome}
+                        </p>
+                      ) : null}
+                      {armed ? (
+                        <p className="mt-0.5 text-[10px] uppercase tracking-wide text-ember">
+                          armado — esperando a frase
                         </p>
                       ) : null}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -563,6 +608,10 @@ export function TriggersSection() {
                   </div>
 
                   {versionsFor === t.id ? <RevisionList trigger={t} onDone={invalidate} /> : null}
+                </li>
+              );
+            })}
+                  </ul>
                 </li>
               );
             })}
@@ -742,6 +791,18 @@ export function TriggersSection() {
                 className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
               />
             </Field>
+
+            {/* RESULTADO PRETENDIDO — guardado no jsonb de action. */}
+            <Field label="resultado pretendido (opcional)">
+              <input
+                value={form.outcome}
+                onChange={(e) => setForm({ ...form, outcome: e.target.value })}
+                placeholder="ex.: ambiente em silêncio, só os ouvidos ligados"
+                className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              />
+            </Field>
+
+
 
             {/* ---------------------------------------- ELEMENTO PROMPT */}
             <Field label='prompt — "fale com a WiMi no disparo" (opcional)'>

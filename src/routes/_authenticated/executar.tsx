@@ -1,19 +1,17 @@
-// Palco de execução da WiMi.
-// Relógio ao vivo + timeline da jornada + manifestação in-place (voz + mic +
-// negociação) + log persistente. O JourneyAgent local dispara as manifestações
-// e o ManifestPanel é a interface viva. Toda ação relevante grava um
-// execution_event no banco.
+// Palco de execução da WiMi — AMBIENTE AGENTE.
+// Fusão Palco + Live: existe uma tela única (Live) com relógio, jornada,
+// registro colapsável e os sensores/atuadores. A aba Gatilhos separa
+// AGENTES (proativos) de COMANDOS (reativos). O ambiente reagente
+// (planejar/conversar) fica a um atalho de distância.
 
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, MessageCircle } from "lucide-react";
+import { Activity, CalendarPlus, MessageCircle } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { useActiveJourney, type JourneyBlock } from "@/hooks/useActiveJourney";
-import { LiveClock } from "@/components/executar/LiveClock";
 import { JourneyTimeline, type TimelineItem } from "@/components/executar/JourneyTimeline";
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
-import { ExecutionLogCard } from "@/components/executar/ExecutionLogCard";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { LivePanel } from "@/components/executar/LivePanel";
 import { TriggersSection } from "@/components/executar/TriggersSection";
@@ -23,6 +21,7 @@ import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
 
 type SeedSearch = { seed?: string };
+
 
 export const Route = createFileRoute("/_authenticated/executar")({
   validateSearch: (s: Record<string, unknown>): SeedSearch => ({
@@ -58,7 +57,9 @@ function ExecutarPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const seedProcessedRef = useRef(false);
-  const [tab, setTab] = useState<"palco" | "live" | "gatilhos">("palco");
+  // Não existem dois palcos: "live" é a tela única do ambiente agente.
+  const [tab, setTab] = useState<"live" | "gatilhos">("live");
+
 
   // Timeline com estado por bloco.
   const timeline: TimelineItem[] = useMemo(() => {
@@ -125,7 +126,7 @@ function ExecutarPage() {
         </div>
 
         <div className="mt-3 flex gap-2">
-          {(["palco", "live", "gatilhos"] as const).map((t) => (
+          {(["live", "gatilhos"] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -137,7 +138,7 @@ function ExecutarPage() {
                   : "text-muted-foreground ring-1 ring-border"
               }`}
             >
-              {t === "palco" ? "Palco" : t === "live" ? "Live" : "Gatilhos"}
+              {t === "live" ? "Live" : "Gatilhos"}
             </button>
           ))}
         </div>
@@ -146,50 +147,59 @@ function ExecutarPage() {
       {/* O painel Live fica montado durante toda a sessão: trocar de aba não pode
           matar os cronômetros do motor de gatilhos nem reiniciar a sessão. */}
       <div className={tab === "live" ? "px-4 py-5 pb-40" : "hidden"} aria-hidden={tab !== "live"}>
-        <LivePanel missionId={journey.current?.id ?? null} />
+        <LivePanel
+          missionId={journey.current?.id ?? null}
+          onOpenCommands={() => setTab("gatilhos")}
+          header={
+            <>
+              <BlockNowSummary journey={journey} />
+              {/* PONTE AGENTE → REAGENTE: o ambiente que espera o usuário. */}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = journey.current;
+                    const ctx = now
+                      ? `Estou executando "${now.title}" agora${
+                          journey.minutesToEndOfCurrent != null
+                            ? ` (faltam ${journey.minutesToEndOfCurrent}min)`
+                            : ""
+                        }. Fica de olho comigo — vou falar aqui do palco de execução.`
+                      : "Estou no palco de execução, entre blocos. Me acompanha?";
+                    setChatSeed(ctx);
+                    setChatOpen(true);
+                  }}
+                  className="inline-flex min-w-0 items-center gap-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember active:scale-95"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Conversar</span>
+                </button>
+                <Link
+                  to="/planejar"
+                  className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground active:scale-95"
+                >
+                  <CalendarPlus className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Criar plano</span>
+                </Link>
+              </div>
+
+              <div className="mt-4">
+                <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Timeline de hoje
+                </h2>
+                <JourneyTimeline items={timeline} />
+              </div>
+            </>
+          }
+        />
       </div>
 
       {tab === "gatilhos" ? (
         <div className="px-4 py-5 pb-40">
           <TriggersSection />
         </div>
-      ) : tab === "live" ? null : (
-        <div className="space-y-5 px-4 py-5 pb-40">
-          <section className="rounded-2xl border border-ember/30 bg-ember/5 p-4">
-            <LiveClock />
-            <BlockNowSummary journey={journey} />
-            {/* Trigger de conversa acompanhada — não sai da tela. */}
-            <button
-              type="button"
-              onClick={() => {
-                const now = journey.current;
-                const ctx = now
-                  ? `Estou executando "${now.title}" agora${
-                      journey.minutesToEndOfCurrent != null
-                        ? ` (faltam ${journey.minutesToEndOfCurrent}min)`
-                        : ""
-                    }. Fica de olho comigo — vou falar aqui do palco de execução.`
-                  : "Estou no palco de execução, entre blocos. Me acompanha?";
-                setChatSeed(ctx);
-                setChatOpen(true);
-              }}
-              className="mt-3 inline-flex items-center gap-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-xs text-ember active:scale-95"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Conversar sem sair do palco
-            </button>
-          </section>
+      ) : null}
 
-          <section>
-            <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              Timeline de hoje
-            </h2>
-            <JourneyTimeline items={timeline} />
-          </section>
-
-          <ExecutionLogCard />
-        </div>
-      )}
 
       {manifest ? (
         <ManifestPanel
