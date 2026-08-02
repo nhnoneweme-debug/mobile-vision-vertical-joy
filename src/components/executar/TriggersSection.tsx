@@ -500,12 +500,27 @@ export function TriggersSection() {
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <button
               type="button"
-              onClick={() => setSpeakOpen(true)}
+              onClick={() => {
+                setSpeakQuick(true);
+                setSpeakOpen(true);
+              }}
               className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-2 py-2 text-[11px] text-ember active:scale-95 sm:px-3 sm:text-xs"
+            >
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Rápido</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSpeakQuick(false);
+                setSpeakOpen(true);
+              }}
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-2 py-2 text-[11px] text-muted-foreground active:scale-95 sm:px-3 sm:text-xs"
             >
               <Sparkles className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Falando</span>
             </button>
+
             <button
               type="button"
               onClick={() => setGeneralOpen(true)}
