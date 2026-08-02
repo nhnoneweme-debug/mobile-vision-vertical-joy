@@ -363,6 +363,42 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           duration: 8000,
         });
       }
+      // ELEMENTO PROMPT — instrução em linguagem natural executada pela LLM.
+      if (action.prompt?.instruction) {
+        const elapsedMin = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000));
+        const contextText = [
+          `Sessão ao vivo há ${elapsedMin} min.`,
+          bufferRef.current.length
+            ? `Últimas falas transcritas:\n${bufferRef.current.slice(-8).join("\n")}`
+            : "Sem transcrição recente.",
+        ].join("\n");
+        void runTriggerPrompt({
+          data: {
+            instruction: action.prompt.instruction,
+            context: contextText,
+            trigger_name: trigger.name,
+          },
+        })
+          .then((res) => {
+            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
+            void persist({
+              mission_id: missionId ?? null,
+              kind: "journey_log",
+              channel: "foreground",
+              note: res.message,
+              meta: {
+                session_id: sessionId,
+                type: "trigger_prompt",
+                trigger_id: trigger.id,
+                instruction: action.prompt?.instruction,
+              },
+            });
+          })
+          .catch((e: unknown) => {
+            toast.error(e instanceof Error ? e.message : "A WiMi não conseguiu responder ao prompt.");
+          });
+      }
+
       if (action.journey_log_prompt) {
         setJourneyLog({
           sessionId,
