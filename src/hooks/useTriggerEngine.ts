@@ -84,8 +84,14 @@ export function useTriggerEngine(
           source_kind: sourceKind,
           source_ref: sourceRef,
           result: "suppressed_cooldown",
-          meta,
+          meta: {
+            ...meta,
+            action_results: [],
+            cooldown_seconds: t.cooldown_seconds,
+            cooldown_remaining_ms: (t.cooldown_seconds ?? 30) * 1000 - (now - last),
+          },
         }).catch(() => {});
+
         onFired?.();
         return;
       }
