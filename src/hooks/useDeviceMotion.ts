@@ -57,6 +57,9 @@ export function useDeviceMotionAggregator({
 }: Options) {
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<PermissionState>("unknown");
+  const [inIframe, setInIframe] = useState(false);
+  // Diagnóstico honesto: quantos eventos de sensor chegaram de verdade.
+  const [diag, setDiag] = useState({ eventsPerSec: 0, totalEvents: 0, blocked: false });
   // Leitura ao vivo (só UI — nada disso vai pro banco): magnitude instantânea,
   // nível 0..1 suavizado e orientação dominante reagindo em tempo real.
   const [live, setLive] = useState<{
@@ -91,6 +94,12 @@ export function useDeviceMotionAggregator({
     gamma: null as number | null,
   });
   const lastPaintRef = useRef(0);
+  const eventCountRef = useRef(0);
+  const totalEventsRef = useRef(0);
+  const prevOrientRef = useRef<{ beta: number | null; gamma: number | null }>({
+    beta: null,
+    gamma: null,
+  });
   const onAggRef = useRef(onAggregate);
   const onSpikeRef = useRef(onSpike);
   onAggRef.current = onAggregate;
@@ -101,6 +110,11 @@ export function useDeviceMotionAggregator({
     const has = "DeviceMotionEvent" in window || "DeviceOrientationEvent" in window;
     setSupported(has);
     if (!has) setPermission("unsupported");
+    try {
+      setInIframe(window.self !== window.top);
+    } catch {
+      setInIframe(true);
+    }
   }, []);
 
   const requestPermission = useCallback(async () => {
@@ -109,6 +123,8 @@ export function useDeviceMotionAggregator({
     const O = (window as unknown as { DeviceOrientationEvent?: OrientationEventCtor })
       .DeviceOrientationEvent;
     try {
+      // iOS: precisa acontecer DENTRO do gesto do usuário — por isso este
+      // método é chamado direto no onClick do botão "Ativar".
       if (M?.requestPermission) {
         const r = await M.requestPermission();
         if (r !== "granted") {
@@ -144,11 +160,15 @@ export function useDeviceMotionAggregator({
       accelN: 0,
       startedAt: Date.now(),
     };
+    eventCountRef.current = 0;
+    totalEventsRef.current = 0;
+    prevOrientRef.current = { beta: null, gamma: null };
+    setDiag({ eventsPerSec: 0, totalEvents: 0, blocked: false });
 
-    // Repinta a UI no máximo ~10x/s: tempo real na tela, sem travar o render.
+    // Repinta a UI no máximo ~20x/s: tempo real na tela, sem travar o render.
     const paint = () => {
       const now = Date.now();
-      if (now - lastPaintRef.current < 100) return;
+      if (now - lastPaintRef.current < 50) return;
       lastPaintRef.current = now;
       setLive({ ...liveRef.current, updatedAt: now });
     };
@@ -164,9 +184,29 @@ export function useDeviceMotionAggregator({
       }
     }, 250);
 
+    // Contador de eventos/s + detecção honesta de bloqueio (iframe sem
+    // Permissions-Policy, contexto inseguro etc.).
+    const startedAt = Date.now();
+    const diagTimer = window.setInterval(() => {
+      if (cancelled) return;
+      const eps = eventCountRef.current;
+      eventCountRef.current = 0;
+      setDiag({
+        eventsPerSec: eps,
+        totalEvents: totalEventsRef.current,
+        blocked: totalEventsRef.current === 0 && Date.now() - startedAt > 2500,
+      });
+    }, 1000);
+
+    const bump = () => {
+      eventCountRef.current += 1;
+      totalEventsRef.current += 1;
+    };
+
     const onOrientation = (ev: DeviceOrientationEvent) => {
       const b = bucket.current;
       if (ev.alpha == null && ev.beta == null && ev.gamma == null) return;
+      bump();
       b.n += 1;
       b.alpha += ev.alpha ?? 0;
       b.beta += ev.beta ?? 0;
@@ -174,6 +214,20 @@ export function useDeviceMotionAggregator({
       b.lastAlpha = ev.alpha;
       b.lastBeta = ev.beta;
       b.lastGamma = ev.gamma;
+
+      // Alguns aparelhos/navegadores só entregam deviceorientation (sem
+      // acceleration útil). Nesses casos a variação angular alimenta a barra,
+      // senão o indicador ficaria morto mesmo com o sensor vivo.
+      const prev = prevOrientRef.current;
+      if (prev.beta != null && prev.gamma != null && ev.beta != null && ev.gamma != null) {
+        const d = Math.abs(ev.beta - prev.beta) + Math.abs(ev.gamma - prev.gamma);
+        if (d > 0.4) {
+          const angleLevel = Math.min(1, d / 25);
+          if (angleLevel > liveRef.current.level) liveRef.current.level = angleLevel;
+        }
+      }
+      prevOrientRef.current = { beta: ev.beta, gamma: ev.gamma };
+
       liveRef.current.beta = ev.beta;
       liveRef.current.gamma = ev.gamma;
       liveRef.current.dominant = dominantFrom(ev.beta, ev.gamma);
@@ -183,15 +237,16 @@ export function useDeviceMotionAggregator({
     const onMotion = (ev: DeviceMotionEvent) => {
       const a = ev.acceleration ?? ev.accelerationIncludingGravity;
       if (!a) return;
-      const withGravity = !ev.acceleration;
+      bump();
+      const hasNet = !!(ev.acceleration && (a.x || a.y || a.z));
       const mag = Math.sqrt((a.x ?? 0) ** 2 + (a.y ?? 0) ** 2 + (a.z ?? 0) ** 2);
-      const net = withGravity ? Math.abs(mag - 9.81) : mag;
+      const net = hasNet ? mag : Math.abs(mag - 9.81);
       const b = bucket.current;
       b.accelSum += net;
       b.accelN += 1;
       if (net > b.peak) b.peak = net;
       liveRef.current.magnitude = net;
-      liveRef.current.level = Math.min(1, liveRef.current.level * 0.7 + (net / 12) * 0.6);
+      liveRef.current.level = Math.min(1, Math.max(liveRef.current.level * 0.7, net / 12));
       paint();
       const now = Date.now();
       if (net >= spikeThreshold && now - lastSpikeRef.current > 4000) {
@@ -236,18 +291,21 @@ export function useDeviceMotionAggregator({
       };
     };
 
-    window.addEventListener("deviceorientation", onOrientation);
-    window.addEventListener("devicemotion", onMotion);
+    window.addEventListener("deviceorientation", onOrientation, true);
+    window.addEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
+    window.addEventListener("devicemotion", onMotion, true);
     const id = window.setInterval(flush, windowMs);
 
     return () => {
       cancelled = true;
-      window.removeEventListener("deviceorientation", onOrientation);
-      window.removeEventListener("devicemotion", onMotion);
+      window.removeEventListener("deviceorientation", onOrientation, true);
+      window.removeEventListener("deviceorientationabsolute", onOrientation as EventListener, true);
+      window.removeEventListener("devicemotion", onMotion, true);
       window.clearInterval(id);
       window.clearInterval(decay);
+      window.clearInterval(diagTimer);
     };
   }, [enabled, supported, spikeThreshold, windowMs]);
 
-  return { supported, permission, requestPermission, live, error };
+  return { supported, permission, requestPermission, live, error, diag, inIframe };
 }

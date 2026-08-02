@@ -2576,6 +2576,92 @@ export type Database = {
         }
         Relationships: []
       }
+      trigger_definitions: {
+        Row: {
+          action: Json
+          condition: Json
+          cooldown_seconds: number
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          position: number
+          trigger_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action?: Json
+          condition?: Json
+          cooldown_seconds?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          position?: number
+          trigger_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: Json
+          condition?: Json
+          cooldown_seconds?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          position?: number
+          trigger_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trigger_firings: {
+        Row: {
+          created_at: string
+          fired_at: string
+          id: string
+          meta: Json
+          result: string
+          source_kind: string | null
+          source_ref: string | null
+          trigger_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fired_at?: string
+          id?: string
+          meta?: Json
+          result?: string
+          source_kind?: string | null
+          source_ref?: string | null
+          trigger_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fired_at?: string
+          id?: string
+          meta?: Json
+          result?: string
+          source_kind?: string | null
+          source_ref?: string | null
+          trigger_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trigger_firings_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "trigger_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string

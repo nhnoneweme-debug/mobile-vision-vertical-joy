@@ -19,7 +19,11 @@ import {
   Waves,
   WifiOff,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { useTriggerEngine } from "@/hooks/useTriggerEngine";
+import { listTriggers, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
 import { useDeviceMotionAggregator, type MotionAggregate } from "@/hooks/useDeviceMotion";
 import { useCamera } from "@/hooks/useCamera";
 import { useActuators, type ActuatorConfig } from "@/providers/ActuatorsProvider";
@@ -65,6 +69,9 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [lang, setLang] = useState<string>("pt-BR");
+  const [lastBlock, setLastBlock] = useState<{ id: string; text: string } | null>(null);
+  const [lastSpike, setLastSpike] = useState<{ at: string; magnitude: number } | null>(null);
+  const [sessionStartedAt] = useState(() => Date.now());
 
   const actuators = useActuators();
   const wake = useWakeLockContext();
@@ -135,6 +142,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       ...prev.slice(-40),
       { id: blockId, text, saved: false, revision: 0, at: endedAt },
     ]);
+    setLastBlock({ id: blockId, text });
     void persist({
       mission_id: missionId ?? null,
       kind: "live_transcript",
@@ -265,6 +273,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   const onSpike = useCallback(
     (s: { at: string; magnitude: number }) => {
       setSpikes((n) => n + 1);
+      setLastSpike(s);
       void persist({
         mission_id: missionId ?? null,
         kind: "sensor_reading",
@@ -295,6 +304,72 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     const ok = await motion.requestPermission();
     if (ok || motion.permission === "granted" || motion.permission === "unknown") setMotionOn(true);
   }, [motion, motionOn]);
+
+  // -------------------------------------------------- MOTOR DE GATILHOS
+  const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+
+  const applyAction = useCallback(
+    (action: TriggerAction, trigger: TriggerDefinition) => {
+      if (action.stop_actuators) actuators.stopAll();
+      if (action.vibrate) {
+        actuators.setVibrationConfig({
+          onSec: action.vibrate.onSec,
+          everySec: action.vibrate.everySec ?? 30,
+          mode: action.vibrate.continuous ? "continuous" : "timed",
+        });
+        actuators.setVibration(true);
+      }
+      if (action.audio_tone) {
+        actuators.setAudioConfig({
+          onSec: action.audio_tone.onSec,
+          everySec: action.audio_tone.everySec ?? 60,
+          mode: action.audio_tone.continuous ? "continuous" : "timed",
+        });
+        actuators.setAudio(true);
+      }
+      if (action.sensors) {
+        const { mic, camera: cam, motion: mot } = action.sensors;
+        if (mic === false && speech.listening) {
+          speech.stop();
+          flushTranscript();
+        }
+        if (mic === true && !speech.listening) speech.start();
+        if (cam === false) camera.stop();
+        if (cam === true && !camera.live) void camera.toggle();
+        if (mot === false) setMotionOn(false);
+        if (mot === true) void toggleMotion();
+      }
+      toast(`gatilho: ${trigger.name}`, {
+        description: action.message ?? undefined,
+      });
+      void persist({
+        mission_id: missionId ?? null,
+        kind: "sensor_reading",
+        channel: "foreground",
+        note: `gatilho disparado: ${trigger.name}`,
+        meta: {
+          session_id: sessionId,
+          type: "trigger_fired",
+          trigger_id: trigger.id,
+          trigger_name: trigger.name,
+        },
+      });
+    },
+    [actuators, camera, flushTranscript, missionId, persist, sessionId, speech, toggleMotion],
+  );
+
+  useTriggerEngine(
+    (triggersQ.data ?? []) as TriggerDefinition[],
+    {
+      active: !offline,
+      sessionStartedAt,
+      lastBlock,
+      lastSpike,
+      beta: motionOn ? motion.live.beta : null,
+      gamma: motionOn ? motion.live.gamma : null,
+    },
+    { applyAction },
+  );
 
   const pauseAll = useCallback(() => {
     if (speech.listening) {
@@ -577,8 +652,17 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
               atividade ao vivo · β {motion.live.beta?.toFixed(0) ?? "—"}° / γ{" "}
-              {motion.live.gamma?.toFixed(0) ?? "—"}°
+              {motion.live.gamma?.toFixed(0) ?? "—"}° · recebendo {motion.diag.eventsPerSec}{" "}
+              eventos/s ({motion.diag.totalEvents} no total)
             </p>
+            {motion.diag.blocked ? (
+              <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-300">
+                Nenhum evento de sensor chegou.{" "}
+                {motion.inIframe
+                  ? "Esta tela está dentro de um iframe de preview, que costuma bloquear acelerômetro/giroscópio. Abra o app em aba própria ou instale como PWA."
+                  : "Verifique se o dispositivo tem giroscópio e se o site está em HTTPS."}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

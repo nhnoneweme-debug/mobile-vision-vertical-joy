@@ -16,6 +16,7 @@ import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutionLogCard } from "@/components/executar/ExecutionLogCard";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { LivePanel } from "@/components/executar/LivePanel";
+import { TriggersSection } from "@/components/executar/TriggersSection";
 import { ActuatorsIndicator } from "@/components/executar/ActuatorsIndicator";
 import { formatMomentLabel, getClientMoment } from "@/lib/client-moment";
 import { logExecutionEvent } from "@/lib/execution.functions";
@@ -57,7 +58,7 @@ function ExecutarPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const seedProcessedRef = useRef(false);
-  const [tab, setTab] = useState<"palco" | "live">("palco");
+  const [tab, setTab] = useState<"palco" | "live" | "gatilhos">("palco");
 
   // Timeline com estado por bloco.
   const timeline: TimelineItem[] = useMemo(() => {
@@ -124,7 +125,7 @@ function ExecutarPage() {
         </div>
 
         <div className="mt-3 flex gap-2">
-          {(["palco", "live"] as const).map((t) => (
+          {(["palco", "live", "gatilhos"] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -136,13 +137,17 @@ function ExecutarPage() {
                   : "text-muted-foreground ring-1 ring-border"
               }`}
             >
-              {t === "palco" ? "Palco" : "Live"}
+              {t === "palco" ? "Palco" : t === "live" ? "Live" : "Gatilhos"}
             </button>
           ))}
         </div>
       </header>
 
-      {tab === "live" ? (
+      {tab === "gatilhos" ? (
+        <div className="px-4 py-5 pb-40">
+          <TriggersSection />
+        </div>
+      ) : tab === "live" ? (
         <div className="px-4 py-5 pb-40">
           <LivePanel missionId={journey.current?.id ?? null} />
         </div>
