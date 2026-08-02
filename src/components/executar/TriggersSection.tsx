@@ -1227,6 +1227,7 @@ export function TriggersSection() {
               id: null,
             });
             setSpeakOpen(false);
+            setSpeakQuick(false);
             setOpen(true);
             toast("Rascunho pronto — revise e salve.");
           }}
