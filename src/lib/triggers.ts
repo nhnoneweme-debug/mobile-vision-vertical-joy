@@ -545,6 +545,13 @@ export function actionElements(
   if (act.journey_log_prompt) parts.push("abrir log de jornada");
   if (act.custom) parts.push(`ação personalizada: ${act.custom.plan ?? act.custom.instruction}`);
   if (act.prompt?.instruction) parts.push(`Prompt("${act.prompt.instruction}")`);
+  if (act.free_interaction)
+    parts.push(
+      act.free_interaction.instruction
+        ? `interação livre: ${act.free_interaction.instruction}`
+        : "interação livre com a WiMi",
+    );
+
   if (act.trigger_fire?.trigger_id)
     parts.push(`acionar "${names[act.trigger_fire.trigger_id] ?? "outro gatilho"}"`);
   if (act.trigger_enable?.trigger_id)
