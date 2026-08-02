@@ -59,7 +59,6 @@ const LANG_KEY = "wimi.live.lang.v1";
 /** silêncio que dá o turno à WiMi no Live Dinâmico */
 const DYNAMIC_SILENCE_MS = 8_000;
 
-
 const LANGS = [
   { code: "pt-BR", label: "PT" },
   { code: "en-US", label: "EN" },
@@ -115,7 +114,11 @@ export function LivePanel({
   } | null>(null);
 
   const emitEvent = useCallback((name: LiveEventName, meta?: Record<string, unknown>) => {
-    setLiveEvent({ name, ref: `${name}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`, meta });
+    setLiveEvent({
+      name,
+      ref: `${name}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+      meta,
+    });
   }, []);
 
   // Um único relógio de sessão para motor, overlay e Studio.
@@ -139,7 +142,6 @@ export function LivePanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSpeechAtRef = useRef<number>(Date.now());
   const [liveLine, setLiveLine] = useState("");
-
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
 
@@ -236,7 +238,6 @@ export function LivePanel({
     [flushTranscript],
   );
 
-
   const speech = useSpeechToText(onFinalText, { lang });
 
   // Detector de silêncio do Live Dinâmico: passado o limite sem fala nova (e
@@ -255,8 +256,6 @@ export function LivePanel({
     }, 1000);
     return () => window.clearInterval(id);
   }, [actuators.speaking, dynamic, emitEvent, speech.listening]);
-
-
 
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
@@ -505,9 +504,7 @@ export function LivePanel({
               result: "executed",
               meta: {
                 type: "free_interaction",
-                action_results: [
-                  { action: "interação livre", success: true, detail: res.message },
-                ],
+                action_results: [{ action: "interação livre", success: true, detail: res.message }],
               },
             }).catch(() => {});
             void persist({
@@ -538,7 +535,6 @@ export function LivePanel({
             }).catch(() => {});
           });
       }
-
 
       if (action.journey_log_prompt) {
         ok("abrir log de jornada");
@@ -619,7 +615,6 @@ export function LivePanel({
     },
     { applyAction },
   );
-
 
   const pauseAll = useCallback(() => {
     if (speech.listening) {
@@ -825,7 +820,9 @@ export function LivePanel({
             dynamic ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
           }`}
         >
-          <Radio className={`h-4 w-4 shrink-0 ${dynamic ? "text-ember" : "text-muted-foreground"}`} />
+          <Radio
+            className={`h-4 w-4 shrink-0 ${dynamic ? "text-ember" : "text-muted-foreground"}`}
+          />
           <span className="min-w-0 flex-1">
             <span className="block text-sm text-foreground">Live dinâmico</span>
             <span className="block text-[11px] text-muted-foreground">
@@ -842,8 +839,6 @@ export function LivePanel({
             {dynamic ? "on" : "off"}
           </span>
         </button>
-
-
 
         {transcriptView}
 

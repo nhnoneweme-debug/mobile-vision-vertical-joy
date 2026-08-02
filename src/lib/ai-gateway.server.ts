@@ -45,7 +45,6 @@ function normalizeRequest(args: Record<string, unknown>): Record<string, unknown
 
 const remapMaxTokens = normalizeRequest;
 
-
 export function createLovableAiGatewayProvider(lovableApiKey: string) {
   return createOpenAICompatible({
     name: "lovable",
@@ -82,11 +81,18 @@ function chooseProvider(lovableApiKey?: string) {
 
 /** Detecta erro de saldo (402) ou rate limit (429) para acionar o fallback. */
 function isCapacityError(err: unknown): boolean {
-  const e = err as { statusCode?: number; status?: number; response?: { status?: number }; message?: string };
+  const e = err as {
+    statusCode?: number;
+    status?: number;
+    response?: { status?: number };
+    message?: string;
+  };
   const status = e?.statusCode ?? e?.status ?? e?.response?.status;
   if (status === 402 || status === 429) return true;
   const msg = String(e?.message ?? "");
-  return /(\b402\b|\b429\b|rate.?limit|too many requests|payment required|insufficient|quota)/i.test(msg);
+  return /(\b402\b|\b429\b|rate.?limit|too many requests|payment required|insufficient|quota)/i.test(
+    msg,
+  );
 }
 
 /**

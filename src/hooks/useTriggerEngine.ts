@@ -34,7 +34,6 @@ export type LiveSignals = {
   event?: { name: string; ref: string; meta?: Record<string, unknown> } | null;
 };
 
-
 export type TriggerControls = {
   applyAction: (
     action: TriggerAction,

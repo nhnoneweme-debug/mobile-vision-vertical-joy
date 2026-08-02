@@ -59,7 +59,6 @@ export type TriggerAction = {
   intended_outcome?: string;
 };
 
-
 /**
  * TAXONOMIA DERIVADA DA CONDIÇÃO — sem coluna nova.
  * - "command" (reativo): palavra-chave de áudio. Espera o usuário falar.

@@ -86,7 +86,6 @@ type ActuatorsCtx = {
   /** toque curto de turno (turn-taking) — independe dos loops de atuador */
   chime: (sound?: ActuatorSound) => void;
   stopAll: () => void;
-
 };
 
 const STORAGE_KEY = "wimi.actuators.v1";
@@ -309,7 +308,6 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     },
     [audioSupported],
   );
-
 
   // Loop da vibração.
   useEffect(() => {
