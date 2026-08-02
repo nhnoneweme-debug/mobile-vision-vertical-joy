@@ -14,15 +14,13 @@ export type TriggerCondition =
   | { mode: "every"; seconds: number }
   | { mode: "after_session"; seconds: number }
   | { source: "audio"; keyword: string }
-  | { source: "motion"; kind: "spike"; min_magnitude: number }
-  | { source: "motion"; kind: "angle_change"; min_degrees: number }
   | { source: "video" };
 
 export type TriggerAction = {
   vibrate?: { onSec: number; everySec?: number; continuous?: boolean };
   audio_tone?: { onSec: number; everySec?: number; continuous?: boolean };
   stop_actuators?: boolean;
-  sensors?: { mic?: boolean; camera?: boolean; motion?: boolean };
+  sensors?: { mic?: boolean; camera?: boolean };
   message?: string;
   /** Abre o Log de Jornada ("o que você está executando agora?"). */
   journey_log_prompt?: boolean;
@@ -279,7 +277,7 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
     trigger_type: "event",
     condition: { source: "audio", keyword: "código off" },
     action: {
-      sensors: { camera: false, motion: false },
+      sensors: { camera: false },
       stop_actuators: true,
       message: "sensores desligados — microfone segue ouvindo.",
     },
@@ -292,7 +290,7 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
     trigger_type: "event",
     condition: { source: "audio", keyword: "código off total" },
     action: {
-      sensors: { mic: false, camera: false, motion: false },
+      sensors: { mic: false, camera: false },
       stop_actuators: true,
       message: "tudo desligado — inclusive o microfone.",
     },
@@ -470,7 +468,7 @@ export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
       enabled: false,
       trigger_type: "event",
       condition: { source: "audio", keyword: "código off" },
-      action: { sensors: { mic: false, camera: false, motion: false }, stop_actuators: true },
+      action: { sensors: { mic: false, camera: false }, stop_actuators: true },
       cooldown_seconds: 10,
     },
   },
@@ -483,7 +481,7 @@ export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
       enabled: false,
       trigger_type: "event",
       condition: { source: "audio", keyword: "só ouvidos" },
-      action: { sensors: { camera: false, motion: false } },
+      action: { sensors: { camera: false } },
       cooldown_seconds: 10,
     },
   },
