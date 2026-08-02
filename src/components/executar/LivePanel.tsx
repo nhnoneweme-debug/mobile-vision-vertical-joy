@@ -1,14 +1,19 @@
-// Painel LIVE do Executando — ouvidos (transcrição contínua), giroscópio
-// agregado e atuadores (vibração + áudio) com padrão temporal persistente.
+// Painel LIVE do Executando — ouvidos (transcrição contínua multilíngue e
+// editável), giroscópio (leitura em tempo real, persistência agregada),
+// atuadores (temporizado ou indefinido) e câmera ao vivo.
 // Tudo que é persistido vira evento append-only em execution_events.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Camera,
+  CameraOff,
   Ear,
   Maximize2,
   Mic,
   MicOff,
+  Pencil,
+  SwitchCamera,
   Vibrate,
   Volume2,
   Waves,
@@ -16,6 +21,7 @@ import {
 } from "lucide-react";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useDeviceMotionAggregator, type MotionAggregate } from "@/hooks/useDeviceMotion";
+import { useCamera } from "@/hooks/useCamera";
 import { useActuators, type ActuatorConfig } from "@/providers/ActuatorsProvider";
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
@@ -23,33 +29,73 @@ import { StationMode } from "./StationMode";
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
+const LANG_KEY = "wimi.live.lang.v1";
 
-function newSessionId() {
+const LANGS = [
+  { code: "pt-BR", label: "PT" },
+  { code: "en-US", label: "EN" },
+  { code: "es-ES", label: "ES" },
+] as const;
+
+type TranscriptBlock = {
+  id: string;
+  text: string;
+  saved: boolean;
+  revision: number;
+  at: number;
+};
+
+function newId(prefix: string) {
   try {
     return crypto.randomUUID();
   } catch {
-    return `sess-${Date.now()}`;
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }
 }
 
 export function LivePanel({ missionId }: { missionId?: string | null }) {
-  const [sessionId] = useState(() => newSessionId());
+  const [sessionId] = useState(() => newId("sess"));
   const [station, setStation] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [blocksSaved, setBlocksSaved] = useState(0);
   const [spikes, setSpikes] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [motionOn, setMotionOn] = useState(false);
-  const [lastBlock, setLastBlock] = useState<string | null>(null);
+  const [blocks, setBlocks] = useState<TranscriptBlock[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [lang, setLang] = useState<string>("pt-BR");
 
   const actuators = useActuators();
   const wake = useWakeLockContext();
+  const camera = useCamera();
 
   const bufferRef = useRef<string[]>([]);
   const blockStartRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
   const flushTimerRef = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [liveLine, setLiveLine] = useState("");
+
+  const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LANG_KEY);
+      if (stored && LANGS.some((l) => l.code === stored)) setLang(stored);
+    } catch {
+      /* storage opcional */
+    }
+  }, []);
+
+  const changeLang = useCallback((code: string) => {
+    setLang(code);
+    try {
+      localStorage.setItem(LANG_KEY, code);
+    } catch {
+      /* storage opcional */
+    }
+  }, []);
 
   useEffect(() => {
     const sync = () => setOffline(typeof navigator !== "undefined" && !navigator.onLine);
@@ -81,9 +127,14 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     const startedAt = blockStartRef.current;
     bufferRef.current = [];
     blockStartRef.current = null;
+    setLiveLine("");
     if (!text) return;
     const endedAt = Date.now();
-    setLastBlock(text);
+    const blockId = newId("blk");
+    setBlocks((prev) => [
+      ...prev.slice(-40),
+      { id: blockId, text, saved: false, revision: 0, at: endedAt },
+    ]);
     void persist({
       mission_id: missionId ?? null,
       kind: "live_transcript",
@@ -91,26 +142,41 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       note: text.slice(0, 4000),
       meta: {
         session_id: sessionId,
+        block_id: blockId,
+        revision: 0,
+        lang,
         block_started_at: new Date(startedAt ?? endedAt).toISOString(),
         block_ended_at: new Date(endedAt).toISOString(),
         chars: text.length,
       },
     }).then((ok) => {
-      if (ok) setBlocksSaved((n) => n + 1);
+      if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
     });
-  }, [missionId, persist, sessionId]);
+  }, [lang, missionId, persist, sessionId]);
 
   const onFinalText = useCallback(
     (text: string) => {
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
       bufferRef.current.push(text);
+      setLiveLine(bufferRef.current.join(" "));
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
     },
     [flushTranscript],
   );
 
-  const speech = useSpeechToText(onFinalText);
+  const speech = useSpeechToText(onFinalText, { lang });
+
+  const currentLine = useMemo(
+    () => `${liveLine} ${speech.interim}`.trim(),
+    [liveLine, speech.interim],
+  );
+
+  // Rolagem automática enquanto a fala acontece.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el && editingId == null) el.scrollTop = el.scrollHeight;
+  }, [blocks, currentLine, editingId]);
 
   // Flush periódico (~15s) enquanto estiver ouvindo.
   useEffect(() => {
@@ -131,6 +197,44 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       speech.start();
     }
   }, [flushTranscript, speech]);
+
+  // Edição inline: a correção humana prevalece. O modelo de eventos é
+  // append-only, então gravamos um novo evento de correção referenciando o
+  // bloco original (que continua no log, preservado).
+  const startEdit = useCallback((b: TranscriptBlock) => {
+    setEditingId(b.id);
+    setDraft(b.text);
+  }, []);
+
+  const commitEdit = useCallback(() => {
+    const id = editingId;
+    if (!id) return;
+    const next = draft.trim();
+    setEditingId(null);
+    const target = blocks.find((b) => b.id === id);
+    if (!target || !next || next === target.text) return;
+    const revision = target.revision + 1;
+    setBlocks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, text: next, revision, saved: !b.saved ? b.saved : b.saved } : b)),
+    );
+    if (!target.saved) return; // ainda não persistido: o texto corrigido é o que será salvo
+    void persist({
+      mission_id: missionId ?? null,
+      kind: "live_transcript",
+      channel: "manual",
+      note: next.slice(0, 4000),
+      meta: {
+        session_id: sessionId,
+        block_id: id,
+        corrects_block_id: id,
+        revision,
+        lang,
+        source: "human_edit",
+        previous_text: target.text.slice(0, 2000),
+        corrected_at: new Date().toISOString(),
+      },
+    });
+  }, [blocks, draft, editingId, lang, missionId, persist, sessionId]);
 
   const onAggregate = useCallback(
     (a: MotionAggregate) => {
@@ -197,17 +301,72 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     }
     setMotionOn(false);
     actuators.stopAll();
-  }, [actuators, flushTranscript, speech]);
+    camera.stop();
+  }, [actuators, camera, flushTranscript, speech]);
 
-  const preview = useMemo(() => speech.preview || lastBlock || "", [speech.preview, lastBlock]);
-
-  // Parada real ao desmontar: nada continua capturando em segundo plano.
   useEffect(() => {
     return () => {
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       if (flushTimerRef.current) window.clearInterval(flushTimerRef.current);
     };
   }, []);
+
+  const transcriptView = (
+    <div
+      ref={scrollRef}
+      className="mt-3 max-h-40 min-h-[72px] space-y-1 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
+    >
+      {blocks.length === 0 && !currentLine ? (
+        <p className="text-muted-foreground">
+          {speech.listening ? "ouvindo…" : "nenhuma transcrição ainda"}
+        </p>
+      ) : null}
+      {blocks.map((b) =>
+        editingId === b.id ? (
+          <textarea
+            key={b.id}
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                commitEdit();
+              }
+              if (e.key === "Escape") setEditingId(null);
+            }}
+            rows={2}
+            className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
+          />
+        ) : (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => startEdit(b)}
+            className="block w-full text-left text-muted-foreground active:opacity-70"
+          >
+            {b.text}
+            {b.revision > 0 ? (
+              <span className="ml-1 text-[10px] uppercase tracking-wide text-ember">corrigido</span>
+            ) : null}
+            {!b.saved ? <span className="ml-1 text-[10px] text-amber-400">não salvo</span> : null}
+          </button>
+        ),
+      )}
+      {currentLine ? <p className="text-foreground">{currentLine}</p> : null}
+    </div>
+  );
+
+  const cameraVideo = (
+    <video
+      ref={camera.attach}
+      muted
+      playsInline
+      autoPlay
+      className="h-full w-full rounded-xl object-cover"
+    />
+  );
 
   if (station) {
     return (
@@ -217,14 +376,19 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         onToggleListening={toggleListening}
         motionActive={motionOn && motion.supported}
         motionMagnitude={motion.live.magnitude}
+        motionLevel={motion.live.level}
         motionDominant={motion.live.dominant}
         vibrationOn={actuators.vibrationOn}
         audioOn={actuators.audioOn}
         wakeActive={wake.active}
-        transcriptPreview={preview}
+        transcriptLines={[...blocks.slice(-3).map((b) => b.text), currentLine].filter(Boolean)}
         blocksSaved={blocksSaved}
         spikes={spikes}
         offline={offline}
+        cameraLive={camera.live}
+        cameraNode={camera.live ? cameraVideo : null}
+        onToggleCamera={() => void camera.toggle()}
+        onFlipCamera={() => void camera.flip()}
         onExit={() => setStation(false)}
         onPauseAll={pauseAll}
       />
@@ -275,17 +439,99 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           </button>
         </div>
 
-        <div className="mt-3 min-h-[42px] rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] text-foreground">
-          {preview ? (
-            <span className="line-clamp-2">{preview}</span>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">idioma</span>
+          {LANGS.map((l) => (
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => changeLang(l.code)}
+              aria-pressed={lang === l.code}
+              className={`rounded-full border px-3 py-1 text-[11px] active:scale-95 ${
+                lang === l.code
+                  ? "border-ember bg-ember/15 text-ember"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+
+        {transcriptView}
+
+        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Pencil className="h-3 w-3" /> toque em qualquer linha para corrigir — o mic continua
+          ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
+        </p>
+      </section>
+
+      {/* CÂMERA */}
+      <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              <Camera className="h-3.5 w-3.5" /> Câmera
+            </h3>
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              {camera.status === "unsupported"
+                ? "Câmera indisponível neste navegador."
+                : camera.status === "requesting"
+                  ? "Pedindo permissão de câmera…"
+                  : camera.status === "denied"
+                    ? "Permissão negada. Libere a câmera nas configurações do site."
+                    : camera.live
+                      ? `Ao vivo · ${camera.facing === "user" ? "frontal" : "traseira"}`
+                      : "Desligada. Nada é gravado nem enviado."}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            {camera.live ? (
+              <button
+                type="button"
+                onClick={() => void camera.flip()}
+                aria-label="Alternar câmera"
+                className="rounded-full border border-border p-3 text-muted-foreground active:scale-95"
+              >
+                <SwitchCamera className="h-5 w-5" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void camera.toggle()}
+              disabled={camera.status === "unsupported"}
+              aria-pressed={camera.live}
+              className={`flex h-14 w-14 items-center justify-center rounded-full border disabled:opacity-40 active:scale-95 ${
+                camera.live
+                  ? "border-ember bg-ember/20 text-ember"
+                  : "border-border bg-charcoal-800 text-muted-foreground"
+              }`}
+            >
+              {camera.live ? <Camera className="h-6 w-6" /> : <CameraOff className="h-6 w-6" />}
+            </button>
+          </div>
+        </div>
+
+        {camera.error ? (
+          <p className="mt-2 text-[11px] text-destructive">{camera.error}</p>
+        ) : null}
+
+        <div className="relative mt-3 aspect-video overflow-hidden rounded-xl border border-border/60 bg-charcoal-950/60">
+          {camera.live ? (
+            <>
+              {cameraVideo}
+              <span className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-charcoal-950/80 px-2 py-1 text-[10px] uppercase tracking-wide text-ember">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ember" /> câmera ativa
+              </span>
+            </>
           ) : (
-            <span className="text-muted-foreground">
-              {speech.listening ? "ouvindo…" : "nenhuma transcrição ainda"}
-            </span>
+            <p className="flex h-full items-center justify-center text-[12px] text-muted-foreground">
+              preview desligado
+            </p>
           )}
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {blocksSaved} bloco(s) salvos nesta sessão{saving ? " · salvando…" : ""}
+          Só visão ao vivo: nenhum quadro é salvo nem enviado a modelo nesta etapa.
         </p>
       </section>
 
@@ -320,8 +566,25 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             {motionOn ? "Ativo" : "Ativar"}
           </button>
         </div>
+
+        {motionOn ? (
+          <div className="mt-3">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-charcoal-950/70">
+              <div
+                className="h-full rounded-full bg-ember transition-[width] duration-100"
+                style={{ width: `${Math.round(motion.live.level * 100)}%` }}
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              atividade ao vivo · β {motion.live.beta?.toFixed(0) ?? "—"}° / γ{" "}
+              {motion.live.gamma?.toFixed(0) ?? "—"}°
+            </p>
+          </div>
+        ) : null}
+
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Agregado a cada 30s. Nada de 60Hz cru no banco — só média/orientação dominante e picos.
+          Leitura em tempo real na tela; no banco só o agregado de 30s, orientação dominante e
+          picos.
         </p>
       </section>
 
@@ -409,6 +672,7 @@ function ActuatorRow({
   onToggle: () => void;
   onConfig: (c: ActuatorConfig) => void;
 }) {
+  const continuous = config.mode === "continuous";
   return (
     <div
       className={`rounded-xl border p-3 ${
@@ -435,7 +699,9 @@ function ActuatorRow({
             {!supported
               ? unsupportedHint
               : on
-                ? `ativo · ${config.onSec}s a cada ${config.everySec}s`
+                ? continuous
+                  ? "ativo · contínuo indefinido (até desligar)"
+                  : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
         </span>
@@ -449,30 +715,65 @@ function ActuatorRow({
       </button>
 
       {supported ? (
-        <div className="mt-3 flex items-center gap-3">
-          <label className="flex flex-1 items-center gap-2 text-[11px] text-muted-foreground">
-            dura (s)
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={config.onSec}
-              onChange={(e) => onConfig({ ...config, onSec: Number(e.target.value) })}
-              className="w-full rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
-            />
-          </label>
-          <label className="flex flex-1 items-center gap-2 text-[11px] text-muted-foreground">
-            a cada (s)
-            <input
-              type="number"
-              min={5}
-              max={3600}
-              value={config.everySec}
-              onChange={(e) => onConfig({ ...config, everySec: Number(e.target.value) })}
-              className="w-full rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
-            />
-          </label>
-        </div>
+        <>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => onConfig({ ...config, mode: "timed" })}
+              aria-pressed={!continuous}
+              className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] active:scale-95 ${
+                !continuous
+                  ? "border-ember bg-ember/15 text-ember"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              Temporizado
+            </button>
+            <button
+              type="button"
+              onClick={() => onConfig({ ...config, mode: "continuous" })}
+              aria-pressed={continuous}
+              className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] active:scale-95 ${
+                continuous
+                  ? "border-ember bg-ember/15 text-ember"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              Contínuo (indefinido)
+            </button>
+          </div>
+
+          {continuous ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Sem duração definida: fica ativo até você desligar.
+            </p>
+          ) : (
+            <div className="mt-3 flex items-center gap-3">
+              <label className="flex flex-1 items-center gap-2 text-[11px] text-muted-foreground">
+                dura (s)
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={config.onSec}
+                  onChange={(e) => onConfig({ ...config, onSec: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
+                />
+              </label>
+              <label className="flex flex-1 items-center gap-2 text-[11px] text-muted-foreground">
+                a cada (s)
+                <input
+                  type="number"
+                  min={5}
+                  max={3600}
+                  value={config.everySec}
+                  onChange={(e) => onConfig({ ...config, everySec: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
+                />
+              </label>
+            </div>
+          )}
+        </>
       ) : null}
     </div>
   );
