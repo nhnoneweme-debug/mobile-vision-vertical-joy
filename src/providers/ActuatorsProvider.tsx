@@ -405,6 +405,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const stopAll = useCallback(() => {
     setVibrationOn(false);
     setAudioOn(false);
+    setBeaconState((b) => (b.enabled ? { ...b, enabled: false } : b));
   }, []);
 
   const value = useMemo<ActuatorsCtx>(
