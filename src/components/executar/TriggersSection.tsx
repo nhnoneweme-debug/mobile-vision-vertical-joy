@@ -1188,7 +1188,25 @@ export function TriggersSection() {
 
       {speakOpen ? (
         <SpeakTriggerSheet
-          onClose={() => setSpeakOpen(false)}
+          onClose={() => {
+            setSpeakOpen(false);
+            setSpeakQuick(false);
+          }}
+          saving={quickSaveM.isPending}
+          onSave={
+            speakQuick
+              ? (d) =>
+                  quickSaveM.mutate({
+                    name: d.name,
+                    enabled: true,
+                    trigger_type: d.trigger_type,
+                    condition: d.condition,
+                    action: d.action,
+                    active_window: d.active_window ?? {},
+                    cooldown_seconds: d.cooldown_seconds,
+                  })
+              : undefined
+          }
           onUse={(d) => {
             setForm({
               ...EMPTY_FORM,
