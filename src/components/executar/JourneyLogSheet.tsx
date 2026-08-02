@@ -4,6 +4,7 @@
 // evento append-only em execution_events.
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ClipboardList, X } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ export function JourneyLogSheet({
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const qc = useQueryClient();
 
   const summary = [
     context.missionTitle ? `bloco: ${context.missionTitle}` : "sem bloco declarado",
@@ -63,6 +65,8 @@ export function JourneyLogSheet({
           },
         },
       });
+      // a Timeline de hoje e o Registro leem execution_events — refresca ambos.
+      void qc.invalidateQueries({ queryKey: ["execution-log"] });
       if (mode === "decline") {
         toast("Beleza — pergunto de novo mais tarde.");
         onClose();

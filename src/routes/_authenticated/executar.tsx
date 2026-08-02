@@ -209,7 +209,7 @@ function ExecutarPage() {
           channel={manifestChannel}
           onResolved={() => {
             setManifest(null);
-            void qc.invalidateQueries({ queryKey: ["execution-log", "today"] });
+            void qc.invalidateQueries({ queryKey: ["execution-log"] });
             journey.refresh();
           }}
           onOpenAssistant={() => {
