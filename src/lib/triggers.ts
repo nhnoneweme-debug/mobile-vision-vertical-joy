@@ -32,7 +32,26 @@ export type TriggerAction = {
   trigger_fire?: { trigger_id: string };
   /** ENCADEAMENTO — arma/desarma outro gatilho. */
   trigger_enable?: { trigger_id: string; enabled: boolean };
+  /**
+   * RESULTADO PRETENDIDO (texto livre, opcional) — o que se espera do ambiente
+   * depois que o comando roda. Guardado dentro do jsonb de action, sem coluna
+   * nova no banco.
+   */
+  intended_outcome?: string;
 };
+
+/**
+ * TAXONOMIA DERIVADA DA CONDIÇÃO — sem coluna nova.
+ * - "command" (reativo): palavra-chave de áudio. Espera o usuário falar.
+ * - "agent" (proativo): chronos e demais métricas. Aciona o usuário.
+ */
+export type TriggerFamily = "agent" | "command";
+
+export function triggerFamily(t: Pick<TriggerDefinition, "condition">): TriggerFamily {
+  const c = t.condition as Record<string, unknown>;
+  return c?.source === "audio" ? "command" : "agent";
+}
+
 
 /** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
 export const MAX_CHAIN_DEPTH = 3;
