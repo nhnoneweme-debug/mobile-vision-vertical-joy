@@ -322,6 +322,7 @@ export function TriggersSection() {
             onSec: Math.min(10, Math.max(1, a.vibrate.onSec ?? 2)),
             everySec: 30,
             mode: "timed",
+            sound: "soft",
           });
           actuators.setVibration(true);
           window.setTimeout(() => actuators.setVibration(false), (a.vibrate.onSec ?? 2) * 1000);
