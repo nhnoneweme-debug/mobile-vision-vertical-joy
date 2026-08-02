@@ -39,6 +39,8 @@ export type StationProps = {
   onFlipCamera: () => void;
   onExit: () => void;
   onPauseAll: () => void;
+  /** Overlay de próximas ações — renderizado no topo do modo imersivo. */
+  overlay?: React.ReactNode;
 };
 
 function Big({
