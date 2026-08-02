@@ -105,7 +105,18 @@ export function NextActionsOverlay({
           when={after ? (after.etaMs != null ? formatCountdown(after.etaMs) : after.when) : ""}
           trigger={after?.trigger}
         />
+        {commandsCount > 0 ? (
+          <button
+            type="button"
+            onClick={onOpenCommands}
+            className={`${label} mt-1 w-full text-left font-display uppercase tracking-[0.14em] text-muted-foreground underline-offset-2 active:opacity-70`}
+          >
+            {commandsCount} comando{commandsCount > 1 ? "s" : ""} armado
+            {commandsCount > 1 ? "s" : ""}
+          </button>
+        ) : null}
       </div>
+
 
       {open ? (
         <div
