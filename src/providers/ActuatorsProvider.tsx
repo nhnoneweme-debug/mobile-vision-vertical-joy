@@ -39,9 +39,12 @@ type ActuatorsCtx = {
   pulsing: { vibration: boolean; audio: boolean };
   toggleVibration: () => void;
   toggleAudio: () => void;
+  setVibration: (on: boolean) => void;
+  setAudio: (on: boolean) => void;
   setVibrationConfig: (c: ActuatorConfig) => void;
   setAudioConfig: (c: ActuatorConfig) => void;
   stopAll: () => void;
+
 };
 
 const STORAGE_KEY = "wimi.actuators.v1";
