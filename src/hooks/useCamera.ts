@@ -91,6 +91,27 @@ export function useCamera() {
     }
   }, []);
 
+  /**
+   * Captura o quadro atual do preview como JPEG. Só isso — nenhum frame sai
+   * daqui sozinho; quem chama decide o que fazer com o blob.
+   */
+  const capture = useCallback(async (): Promise<Blob | null> => {
+    const video = videoRef.current;
+    if (!video || !streamRef.current) return null;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, w, h);
+    return new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
+    });
+  }, []);
+
   useEffect(
     () => () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -105,9 +126,11 @@ export function useCamera() {
     facing,
     error,
     attach,
+    capture,
     start,
     stop,
     toggle,
     flip,
   };
 }
+
