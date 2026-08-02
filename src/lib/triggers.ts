@@ -366,6 +366,8 @@ export function describeAction(t: TriggerDefinition): string {
     if (on.length) parts.push(`ligar ${on.join("/")}`);
     if (off.length) parts.push(`desligar ${off.join("/")}`);
   }
+  if (a.journey_log_prompt) parts.push("abrir log de jornada");
+  if (a.custom) parts.push(`ação personalizada: ${a.custom.plan ?? a.custom.instruction}`);
   if (a.message) parts.push(`avisar "${a.message}"`);
   return parts.length ? parts.join(" + ") : "nenhuma ação";
 }
@@ -502,4 +504,91 @@ export function computeStats(firings: TriggerFiring[]): Record<string, TriggerSt
     if (!s.last || f.fired_at > s.last) s.last = f.fired_at;
   }
   return map;
+}
+
+// ------------------------------------------------------ agenda do chronos
+
+/**
+ * Próximo disparo (em ms epoch) de um gatilho chronos, ou null quando não
+ * se aplica. Base do diagnóstico visível e do overlay de próximas ações.
+ */
+export function nextChronosFireAt(
+  t: Pick<TriggerDefinition, "condition">,
+  sessionStartedAt: number,
+  now: number = Date.now(),
+): number | null {
+  const c = t.condition as Record<string, unknown>;
+  if (c?.mode === "every") {
+    const secs = Math.max(10, Number(c.seconds ?? 60)) * 1000;
+    const elapsed = Math.max(0, now - sessionStartedAt);
+    const n = Math.floor(elapsed / secs) + 1;
+    return sessionStartedAt + n * secs;
+  }
+  if (c?.mode === "after_session") {
+    const secs = Math.max(10, Number(c.seconds ?? 60)) * 1000;
+    const at = sessionStartedAt + secs;
+    return at > now ? at : null;
+  }
+  if (c?.mode === "at_time" && typeof c.time === "string") {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(c.time);
+    if (!m) return null;
+    const d = new Date(now);
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    if (d.getTime() <= now) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  return null;
+}
+
+/** "12:34" / "1h02" — formatação de contagem regressiva. */
+export function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h${String(m).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+export type UpcomingAction = {
+  trigger: TriggerDefinition;
+  /** ms até o disparo (chronos) ou null quando é gatilho de evento. */
+  etaMs: number | null;
+  when: string;
+};
+
+/**
+ * Fila ordenada de próximas ações: chronos elegíveis por proximidade, depois
+ * os gatilhos de evento na ordem sequencial (position).
+ */
+export function upcomingActions(
+  triggers: TriggerDefinition[],
+  sessionStartedAt: number,
+  now: number = Date.now(),
+): UpcomingAction[] {
+  const eligible = triggers
+    .filter((t) => t.enabled && isWithinWindow(t.active_window, new Date(now)))
+    .sort((a, b) => a.position - b.position);
+
+  const chronos: UpcomingAction[] = [];
+  const events: UpcomingAction[] = [];
+
+  for (const t of eligible) {
+    const at = nextChronosFireAt(t, sessionStartedAt, now);
+    if (at != null) {
+      chronos.push({ trigger: t, etaMs: at - now, when: `em ${formatCountdown(at - now)}` });
+    } else {
+      const c = t.condition as Record<string, unknown>;
+      const when =
+        c?.source === "audio"
+          ? `aguardando: "${String(c.keyword)}"`
+          : c?.source === "motion"
+            ? "aguardando movimento"
+            : "aguardando sinal";
+      events.push({ trigger: t, etaMs: null, when });
+    }
+  }
+
+  chronos.sort((a, b) => (a.etaMs ?? 0) - (b.etaMs ?? 0));
+  return [...chronos, ...events];
 }
