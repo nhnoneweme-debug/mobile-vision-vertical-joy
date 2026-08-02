@@ -264,64 +264,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     });
   }, [blocks, draft, editingId, lang, missionId, persist, sessionId]);
 
-  const onAggregate = useCallback(
-    (a: MotionAggregate) => {
-      void persist({
-        mission_id: missionId ?? null,
-        kind: "sensor_reading",
-        channel: "foreground",
-        meta: {
-          session_id: sessionId,
-          type: "orientation_aggregate",
-          started_at: a.startedAt,
-          ended_at: a.endedAt,
-          samples: a.samples,
-          alpha: a.alpha,
-          beta: a.beta,
-          gamma: a.gamma,
-          dominant: a.dominant,
-          peak_accel: a.peakAccel,
-          avg_accel: a.avgAccel,
-        },
-      });
-    },
-    [missionId, persist, sessionId],
-  );
 
-  const onSpike = useCallback(
-    (s: { at: string; magnitude: number }) => {
-      setSpikes((n) => n + 1);
-      setLastSpike(s);
-      void persist({
-        mission_id: missionId ?? null,
-        kind: "sensor_reading",
-        channel: "foreground",
-        note: "movimento brusco detectado",
-        meta: {
-          session_id: sessionId,
-          type: "motion_spike",
-          at: s.at,
-          magnitude: s.magnitude,
-        },
-      });
-    },
-    [missionId, persist, sessionId],
-  );
-
-  const motion = useDeviceMotionAggregator({
-    enabled: motionOn && !offline,
-    onAggregate,
-    onSpike,
-  });
-
-  const toggleMotion = useCallback(async () => {
-    if (motionOn) {
-      setMotionOn(false);
-      return;
-    }
-    const ok = await motion.requestPermission();
-    if (ok || motion.permission === "granted" || motion.permission === "unknown") setMotionOn(true);
-  }, [motion, motionOn]);
 
   // -------------------------------------------------- MOTOR DE GATILHOS
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
