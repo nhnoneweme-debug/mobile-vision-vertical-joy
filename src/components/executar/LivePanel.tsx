@@ -752,6 +752,7 @@ function ActuatorRow({
   config,
   onToggle,
   onConfig,
+  showSound,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -762,8 +763,10 @@ function ActuatorRow({
   config: ActuatorConfig;
   onToggle: () => void;
   onConfig: (c: ActuatorConfig) => void;
+  showSound?: boolean;
 }) {
   const continuous = config.mode === "continuous";
+
   return (
     <div
       className={`rounded-xl border p-3 ${
