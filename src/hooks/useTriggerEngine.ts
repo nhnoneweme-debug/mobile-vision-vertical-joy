@@ -7,10 +7,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   MAX_CHAIN_DEPTH,
+  findKeyword,
   isWithinWindow,
-  keywordMatches,
   recordFiring,
   updateTrigger,
+  type ActionResult,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
@@ -20,10 +21,20 @@ export type LiveSignals = {
   active: boolean;
   sessionStartedAt: number;
   lastBlock: { id: string; text: string } | null;
+  /**
+   * TEXTO OUVIDO AO VIVO (final + parcial do reconhecedor). É AQUI que os
+   * comandos de voz casam — continuamente, sem esperar o bloco de 15s fechar.
+   * `epoch` muda a cada bloco fechado, reiniciando as âncoras de dedupe.
+   */
+  liveText?: { text: string; epoch: number };
 };
 
 export type TriggerControls = {
-  applyAction: (action: TriggerAction, trigger: TriggerDefinition) => void;
+  applyAction: (
+    action: TriggerAction,
+    trigger: TriggerDefinition,
+    meta?: { matched_text?: string },
+  ) => ActionResult[] | void;
 };
 
 export function useTriggerEngine(
@@ -50,6 +61,7 @@ export function useTriggerEngine(
       depth?: number,
     ) => void
   >(() => {});
+
 
   const fire = useCallback(
     (
