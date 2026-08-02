@@ -77,12 +77,10 @@ function fromFrac(p: Frac) {
 /** Snap: borda mais próxima (esquerda/direita, ou topo/fundo se estiver mais perto). */
 function snap(x: number, y: number) {
   const b = bounds();
-  const cx = x + SIZE / 2;
-  const cy = y + SIZE / 2;
-  const dLeft = cx - b.minX;
-  const dRight = b.maxX + SIZE / 2 - cx + SIZE / 2;
-  const dTop = cy - b.minY;
-  const dBottom = b.maxY + SIZE / 2 - cy + SIZE / 2;
+  const dLeft = x - b.minX;
+  const dRight = b.maxX - x;
+  const dTop = y - b.minY;
+  const dBottom = b.maxY - y;
   const min = Math.min(dLeft, dRight, dTop, dBottom);
   if (min === dTop) return clampPx(x, b.minY);
   if (min === dBottom) return clampPx(x, b.maxY);
@@ -111,7 +109,8 @@ export function FocusFloatingButton() {
   useEffect(() => {
     const onResize = () => {
       const saved = readPos();
-      setPos(saved ? fromFrac(saved) : (p) => (p ? clampPx(p.x, p.y) : p) as never);
+      if (saved) setPos(fromFrac(saved));
+      else setPos((p) => (p ? clampPx(p.x, p.y) : p));
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
