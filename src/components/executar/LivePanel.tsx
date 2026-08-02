@@ -36,6 +36,8 @@ import {
   useActuators,
   ACTUATOR_SOUNDS,
   INTERVAL_PRESETS,
+  beaconIntervalSec,
+  type BeaconUnit,
   type ActuatorConfig,
 } from "@/providers/ActuatorsProvider";
 
