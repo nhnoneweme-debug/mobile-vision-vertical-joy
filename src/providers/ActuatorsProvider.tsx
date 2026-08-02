@@ -254,7 +254,9 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [vibrationOn, vibrationSupported, vibrationConfig]);
 
-  // Loop do áudio (tom suave via Web Audio).
+  // Loop do áudio (timbre curto e agradável via Web Audio).
+  // Contínuo = atuador armado indefinidamente, repetindo o padrão — nunca uma
+  // senoide infinita (que soava como tom de discar).
   useEffect(() => {
     if (!audioOn || !audioSupported) return;
     let cancelled = false;
@@ -270,60 +272,28 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       return audioCtxRef.current;
     };
 
+    const sound = audioConfig.sound ?? "soft";
+
     const fire = () => {
       if (cancelled) return;
       const ctx = getCtx();
       if (!ctx) return;
       void ctx.resume().catch(() => {});
-      const dur = audioConfig.onSec;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 432;
-      const t0 = ctx.currentTime;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.08);
-      gain.gain.setValueAtTime(0.12, t0 + Math.max(0.1, dur - 0.15));
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t0);
-      osc.stop(t0 + dur + 0.05);
+      const dur = playSound(ctx, sound);
       setPulsing((p) => ({ ...p, audio: true }));
       window.setTimeout(() => {
         if (!cancelled) setPulsing((p) => ({ ...p, audio: false }));
       }, dur * 1000);
     };
 
-    if (audioConfig.mode === "continuous") {
-      const ctx = getCtx();
-      if (!ctx) return;
-      void ctx.resume().catch(() => {});
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 432;
-      const t0 = ctx.currentTime;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.3);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t0);
-      setPulsing((p) => ({ ...p, audio: true }));
-      return () => {
-        cancelled = true;
-        try {
-          gain.gain.cancelScheduledValues(ctx.currentTime);
-          gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
-          osc.stop(ctx.currentTime + 0.2);
-        } catch {
-          /* já parado */
-        }
-        setPulsing((p) => ({ ...p, audio: false }));
-      };
-    }
+    const periodMs =
+      audioConfig.mode === "continuous"
+        ? CONTINUOUS_PATTERN_MS
+        : Math.max(1000, audioConfig.everySec * 1000);
 
     fire();
-    const id = window.setInterval(fire, audioConfig.everySec * 1000);
+    const id = window.setInterval(fire, periodMs);
+
     return () => {
       cancelled = true;
       window.clearInterval(id);
