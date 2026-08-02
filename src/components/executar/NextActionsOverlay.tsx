@@ -20,12 +20,17 @@ export function NextActionsOverlay({
   sessionStartedAt,
   now,
   big = false,
+  commandsCount = 0,
+  onOpenCommands,
 }: {
   triggers: TriggerDefinition[];
   sessionStartedAt: number;
   now: NowLine;
   /** Modo Estação: fonte maior. */
   big?: boolean;
+  /** Comandos de voz armados — contador discreto, nunca entram na fila. */
+  commandsCount?: number;
+  onOpenCommands?: () => void;
 }) {
   const [tick, setTick] = useState(() => Date.now());
   const [open, setOpen] = useState<TriggerDefinition | null>(null);
@@ -35,9 +40,11 @@ export function NextActionsOverlay({
     return () => window.clearInterval(id);
   }, []);
 
+  // upcomingActions já filtra: só agentes proativos elegíveis.
   const queue = upcomingActions(triggers, sessionStartedAt, tick);
   const next = queue[0] ?? null;
   const after = queue[1] ?? null;
+
 
   const size = big ? "text-[15px]" : "text-[12px]";
   const label = big ? "text-[11px]" : "text-[9px]";
