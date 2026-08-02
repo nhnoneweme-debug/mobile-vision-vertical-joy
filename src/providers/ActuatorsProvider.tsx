@@ -377,7 +377,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const beaconSec = beaconIntervalSec(audioConfig.beacon ?? { value: 60, unit: "s" });
   const audioMode = audioConfig.mode;
   const audioEverySec = audioConfig.everySec;
-  const audioSound = audioConfig.sound;
+  const audioSound = audioConfig.sound ?? "soft";
 
   // AGENDADOR ÚNICO DE ÁUDIO — um só timer, um só timbre por vez.
   //
