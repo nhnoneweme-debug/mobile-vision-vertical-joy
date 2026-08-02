@@ -155,6 +155,8 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [vibrationSupported, setVibrationSupported] = useState(false);
   const [audioSupported, setAudioSupported] = useState(false);
   const [pulsing, setPulsing] = useState({ vibration: false, audio: false });
+  const [beacon, setBeaconState] = useState<BeaconConfig>(DEFAULT_BEACON);
+  const [beaconPulsing, setBeaconPulsing] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -176,17 +178,22 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(raw) as {
         vibration?: Partial<ActuatorConfig>;
         audio?: Partial<ActuatorConfig>;
+        beacon?: Partial<BeaconConfig>;
       };
       setVibrationConfigState(clampConfig(parsed.vibration));
       setAudioConfigState(clampConfig(parsed.audio));
+      setBeaconState(clampBeacon(parsed.beacon));
     } catch {
       /* config opcional */
     }
   }, []);
 
-  const persist = useCallback((vib: ActuatorConfig, aud: ActuatorConfig) => {
+  const persist = useCallback((vib: ActuatorConfig, aud: ActuatorConfig, bea: BeaconConfig) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ vibration: vib, audio: aud }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ vibration: vib, audio: aud, beacon: bea }),
+      );
     } catch {
       /* storage indisponível */
     }
@@ -196,19 +203,29 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     (c: ActuatorConfig) => {
       const next = clampConfig(c);
       setVibrationConfigState(next);
-      persist(next, audioConfig);
+      persist(next, audioConfig, beacon);
     },
-    [audioConfig, persist],
+    [audioConfig, beacon, persist],
   );
 
   const setAudioConfig = useCallback(
     (c: ActuatorConfig) => {
       const next = clampConfig(c);
       setAudioConfigState(next);
-      persist(vibrationConfig, next);
+      persist(vibrationConfig, next, beacon);
     },
-    [persist, vibrationConfig],
+    [beacon, persist, vibrationConfig],
   );
+
+  const setBeacon = useCallback(
+    (c: BeaconConfig) => {
+      const next = clampBeacon(c);
+      setBeaconState(next);
+      persist(vibrationConfig, audioConfig, next);
+    },
+    [audioConfig, persist, vibrationConfig],
+  );
+
 
   // Loop da vibração.
   useEffect(() => {
