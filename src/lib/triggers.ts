@@ -26,6 +26,13 @@ export type TriggerAction = {
   message?: string;
 };
 
+/** Janela de elegibilidade: horário e/ou dias da semana (0 = domingo). */
+export type ActiveWindow = {
+  start?: string; // "HH:MM"
+  end?: string; // "HH:MM"
+  days?: number[]; // 0..6
+};
+
 export type TriggerDefinition = {
   id: string;
   user_id: string;
@@ -35,12 +42,13 @@ export type TriggerDefinition = {
   trigger_type: TriggerType;
   condition: TriggerCondition;
   action: TriggerAction;
+  active_window: ActiveWindow;
   cooldown_seconds: number;
   created_at: string;
   updated_at: string;
 };
 
-export type FiringResult = "executed" | "suppressed_cooldown" | "failed";
+export type FiringResult = "executed" | "suppressed_cooldown" | "failed" | "simulated";
 
 export type TriggerFiring = {
   id: string;
@@ -52,7 +60,17 @@ export type TriggerFiring = {
   meta: Record<string, unknown>;
 };
 
+export type TriggerRevision = {
+  id: string;
+  trigger_id: string;
+  revision: number;
+  snapshot: Record<string, unknown>;
+  change_note: string | null;
+  changed_at: string;
+};
+
 export const DEFAULT_COOLDOWN = 30;
+
 
 // ------------------------------------------------------------------ leitura
 
