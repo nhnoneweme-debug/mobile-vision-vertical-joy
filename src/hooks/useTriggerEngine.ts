@@ -27,7 +27,13 @@ export type LiveSignals = {
    * `epoch` muda a cada bloco fechado, reiniciando as âncoras de dedupe.
    */
   liveText?: { text: string; epoch: number };
+  /**
+   * ÚLTIMO EVENTO DISCRETO da sessão (início, bloco fechado, silêncio, registro
+   * manual). `ref` é único por ocorrência e serve de âncora de idempotência.
+   */
+  event?: { name: string; ref: string; meta?: Record<string, unknown> } | null;
 };
+
 
 export type TriggerControls = {
   applyAction: (
