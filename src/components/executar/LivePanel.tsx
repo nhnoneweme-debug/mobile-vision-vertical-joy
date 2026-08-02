@@ -826,9 +826,11 @@ function ActuatorRow({
             {!supported
               ? unsupportedHint
               : on
-                ? continuous
-                  ? "ativo · contínuo indefinido (até desligar)"
-                  : `ativo · ${config.onSec}s a cada ${config.everySec}s`
+                ? config.beacon?.on
+                  ? `beacon · a cada ${config.beacon.value} ${config.beacon.unit}`
+                  : continuous
+                    ? "ativo · contínuo indefinido (até desligar)"
+                    : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
         </span>
