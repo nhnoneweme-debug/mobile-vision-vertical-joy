@@ -61,7 +61,10 @@ type ActuatorsCtx = {
 
 const STORAGE_KEY = "wimi.actuators.v1";
 
-const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed" };
+const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed", sound: "soft" };
+
+/** intervalo de repetição do padrão sonoro no modo contínuo (ms) */
+const CONTINUOUS_PATTERN_MS = 2500;
 
 const ActuatorsContext = createContext<ActuatorsCtx | null>(null);
 
@@ -72,8 +75,59 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
     Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_CONFIG.everySec))),
   );
   const mode: ActuatorMode = c?.mode === "continuous" ? "continuous" : "timed";
-  return { onSec, everySec: Math.max(everySec, onSec + 1), mode };
+  const sound: ActuatorSound =
+    c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
+  return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
 }
+
+/**
+ * Toca um timbre curto e agradável. Sempre com envelope (attack/release) para
+ * evitar clique de corte seco. Retorna a duração aproximada, em segundos.
+ */
+function playSound(ctx: AudioContext, sound: ActuatorSound): number {
+  const t0 = ctx.currentTime + 0.01;
+  const out = ctx.createGain();
+  out.gain.value = 1;
+  out.connect(ctx.destination);
+
+  const tone = (
+    freq: number,
+    start: number,
+    dur: number,
+    peak: number,
+    type: OscillatorType = "sine",
+  ) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(peak, start + Math.min(0.05, dur * 0.25));
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    osc.connect(g).connect(out);
+    osc.start(start);
+    osc.stop(start + dur + 0.03);
+  };
+
+  if (sound === "tick") {
+    tone(1400, t0, 0.05, 0.07, "triangle");
+    tone(2600, t0, 0.03, 0.03, "sine");
+    return 0.08;
+  }
+
+  if (sound === "bell") {
+    tone(880, t0, 0.6, 0.09);
+    tone(1760, t0, 0.35, 0.03);
+    tone(2640, t0, 0.18, 0.015);
+    return 0.6;
+  }
+
+  // "soft": duas notas em quinta (528Hz → 792Hz)
+  tone(528, t0, 0.24, 0.08);
+  tone(792, t0 + 0.18, 0.24, 0.07);
+  return 0.42;
+}
+
 
 export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [vibrationOn, setVibrationOn] = useState(false);
