@@ -34,6 +34,14 @@ export const ACTUATOR_SOUNDS: { id: ActuatorSound; label: string; hint: string }
 /** Intervalos rápidos para o sinal periódico de presença. */
 export const INTERVAL_PRESETS = [30, 60, 120, 300];
 
+/** Unidade do intervalo do beacon de presença. */
+export type BeaconUnit = "s" | "min";
+
+export function beaconIntervalSec(b: { value: number; unit: BeaconUnit }): number {
+  const raw = b.unit === "min" ? b.value * 60 : b.value;
+  return Math.min(3600, Math.max(5, Math.round(raw)));
+}
+
 export type ActuatorConfig = {
   /** duração do pulso, em segundos */
   onSec: number;
