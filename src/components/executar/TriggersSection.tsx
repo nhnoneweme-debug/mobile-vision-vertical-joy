@@ -86,8 +86,6 @@ type FormState = {
   time: string;
   minutes: number;
   keyword: string;
-  magnitude: number;
-  degrees: number;
   cooldown: number;
   vibrate: boolean;
   vibrateSec: number;
@@ -119,8 +117,6 @@ const EMPTY_FORM: FormState = {
   time: "08:00",
   minutes: 25,
   keyword: "",
-  magnitude: 8,
-  degrees: 45,
   cooldown: DEFAULT_COOLDOWN,
   vibrate: false,
   vibrateSec: 2,
@@ -230,8 +226,6 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     time: typeof c.time === "string" ? c.time : "08:00",
     minutes: c.seconds ? Math.round(Number(c.seconds) / 60) : 25,
     keyword: typeof c.keyword === "string" ? c.keyword : "",
-    magnitude: Number(c.min_magnitude ?? 8),
-    degrees: Number(c.min_degrees ?? 45),
     cooldown: t.cooldown_seconds,
     vibrate: !!a.vibrate,
     vibrateSec: a.vibrate?.onSec ?? 2,
