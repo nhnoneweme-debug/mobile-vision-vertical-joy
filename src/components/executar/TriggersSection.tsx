@@ -299,6 +299,8 @@ export function TriggersSection() {
   const [libOpen, setLibOpen] = useState(false);
   const [versionsFor, setVersionsFor] = useState<string | null>(null);
   const [speakOpen, setSpeakOpen] = useState(false);
+  /** Modo rápido: mesma folha, mas com "Salvar assim" habilitado. */
+  const [speakQuick, setSpeakQuick] = useState(false);
   const [reportFor, setReportFor] = useState<string | null>(null);
   const [generalOpen, setGeneralOpen] = useState(false);
   const sessionStartedAt = useLiveSessionStart();
