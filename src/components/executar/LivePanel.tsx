@@ -487,6 +487,10 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
 
   if (station) {
     return (
+      <>
+      {journeyLog ? (
+        <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
+      ) : null}
       <StationMode
         listening={speech.listening}
         micSupported={speech.supported}
@@ -509,7 +513,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         onExit={() => setStation(false)}
         onPauseAll={pauseAll}
         overlay={
-          <<NextActionsOverlay
+          <NextActionsOverlay
           triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
           sessionStartedAt={sessionStartedAt}
           now={{
@@ -524,12 +528,13 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           />
         }
       />
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
-      <<NextActionsOverlay
+      <NextActionsOverlay
           triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
           sessionStartedAt={sessionStartedAt}
           now={{
