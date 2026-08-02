@@ -23,7 +23,13 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
-import { listTriggers, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
+import {
+  armedCommands,
+  listTriggers,
+  type TriggerAction,
+  type TriggerDefinition,
+} from "@/lib/triggers";
+
 import { runTriggerPrompt } from "@/lib/triggers.functions";
 import { useCamera } from "@/hooks/useCamera";
 import {
