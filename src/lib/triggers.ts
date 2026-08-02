@@ -109,6 +109,7 @@ export type TriggerDraft = {
   trigger_type: TriggerType;
   condition: TriggerCondition;
   action: TriggerAction;
+  active_window?: ActiveWindow;
   cooldown_seconds: number;
 };
 
@@ -122,6 +123,7 @@ export async function createTrigger(draft: TriggerDraft, position: number) {
     trigger_type: draft.trigger_type,
     condition: draft.condition as never,
     action: draft.action as never,
+    active_window: (draft.active_window ?? {}) as never,
     cooldown_seconds: draft.cooldown_seconds,
   });
   if (error) throw new Error(error.message);
@@ -146,6 +148,89 @@ export async function deleteTrigger(id: string) {
 export async function reorderTriggers(ordered: TriggerDefinition[]) {
   await Promise.all(ordered.map((t, i) => updateTrigger(t.id, { position: i })));
 }
+
+// ------------------------------------------------------------ versões
+
+export async function listRevisions(triggerId: string): Promise<TriggerRevision[]> {
+  const { data, error } = await supabase
+    .from("trigger_revisions")
+    .select("id, trigger_id, revision, snapshot, change_note, changed_at")
+    .eq("trigger_id", triggerId)
+    .order("revision", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as TriggerRevision[];
+}
+
+/** Grava o estado ATUAL do gatilho como revisão (chamado antes de aplicar a edição). */
+export async function snapshotTrigger(current: TriggerDefinition, note?: string) {
+  const user_id = await currentUserId();
+  const { data } = await supabase
+    .from("trigger_revisions")
+    .select("revision")
+    .eq("trigger_id", current.id)
+    .order("revision", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const next = ((data?.revision as number | undefined) ?? 0) + 1;
+  const { error } = await supabase.from("trigger_revisions").insert({
+    user_id,
+    trigger_id: current.id,
+    revision: next,
+    change_note: note ?? null,
+    snapshot: {
+      name: current.name,
+      enabled: current.enabled,
+      trigger_type: current.trigger_type,
+      condition: current.condition,
+      action: current.action,
+      active_window: current.active_window ?? {},
+      cooldown_seconds: current.cooldown_seconds,
+    } as never,
+  });
+  if (error) throw new Error(error.message);
+  return next;
+}
+
+/** Edição versionada: guarda a versão anterior e depois aplica o patch. */
+export async function updateTriggerVersioned(
+  current: TriggerDefinition,
+  patch: Partial<TriggerDraft>,
+  note?: string,
+) {
+  await snapshotTrigger(current, note ?? "edição");
+  await updateTrigger(current.id, patch);
+}
+
+/** Restaurar uma versão também gera revisão — nada se apaga. */
+export async function restoreRevision(current: TriggerDefinition, rev: TriggerRevision) {
+  const s = rev.snapshot as unknown as TriggerDraft;
+  await snapshotTrigger(current, `restaurando v${rev.revision}`);
+  await updateTrigger(current.id, {
+    name: s.name,
+    enabled: s.enabled,
+    trigger_type: s.trigger_type,
+    condition: s.condition,
+    action: s.action,
+    active_window: s.active_window ?? {},
+    cooldown_seconds: s.cooldown_seconds,
+  });
+}
+
+export async function duplicateTrigger(t: TriggerDefinition, position: number) {
+  await createTrigger(
+    {
+      name: `${t.name} (cópia)`,
+      enabled: false,
+      trigger_type: t.trigger_type,
+      condition: t.condition,
+      action: t.action,
+      active_window: t.active_window ?? {},
+      cooldown_seconds: t.cooldown_seconds,
+    },
+    position,
+  );
+}
+
 
 export async function recordFiring(input: {
   trigger_id: string;
