@@ -26,11 +26,14 @@ import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import {
   armedCommands,
   listTriggers,
+  recordFiring,
+  type LiveEventName,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
 
 import { runTriggerPrompt } from "@/lib/triggers.functions";
+
 import { useCamera } from "@/hooks/useCamera";
 import {
   useActuators,
