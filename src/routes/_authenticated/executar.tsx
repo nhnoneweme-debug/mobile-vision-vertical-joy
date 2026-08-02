@@ -6,14 +6,7 @@
 
 import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Activity,
-  CalendarPlus,
-  MessageCircle,
-  MoonStar,
-  PlusCircle,
-  Sunrise,
-} from "lucide-react";
+import { Activity, CalendarPlus, MessageCircle, MoonStar, PlusCircle, Sunrise } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
 import { useActiveJourney } from "@/hooks/useActiveJourney";
@@ -30,7 +23,6 @@ import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
 
 type SeedSearch = { seed?: string };
-
 
 export const Route = createFileRoute("/_authenticated/executar")({
   validateSearch: (s: Record<string, unknown>): SeedSearch => ({
@@ -78,7 +70,6 @@ function ExecutarPage() {
     () => todayEntries.map((e) => ({ time: e.time, label: e.title })),
     [todayEntries],
   );
-
 
   const handleManifest = useCallback((m: JourneyManifestation) => {
     setManifestChannel("foreground");
@@ -207,7 +198,6 @@ function ExecutarPage() {
                 <RitualShortcuts onNight={() => setDayReviewOpen(true)} />
                 <TodayTimeline onRegister={() => setRegisterOpen(true)} />
               </div>
-
             </>
           }
         />
@@ -218,7 +208,6 @@ function ExecutarPage() {
           <TriggersSection />
         </div>
       ) : null}
-
 
       {manifest ? (
         <ManifestPanel
@@ -302,7 +291,6 @@ function RitualShortcuts({ onNight }: { onNight: () => void }) {
     </div>
   );
 }
-
 
 function phaseText(p: JourneyManifestation["phase"]): string {
   if (p === "preEnd") return "faltando pouco pra fechar";

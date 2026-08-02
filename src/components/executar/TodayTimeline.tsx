@@ -287,16 +287,16 @@ export function TodayTimeline({ onRegister }: { onRegister?: () => void }) {
                 onClick={() => setOpen(e)}
                 className={[
                   "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition active:scale-[0.99]",
-                  e.highlight
-                    ? "border-ember/50 bg-ember/10"
-                    : "border-border bg-charcoal-800/40",
+                  e.highlight ? "border-ember/50 bg-ember/10" : "border-border bg-charcoal-800/40",
                 ].join(" ")}
               >
                 <span className="w-10 shrink-0 font-display text-[11px] tabular-nums text-muted-foreground">
                   {e.time}
                 </span>
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border/60 bg-charcoal-900/70">
-                  <Icon className={`h-4 w-4 ${e.highlight ? "text-ember" : "text-muted-foreground"}`} />
+                  <Icon
+                    className={`h-4 w-4 ${e.highlight ? "text-ember" : "text-muted-foreground"}`}
+                  />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-foreground">{e.title}</span>
