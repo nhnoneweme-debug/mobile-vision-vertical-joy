@@ -6,11 +6,13 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import {
+  isWithinWindow,
   keywordMatches,
   recordFiring,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
+
 
 export type LiveSignals = {
   /** avaliador ativo (Live aberto e não pausado) */
@@ -88,9 +90,13 @@ export function useTriggerEngine(
   );
 
   const enabled = useCallback(
-    () => triggersRef.current.filter((t) => t.enabled).sort((a, b) => a.position - b.position),
+    () =>
+      triggersRef.current
+        .filter((t) => t.enabled && isWithinWindow(t.active_window))
+        .sort((a, b) => a.position - b.position),
     [],
   );
+
 
   // --------------------------------------------------- eventos de ÁUDIO
   useEffect(() => {
