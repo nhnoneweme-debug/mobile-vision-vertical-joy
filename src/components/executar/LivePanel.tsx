@@ -218,11 +218,13 @@ export function LivePanel({
     }).then((ok) => {
       if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
     });
-  }, [lang, missionId, persist, sessionId]);
+    emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+  }, [emitEvent, lang, missionId, persist, sessionId]);
 
   const onFinalText = useCallback(
     (text: string) => {
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
+      lastSpeechAtRef.current = Date.now();
       bufferRef.current.push(text);
       setLiveLine(bufferRef.current.join(" "));
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
@@ -230,6 +232,7 @@ export function LivePanel({
     },
     [flushTranscript],
   );
+
 
   const speech = useSpeechToText(onFinalText, { lang });
 
