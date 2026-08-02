@@ -13,6 +13,7 @@ import {
   Mic,
   MicOff,
   Pencil,
+  Radio,
   SwitchCamera,
   Vibrate,
   Volume2,
@@ -29,8 +30,11 @@ import { useCamera } from "@/hooks/useCamera";
 import {
   useActuators,
   ACTUATOR_SOUNDS,
+  BEACON_PRESETS,
   type ActuatorConfig,
+  type BeaconConfig,
 } from "@/providers/ActuatorsProvider";
+
 
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
