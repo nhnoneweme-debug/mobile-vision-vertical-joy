@@ -275,6 +275,22 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     setAudioOn((v) => !v);
   }, [audioSupported]);
 
+  const setVibration = useCallback(
+    (on: boolean) => {
+      if (!vibrationSupported) return;
+      setVibrationOn(on);
+    },
+    [vibrationSupported],
+  );
+
+  const setAudio = useCallback(
+    (on: boolean) => {
+      if (!audioSupported) return;
+      setAudioOn(on);
+    },
+    [audioSupported],
+  );
+
   const stopAll = useCallback(() => {
     setVibrationOn(false);
     setAudioOn(false);
@@ -291,6 +307,8 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       pulsing,
       toggleVibration,
       toggleAudio,
+      setVibration,
+      setAudio,
       setVibrationConfig,
       setAudioConfig,
       stopAll,
@@ -305,6 +323,8 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       pulsing,
       toggleVibration,
       toggleAudio,
+      setVibration,
+      setAudio,
       setVibrationConfig,
       setAudioConfig,
       stopAll,
@@ -327,6 +347,8 @@ export function useActuators(): ActuatorsCtx {
       pulsing: { vibration: false, audio: false },
       toggleVibration: () => {},
       toggleAudio: () => {},
+      setVibration: () => {},
+      setAudio: () => {},
       setVibrationConfig: () => {},
       setAudioConfig: () => {},
       stopAll: () => {},
