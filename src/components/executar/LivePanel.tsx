@@ -423,6 +423,22 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
+            actuators.speak(res.message);
+            // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
+            // uma linha própria (append-only) para aparecer no relatório.
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "prompt_result",
+              source_ref: `prompt:${trigger.id}:${Date.now()}`,
+              result: "executed",
+              meta: {
+                type: "prompt_result",
+                instruction: action.prompt?.instruction ?? "",
+                action_results: [
+                  { action: "prompt (resposta da WiMi)", success: true, detail: res.message },
+                ],
+              },
+            }).catch(() => {});
             void persist({
               mission_id: missionId ?? null,
               kind: "sensor_reading",
@@ -437,11 +453,92 @@ export function LivePanel({
             });
           })
           .catch((e: unknown) => {
-            toast.error(
-              e instanceof Error ? e.message : "A WiMi não conseguiu responder ao prompt.",
-            );
+            const detail = e instanceof Error ? e.message : "falha ao responder";
+            toast.error(detail);
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "prompt_result",
+              source_ref: `prompt:${trigger.id}:${Date.now()}`,
+              result: "failed",
+              meta: {
+                type: "prompt_result",
+                action_results: [{ action: "prompt (resposta da WiMi)", success: false, detail }],
+              },
+            }).catch(() => {});
           });
       }
+
+      // INTERAÇÃO LIVRE — a WiMi toma a palavra e devolve o turno ao microfone.
+      if (action.free_interaction) {
+        ok("interação livre", "turno passado à WiMi");
+        const elapsedMin = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000));
+        const recent = blocksRef.current.slice(-8);
+        const wasListening = speech.listening;
+        // sinal de turno: a WiMi vai falar
+        actuators.chime("tick");
+        if (wasListening) speech.stop();
+        void runTriggerPrompt({
+          data: {
+            instruction:
+              action.free_interaction.instruction ??
+              "Continue a conversa ao vivo: comente o que ouviu e faça UMA pergunta curta que ajude a pessoa a seguir executando.",
+            context: [
+              `Sessão ao vivo há ${elapsedMin} min.`,
+              recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
+            ].join("\n"),
+            trigger_name: trigger.name,
+          },
+        })
+          .then((res: { message: string }) => {
+            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
+            actuators.speak(res.message, {
+              onEnd: () => {
+                // devolve o turno: toque curto e microfone de volta.
+                actuators.chime("soft");
+                if (wasListening) speech.start();
+              },
+            });
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "free_interaction",
+              source_ref: `free:${trigger.id}:${Date.now()}`,
+              result: "executed",
+              meta: {
+                type: "free_interaction",
+                action_results: [
+                  { action: "interação livre", success: true, detail: res.message },
+                ],
+              },
+            }).catch(() => {});
+            void persist({
+              mission_id: missionId ?? null,
+              kind: "sensor_reading",
+              channel: "foreground",
+              note: res.message,
+              meta: {
+                session_id: sessionId,
+                type: "free_interaction",
+                trigger_id: trigger.id,
+              },
+            });
+          })
+          .catch((e: unknown) => {
+            if (wasListening) speech.start();
+            const detail = e instanceof Error ? e.message : "falha na interação livre";
+            toast.error(detail);
+            void recordFiring({
+              trigger_id: trigger.id,
+              source_kind: "free_interaction",
+              source_ref: `free:${trigger.id}:${Date.now()}`,
+              result: "failed",
+              meta: {
+                type: "free_interaction",
+                action_results: [{ action: "interação livre", success: false, detail }],
+              },
+            }).catch(() => {});
+          });
+      }
+
 
       if (action.journey_log_prompt) {
         ok("abrir log de jornada");
