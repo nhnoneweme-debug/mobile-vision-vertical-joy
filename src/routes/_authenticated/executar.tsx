@@ -6,12 +6,13 @@
 
 import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, CalendarPlus, MessageCircle } from "lucide-react";
+import { Activity, CalendarPlus, MessageCircle, MoonStar, PlusCircle, Sunrise } from "lucide-react";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { JourneyAgent, type JourneyManifestation } from "@/components/assistente/JourneyAgent";
-import { useActiveJourney, type JourneyBlock } from "@/hooks/useActiveJourney";
-import { type TimelineItem } from "@/components/executar/JourneyTimeline";
-import { TodayTimeline } from "@/components/executar/TodayTimeline";
+import { useActiveJourney } from "@/hooks/useActiveJourney";
+import { TodayTimeline, useTodayEntries } from "@/components/executar/TodayTimeline";
+import { RegisterSheet } from "@/components/executar/RegisterSheet";
+import { DayReviewSheet } from "@/components/executar/DayReviewSheet";
 import { ManifestPanel } from "@/components/executar/ManifestPanel";
 import { ExecutarChatDrawer } from "@/components/executar/ExecutarChatDrawer";
 import { LivePanel } from "@/components/executar/LivePanel";
@@ -22,7 +23,6 @@ import { logExecutionEvent } from "@/lib/execution.functions";
 import { useQueryClient } from "@tanstack/react-query";
 
 type SeedSearch = { seed?: string };
-
 
 export const Route = createFileRoute("/_authenticated/executar")({
   validateSearch: (s: Record<string, unknown>): SeedSearch => ({
@@ -60,19 +60,16 @@ function ExecutarPage() {
   const seedProcessedRef = useRef(false);
   // Não existem dois palcos: "live" é a tela única do ambiente agente.
   const [tab, setTab] = useState<"live" | "gatilhos">("live");
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [dayReviewOpen, setDayReviewOpen] = useState(false);
 
-
-  // Timeline com estado por bloco.
-  const timeline: TimelineItem[] = useMemo(() => {
-    const now = journey.nowMin;
-    return journey.blocks.map((b: JourneyBlock) => {
-      if (b.endMin <= now) return { block: b, state: "done" as const };
-      if (b.startMin <= now && b.endMin > now) {
-        return { block: b, state: "now" as const, remaining: Math.max(0, b.endMin - now) };
-      }
-      return { block: b, state: "future" as const, remaining: Math.max(0, b.startMin - now) };
-    });
-  }, [journey.blocks, journey.nowMin]);
+  // Entradas REAIS de hoje — a timeline não conhece plano nenhum, e o ritual
+  // da noite se ancora exatamente nelas.
+  const todayEntries = useTodayEntries();
+  const reviewEntries = useMemo(
+    () => todayEntries.map((e) => ({ time: e.time, label: e.title })),
+    [todayEntries],
+  );
 
   const handleManifest = useCallback((m: JourneyManifestation) => {
     setManifestChannel("foreground");
@@ -185,10 +182,21 @@ function ExecutarPage() {
               </div>
 
               <div className="mt-4">
-                <h2 className="mb-2 font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Timeline de hoje
-                </h2>
-                <TodayTimeline planned={timeline} />
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Timeline de hoje · executado
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterOpen(true)}
+                    className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-1 text-[11px] text-ember active:scale-95"
+                  >
+                    <PlusCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">Registrar</span>
+                  </button>
+                </div>
+                <RitualShortcuts onNight={() => setDayReviewOpen(true)} />
+                <TodayTimeline onRegister={() => setRegisterOpen(true)} />
               </div>
             </>
           }
@@ -200,7 +208,6 @@ function ExecutarPage() {
           <TriggersSection />
         </div>
       ) : null}
-
 
       {manifest ? (
         <ManifestPanel
@@ -234,7 +241,54 @@ function ExecutarPage() {
       ) : null}
 
       <ExecutarChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} seed={chatSeed} />
+
+      {registerOpen ? (
+        <RegisterSheet
+          missionId={journey.current?.id ?? null}
+          onClose={() => setRegisterOpen(false)}
+        />
+      ) : null}
+
+      {dayReviewOpen ? (
+        <DayReviewSheet entries={reviewEntries} onClose={() => setDayReviewOpen(false)} />
+      ) : null}
     </MobileShell>
+  );
+}
+
+/**
+ * Atalhos discretos que aparecem conforme a hora: de noite, registrar o dia
+ * (ancorado na timeline); de manhã, registrar o sonho no fluxo já existente
+ * de /despertar/sonho (dream_logs).
+ */
+function RitualShortcuts({ onNight }: { onNight: () => void }) {
+  const hour = new Date().getHours();
+  const night = hour >= 20 || hour < 3;
+  const morning = hour >= 4 && hour < 11;
+  if (!night && !morning) return null;
+  return (
+    <div className="mb-2 flex flex-wrap gap-2">
+      {night ? (
+        <button
+          type="button"
+          onClick={onNight}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-1 text-[11px] text-ember active:scale-95"
+        >
+          <MoonStar className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Registrar meu dia</span>
+        </button>
+      ) : null}
+      {morning ? (
+        <Link
+          to="/despertar/sonho"
+          search={{ session: "" }}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground active:scale-95"
+        >
+          <Sunrise className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Registrar sonho</span>
+        </Link>
+      ) : null}
+    </div>
   );
 }
 

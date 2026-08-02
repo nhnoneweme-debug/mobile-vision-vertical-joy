@@ -21,13 +21,24 @@ const EVENT_KINDS = [
   "sensor_reading",
   "journey_log",
   "journey_log_declined",
+  // registro manual do usuário no Live (mic / câmera / dump)
+  "manual_log",
+  // ritual da noite: "registrar meu dia"
+  "day_review",
 ] as const;
 
 const PHASES = ["preEnd", "atEnd", "preStart", "atStart"] as const;
 const CHANNELS = ["foreground", "push", "voice", "manual"] as const;
 
 const jsonValue: z.ZodType<Json> = z.lazy(() =>
-  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValue), z.record(z.string(), jsonValue)]),
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValue),
+    z.record(z.string(), jsonValue),
+  ]),
 );
 
 const logSchema = z.object({
@@ -65,7 +76,12 @@ export const logExecutionEvent = createServerFn({ method: "POST" })
 
 const extendSchema = z.object({
   mission_id: z.string().uuid(),
-  minutes: z.number().int().min(-240).max(240).refine((n) => n !== 0, "no zero"),
+  minutes: z
+    .number()
+    .int()
+    .min(-240)
+    .max(240)
+    .refine((n) => n !== 0, "no zero"),
 });
 
 export const extendMissionToday = createServerFn({ method: "POST" })
