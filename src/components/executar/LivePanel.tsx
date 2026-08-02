@@ -18,7 +18,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useDeviceMotionAggregator, type MotionAggregate } from "@/hooks/useDeviceMotion";
 import { useActuators, type ActuatorConfig } from "@/providers/ActuatorsProvider";
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
-import { logExecutionEvent } from "@/lib/execution.functions";
+import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
 
 const FLUSH_MS = 15_000;
@@ -63,7 +63,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   }, []);
 
   const persist = useCallback(
-    async (payload: Parameters<typeof logExecutionEvent>[0]["data"]) => {
+    async (payload: LogExecutionEventInput) => {
       setSaving(true);
       try {
         await logExecutionEvent({ data: payload });
