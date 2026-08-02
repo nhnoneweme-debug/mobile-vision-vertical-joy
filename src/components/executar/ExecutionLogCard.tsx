@@ -62,8 +62,9 @@ export function ExecutionLogCard() {
       >
         <ScrollText className="h-4 w-4 text-muted-foreground" />
         <span className="font-display text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Log de hoje
+          Registro
         </span>
+
         <span className="ml-auto rounded-full bg-charcoal-900/60 px-2 py-0.5 text-[10px] text-muted-foreground">
           {rows.length}
         </span>
