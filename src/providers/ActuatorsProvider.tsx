@@ -82,8 +82,11 @@ type ActuatorsCtx = {
   toggleSpeech: () => void;
   speaking: boolean;
   /** fala um texto se a voz estiver ligada; no-op caso contrário */
-  speak: (text: string) => void;
+  speak: (text: string, opts?: { onEnd?: () => void }) => void;
+  /** toque curto de turno (turn-taking) — independe dos loops de atuador */
+  chime: (sound?: ActuatorSound) => void;
   stopAll: () => void;
+
 };
 
 const STORAGE_KEY = "wimi.actuators.v1";
