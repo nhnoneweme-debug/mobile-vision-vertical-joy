@@ -341,6 +341,41 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [audioOn, audioSupported, audioConfig]);
 
+  // Beacon: sinal periódico de presença, independente dos gatilhos.
+  useEffect(() => {
+    if (!beacon.enabled || !audioSupported) return;
+    let cancelled = false;
+
+    const sound = audioConfig.sound ?? "soft";
+
+    const ping = () => {
+      if (cancelled) return;
+      if (!audioCtxRef.current) {
+        const Ctor =
+          (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctor) return;
+        audioCtxRef.current = new Ctor();
+      }
+      const ctx = audioCtxRef.current;
+      void ctx.resume().catch(() => {});
+      const dur = playSound(ctx, sound);
+      setBeaconPulsing(true);
+      window.setTimeout(() => {
+        if (!cancelled) setBeaconPulsing(false);
+      }, dur * 1000);
+    };
+
+    ping();
+    const id = window.setInterval(ping, Math.max(5000, beacon.everySec * 1000));
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      setBeaconPulsing(false);
+    };
+  }, [beacon, audioSupported, audioConfig.sound]);
+
+
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;
     setVibrationOn((v) => !v);
