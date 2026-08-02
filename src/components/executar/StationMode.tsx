@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { LiveClock } from "./LiveClock";
+import { useActuators } from "@/providers/ActuatorsProvider";
 
 export type StationProps = {
   listening: boolean;
@@ -120,7 +121,7 @@ export function StationMode(props: StationProps) {
           detail={props.cameraLive ? "ao vivo" : "desligada"}
         />
         <Big label="Vibração" on={props.vibrationOn} icon={<Vibrate className="h-9 w-9" />} />
-        <Big label="Áudio" on={props.audioOn} icon={<Volume2 className="h-9 w-9" />} />
+        <AudioBig on={props.audioOn} />
       </div>
 
       {props.cameraLive ? (
@@ -197,5 +198,19 @@ export function StationMode(props: StationProps) {
         tela ligada: {props.wakeActive ? "sim (wake lock ativo)" : "não garantida"}
       </p>
     </div>
+  );
+}
+
+/** Indicador grande de áudio — mostra o beacon de presença quando ativo. */
+function AudioBig({ on }: { on: boolean }) {
+  const { audioConfig } = useActuators();
+  const beacon = audioConfig.beacon?.on ? audioConfig.beacon : null;
+  return (
+    <Big
+      label="Áudio"
+      on={on}
+      icon={<Volume2 className="h-9 w-9" />}
+      detail={on ? (beacon ? `beacon a cada ${beacon.value} ${beacon.unit}` : "ativo") : "desligado"}
+    />
   );
 }
