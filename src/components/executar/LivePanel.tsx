@@ -35,6 +35,9 @@ import {
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
+import { NextActionsOverlay } from "./NextActionsOverlay";
+import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
+import { setLiveSessionStart } from "@/hooks/useLiveSession";
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
@@ -77,6 +80,12 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   const [lastBlock, setLastBlock] = useState<{ id: string; text: string } | null>(null);
   const [lastSpike, setLastSpike] = useState<{ at: string; magnitude: number } | null>(null);
   const [sessionStartedAt] = useState(() => Date.now());
+  const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
+
+  // Um único relógio de sessão para motor, overlay e Studio.
+  useEffect(() => {
+    setLiveSessionStart(sessionStartedAt);
+  }, [sessionStartedAt]);
 
   const actuators = useActuators();
   const wake = useWakeLockContext();
@@ -344,6 +353,22 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         if (mot === false) setMotionOn(false);
         if (mot === true) void toggleMotion();
       }
+      if (action.custom?.plan || action.custom?.instruction) {
+        toast(`gatilho: ${trigger.name}`, {
+          description: action.custom.plan ?? action.custom.instruction,
+          duration: 8000,
+        });
+      }
+      if (action.journey_log_prompt) {
+        setJourneyLog({
+          sessionId,
+          missionId: missionId ?? null,
+          missionTitle: null,
+          elapsedMin: Math.max(0, Math.round((Date.now() - sessionStartedAt) / 60000)),
+          recentTranscript: bufferRef.current.slice(-3),
+          triggerName: trigger.name,
+        });
+      }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? undefined,
       });
@@ -360,7 +385,17 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         },
       });
     },
-    [actuators, camera, flushTranscript, missionId, persist, sessionId, speech, toggleMotion],
+    [
+      actuators,
+      camera,
+      flushTranscript,
+      missionId,
+      persist,
+      sessionId,
+      sessionStartedAt,
+      speech,
+      toggleMotion,
+    ],
   );
 
   useTriggerEngine(
