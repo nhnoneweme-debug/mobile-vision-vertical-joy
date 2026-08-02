@@ -103,7 +103,14 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
   );
   const mode: ActuatorMode = c?.mode === "continuous" ? "continuous" : "timed";
   const sound: ActuatorSound = c?.sound === "bell" || c?.sound === "tick" ? c.sound : "soft";
-  return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound };
+  const rawBeacon = c?.beacon;
+  const unit: BeaconUnit = rawBeacon?.unit === "min" ? "min" : "s";
+  const value = Math.min(
+    999,
+    Math.max(1, Math.round(Number(rawBeacon?.value ?? (unit === "min" ? 2 : 60)))),
+  );
+  const beacon = { on: !!rawBeacon?.on, value, unit };
+  return { onSec, everySec: Math.max(everySec, onSec + 1), mode, sound, beacon };
 }
 
 /**
