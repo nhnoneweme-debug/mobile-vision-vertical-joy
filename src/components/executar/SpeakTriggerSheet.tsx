@@ -1,22 +1,28 @@
-// D2 — CRIAR GATILHO FALANDO.
+// D2 — CRIAR GATILHO FALANDO / MODO RÁPIDO.
 // O usuário descreve o gatilho inteiro (voz ou texto), a IA monta o rascunho
-// estruturado e ele é aberto no builder para revisão. Nunca salva direto.
+// estruturado e mostra um resumo legível. No modo rápido dá pra salvar direto
+// (ou abrir no builder para ajustar). Sem `onSave`, só o caminho do builder.
 
 import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { DualInput } from "./DualInput";
 import { interpretTriggerSpeech, resolveTriggerProposal } from "@/lib/triggers.functions";
-import type { TriggerDraft } from "@/lib/triggers";
+import { actionElements, describeTrigger, type TriggerDraft } from "@/lib/triggers";
 
 type Interpreted = TriggerDraft & { summary?: string };
 
 export function SpeakTriggerSheet({
   onClose,
   onUse,
+  onSave,
+  saving = false,
 }: {
   onClose: () => void;
   onUse: (draft: Interpreted) => void;
+  /** Modo rápido: salva o gatilho direto, sem passar pelo builder. */
+  onSave?: (draft: Interpreted) => void;
+  saving?: boolean;
 }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -95,32 +101,63 @@ export function SpeakTriggerSheet({
             {draft.summary ? (
               <p className="mt-1 text-[12px] text-muted-foreground">{draft.summary}</p>
             ) : null}
-            <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-charcoal-950/60 p-2 text-[10px] text-muted-foreground">
-              {JSON.stringify(
-                {
-                  condition: draft.condition,
-                  action: draft.action,
-                  active_window: draft.active_window,
-                  cooldown_seconds: draft.cooldown_seconds,
-                },
-                null,
-                1,
-              )}
-            </pre>
+
+            {/* Resumo legível — nada de JSON cru no modo rápido. */}
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              {describeTrigger({
+                condition: draft.condition,
+                action: draft.action,
+                active_window: draft.active_window,
+                cooldown_seconds: draft.cooldown_seconds,
+              })}
+            </p>
+            {actionElements(draft.action).length ? (
+              <ol className="mt-2 space-y-1">
+                {actionElements(draft.action).map((el, i) => (
+                  <li key={i} className="flex gap-2 text-[11px] text-muted-foreground">
+                    <span className="font-display text-ember">{i + 1}.</span>
+                    <span className="min-w-0 break-words">{el}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {onSave ? (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => {
+                    if (auditId)
+                      void resolveTriggerProposal({
+                        data: { audit_id: auditId, status: "applied" },
+                      });
+                    onSave(draft);
+                  }}
+                  className="w-full rounded-xl border border-ember/40 bg-ember/10 py-2.5 text-sm text-ember disabled:opacity-40 active:scale-95"
+                >
+                  {saving ? "salvando…" : "Salvar assim"}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  if (auditId)
+                    void resolveTriggerProposal({ data: { audit_id: auditId, status: "applied" } });
+                  onUse(draft);
+                }}
+                className="w-full rounded-xl border border-border py-2.5 text-sm text-muted-foreground active:scale-95"
+              >
+                {onSave ? "Ajustar no builder" : "Revisar no builder"}
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                if (auditId)
-                  void resolveTriggerProposal({ data: { audit_id: auditId, status: "applied" } });
-                onUse(draft);
-              }}
-              className="mt-3 w-full rounded-xl border border-ember/40 bg-ember/10 py-2.5 text-sm text-ember active:scale-95"
+              onClick={discard}
+              className="mt-2 w-full py-1 text-center text-[11px] text-muted-foreground active:scale-95"
             >
-              Revisar no builder
+              Cancelar
             </button>
-            <p className="mt-1 text-center text-[10px] text-muted-foreground">
-              nada é salvo antes da sua revisão
-            </p>
           </div>
         ) : null}
       </div>

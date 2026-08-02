@@ -299,6 +299,8 @@ export function TriggersSection() {
   const [libOpen, setLibOpen] = useState(false);
   const [versionsFor, setVersionsFor] = useState<string | null>(null);
   const [speakOpen, setSpeakOpen] = useState(false);
+  /** Modo rápido: mesma folha, mas com "Salvar assim" habilitado. */
+  const [speakQuick, setSpeakQuick] = useState(false);
   const [reportFor, setReportFor] = useState<string | null>(null);
   const [generalOpen, setGeneralOpen] = useState(false);
   const sessionStartedAt = useLiveSessionStart();
@@ -367,6 +369,19 @@ export function TriggersSection() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  /** Modo rápido — salva o rascunho da IA direto, já ligado. */
+  const quickSaveM = useMutation({
+    mutationFn: (draft: TriggerDraft) =>
+      createTrigger({ ...draft, enabled: true }, triggers.length),
+    onSuccess: () => {
+      setSpeakOpen(false);
+      setSpeakQuick(false);
+      invalidate();
+      toast.success("Gatilho criado e ligado.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const dupM = useMutation({
     mutationFn: (t: TriggerDefinition) => duplicateTrigger(t, triggers.length),
@@ -485,12 +500,27 @@ export function TriggersSection() {
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <button
               type="button"
-              onClick={() => setSpeakOpen(true)}
+              onClick={() => {
+                setSpeakQuick(true);
+                setSpeakOpen(true);
+              }}
               className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-2 py-2 text-[11px] text-ember active:scale-95 sm:px-3 sm:text-xs"
+            >
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Rápido</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSpeakQuick(false);
+                setSpeakOpen(true);
+              }}
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-2 py-2 text-[11px] text-muted-foreground active:scale-95 sm:px-3 sm:text-xs"
             >
               <Sparkles className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Falando</span>
             </button>
+
             <button
               type="button"
               onClick={() => setGeneralOpen(true)}
@@ -1158,7 +1188,25 @@ export function TriggersSection() {
 
       {speakOpen ? (
         <SpeakTriggerSheet
-          onClose={() => setSpeakOpen(false)}
+          onClose={() => {
+            setSpeakOpen(false);
+            setSpeakQuick(false);
+          }}
+          saving={quickSaveM.isPending}
+          onSave={
+            speakQuick
+              ? (d) =>
+                  quickSaveM.mutate({
+                    name: d.name,
+                    enabled: true,
+                    trigger_type: d.trigger_type,
+                    condition: d.condition,
+                    action: d.action,
+                    active_window: d.active_window ?? {},
+                    cooldown_seconds: d.cooldown_seconds,
+                  })
+              : undefined
+          }
           onUse={(d) => {
             setForm({
               ...EMPTY_FORM,
@@ -1179,6 +1227,7 @@ export function TriggersSection() {
               id: null,
             });
             setSpeakOpen(false);
+            setSpeakQuick(false);
             setOpen(true);
             toast("Rascunho pronto — revise e salve.");
           }}

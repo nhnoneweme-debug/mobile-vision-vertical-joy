@@ -181,6 +181,10 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [speaking, setSpeaking] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // Timer único do áudio + trava anti-sobreposição (ver agendador abaixo).
+  const audioTimerRef = useRef<number | null>(null);
+  const audioStartedRef = useRef(false);
+  const lastAudioFireRef = useRef(0);
 
   // Suporte + config persistida (client-only).
   useEffect(() => {
@@ -367,9 +371,31 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [vibrationOn, vibrationSupported, vibrationConfig]);
 
+  // Primitivas derivadas: o efeito depende delas, não do objeto de config
+  // inteiro — assim editar um campo irrelevante não reinicia o agendador.
+  const beaconOn = audioConfig.beacon?.on === true;
+  const beaconSec = beaconIntervalSec(audioConfig.beacon ?? { value: 60, unit: "s" });
+  const audioMode = audioConfig.mode;
+  const audioEverySec = audioConfig.everySec;
+  const audioSound = audioConfig.sound ?? "soft";
+
   // AGENDADOR ÚNICO DE ÁUDIO — um só timer, um só timbre por vez.
+  //
+  // FATIA 3.5.1 — o beacon agora é um PORTÃO, não só um seletor de intervalo:
+  // ele só entra no cálculo quando `beacon.on` é verdadeiro, o timer vive num
+  // ref (nunca sobrevive a uma reconfiguração) e a emissão imediata acontece
+  // apenas na transição desligado→ligado. Antes, qualquer edição de config
+  // reexecutava o efeito e disparava um som fora de fase, o que soava como um
+  // segundo emissor rodando em paralelo ao padrão do modo contínuo.
   useEffect(() => {
-    if (!audioOn || !audioSupported) return;
+    if (!audioOn || !audioSupported) {
+      audioStartedRef.current = false;
+      if (audioTimerRef.current) {
+        window.clearInterval(audioTimerRef.current);
+        audioTimerRef.current = null;
+      }
+      return;
+    }
     let cancelled = false;
 
     const getCtx = () => {
@@ -383,10 +409,14 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       return audioCtxRef.current;
     };
 
-    const sound = audioConfig.sound ?? "soft";
+    const sound = audioSound;
 
     const fire = () => {
       if (cancelled) return;
+      // Trava anti-sobreposição: nenhuma fonte pode empilhar timbres.
+      const now = Date.now();
+      if (now - lastAudioFireRef.current < 400) return;
+      lastAudioFireRef.current = now;
       const ctx = getCtx();
       if (!ctx) return;
       void ctx.resume().catch(() => {});
@@ -397,23 +427,33 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       }, dur * 1000);
     };
 
-    // ANTI-DUPLICAÇÃO: um só timer. Se o beacon está ligado, ele MANDA no
-    // intervalo — o padrão temporizado não abre um segundo fluxo de emissão.
-    const periodMs = audioConfig.beacon?.on
-      ? beaconIntervalSec(audioConfig.beacon) * 1000
-      : audioConfig.mode === "continuous"
+    // Portão explícito: com o beacon desligado ele não influencia nada.
+    const periodMs = beaconOn
+      ? beaconSec * 1000
+      : audioMode === "continuous"
         ? CONTINUOUS_PATTERN_MS
-        : Math.max(1000, audioConfig.everySec * 1000);
+        : Math.max(1000, audioEverySec * 1000);
 
-    fire();
-    const id = window.setInterval(fire, periodMs);
+    // Um só timer vivo: derruba qualquer resíduo antes de criar o novo.
+    if (audioTimerRef.current) {
+      window.clearInterval(audioTimerRef.current);
+      audioTimerRef.current = null;
+    }
+    if (!audioStartedRef.current) {
+      audioStartedRef.current = true;
+      fire();
+    }
+    audioTimerRef.current = window.setInterval(fire, periodMs);
 
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      if (audioTimerRef.current) {
+        window.clearInterval(audioTimerRef.current);
+        audioTimerRef.current = null;
+      }
       setPulsing((p) => ({ ...p, audio: false }));
     };
-  }, [audioOn, audioSupported, audioConfig]);
+  }, [audioOn, audioSupported, beaconOn, beaconSec, audioMode, audioEverySec, audioSound]);
 
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;
