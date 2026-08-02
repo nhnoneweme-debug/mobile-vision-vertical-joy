@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { LiveClock } from "./LiveClock";
+import { useActuators } from "@/providers/ActuatorsProvider";
 
 export type StationProps = {
   listening: boolean;
@@ -140,6 +141,8 @@ export function StationMode(props: StationProps) {
         <Big label="Áudio" on={props.audioOn} icon={<Volume2 className="h-9 w-9" />} />
       </div>
 
+      <BeaconBadge />
+
       {props.cameraLive ? (
         <div className="relative mb-3 aspect-video overflow-hidden rounded-2xl border border-ember/40">
           {props.cameraNode}
@@ -213,6 +216,19 @@ export function StationMode(props: StationProps) {
       <p className="mt-2 text-center text-[10px] text-muted-foreground">
         tela ligada: {props.wakeActive ? "sim (wake lock ativo)" : "não garantida"}
       </p>
+    </div>
+  );
+}
+
+function BeaconBadge() {
+  const { beacon, beaconPulsing } = useActuators();
+  if (!beacon.enabled) return null;
+  return (
+    <div className="mb-3 flex items-center gap-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-[11px] text-ember">
+      <span
+        className={`h-2 w-2 rounded-full bg-ember ${beaconPulsing ? "animate-ping" : "animate-pulse"}`}
+      />
+      <span className="truncate">beacon ativo · a cada {beacon.everySec}s</span>
     </div>
   );
 }
