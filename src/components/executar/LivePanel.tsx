@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import { listTriggers, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
+import { runTriggerPrompt } from "@/lib/triggers.functions";
 import { useDeviceMotionAggregator, type MotionAggregate } from "@/hooks/useDeviceMotion";
 import { useCamera } from "@/hooks/useCamera";
 import {
@@ -379,18 +380,18 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             trigger_name: trigger.name,
           },
         })
-          .then((res) => {
+          .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
             void persist({
               mission_id: missionId ?? null,
-              kind: "journey_log",
+              kind: "sensor_reading",
               channel: "foreground",
               note: res.message,
               meta: {
                 session_id: sessionId,
                 type: "trigger_prompt",
                 trigger_id: trigger.id,
-                instruction: action.prompt?.instruction,
+                instruction: action.prompt?.instruction ?? "",
               },
             });
           })
