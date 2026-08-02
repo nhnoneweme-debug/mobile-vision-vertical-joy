@@ -57,7 +57,9 @@ function ExecutarPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const seedProcessedRef = useRef(false);
-  const [tab, setTab] = useState<"palco" | "live" | "gatilhos">("palco");
+  // Não existem dois palcos: "live" é a tela única do ambiente agente.
+  const [tab, setTab] = useState<"live" | "gatilhos">("live");
+
 
   // Timeline com estado por bloco.
   const timeline: TimelineItem[] = useMemo(() => {
