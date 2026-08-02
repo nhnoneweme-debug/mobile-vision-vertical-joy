@@ -73,6 +73,19 @@ const COND_LABEL: Record<CondKind, string> = {
   video: "detecção por vídeo",
 };
 
+const FAMILIES = [
+  {
+    key: "agent" as const,
+    label: "Agentes",
+    hint: "proativos: cronos e métricas — acionam você e entram na fila de próximas ações.",
+  },
+  {
+    key: "command" as const,
+    label: "Comandos",
+    hint: "reativos: códigos de voz que esperam você falar — nunca aparecem como próxima ação.",
+  },
+];
+
 const DAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 type FormState = {
@@ -468,10 +481,23 @@ export function TriggersSection() {
             construtor.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
-            {triggers.map((t, i) => {
+          <ul className="mt-3 space-y-4">
+            {FAMILIES.map((fam) => {
+              const items = triggers
+                .map((t, i) => ({ t, i }))
+                .filter(({ t }) => triggerFamily(t) === fam.key);
+              if (!items.length) return null;
+              return (
+                <li key={fam.key} className="list-none">
+                  <p className="font-display text-[10px] uppercase tracking-[0.18em] text-ember">
+                    {fam.label}
+                  </p>
+                  <p className="mb-2 text-[11px] text-muted-foreground">{fam.hint}</p>
+                  <ul className="space-y-2">
+            {items.map(({ t, i }) => {
               const s = stats[t.id];
               const win = describeWindow(t.active_window);
+              const armed = fam.key === "command" && t.enabled;
               return (
                 <li
                   key={t.id}
@@ -495,6 +521,19 @@ export function TriggersSection() {
                           {formatCountdown(
                             (nextChronosFireAt(t, sessionStartedAt, tick) as number) - tick,
                           )}
+                        </p>
+                      ) : null}
+                      {t.action?.intended_outcome ? (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          <span className="font-display uppercase tracking-wide text-ember">
+                            resultado pretendido ·{" "}
+                          </span>
+                          {t.action.intended_outcome}
+                        </p>
+                      ) : null}
+                      {armed ? (
+                        <p className="mt-0.5 text-[10px] uppercase tracking-wide text-ember">
+                          armado — esperando a frase
                         </p>
                       ) : null}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -569,6 +608,10 @@ export function TriggersSection() {
                   </div>
 
                   {versionsFor === t.id ? <RevisionList trigger={t} onDone={invalidate} /> : null}
+                </li>
+              );
+            })}
+                  </ul>
                 </li>
               );
             })}
