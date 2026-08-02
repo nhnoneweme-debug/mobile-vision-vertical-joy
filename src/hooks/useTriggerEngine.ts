@@ -208,7 +208,27 @@ export function useTriggerEngine(
     }
   }, [signals.active, liveTextValue, liveEpoch, enabled, fire]);
 
+  // ------------------------------------------------ EVENTOS DA SESSÃO LIVE
+  //
+  // Sinais discretos (início, bloco fechado, silêncio, registro manual). O
+  // dedupe é pela `ref` da ocorrência, então o mesmo evento nunca dispara duas
+  // vezes o mesmo gatilho.
+  const eventName = signals.event?.name ?? null;
+  const eventRef = signals.event?.ref ?? null;
+  useEffect(() => {
+    if (!signals.active || !eventName || !eventRef) return;
+    for (const t of enabled()) {
+      const c = t.condition as Record<string, unknown>;
+      if (c?.source !== "event" || c.event !== eventName) continue;
+      fire(t, "event", eventRef, {
+        event: eventName,
+        ...(signalsRef.current.event?.meta ?? {}),
+      });
+    }
+  }, [signals.active, eventName, eventRef, enabled, fire]);
+
   // ------------------------------------------------------------ CHRONOS
+
   useEffect(() => {
     if (!signals.active) return;
     const tick = () => {
