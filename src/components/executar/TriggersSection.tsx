@@ -58,13 +58,14 @@ import { SpeakTriggerSheet } from "./SpeakTriggerSheet";
 import { CustomActionBox } from "./CustomActionBox";
 import { DualInput } from "./DualInput";
 
-type CondKind = "at_time" | "every" | "after_session" | "audio" | "video";
+type CondKind = "at_time" | "every" | "after_session" | "audio" | "event" | "video";
 
-type Source = "chronos" | "audio" | "video";
+type Source = "chronos" | "audio" | "event" | "video";
 
 const SOURCE_LABEL: Record<Source, string> = {
   chronos: "Cronos",
   audio: "Áudio",
+  event: "Evento",
   video: "Vídeo (em breve)",
 };
 
@@ -73,8 +74,10 @@ const COND_LABEL: Record<CondKind, string> = {
   every: "a cada X min de Live",
   after_session: "após X min de sessão",
   audio: "palavra-chave no áudio",
+  event: "evento da sessão Live",
   video: "detecção por vídeo",
 };
+
 
 const FAMILIES = [
   {
