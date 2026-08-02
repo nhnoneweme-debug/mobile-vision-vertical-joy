@@ -40,6 +40,14 @@ export type ActuatorConfig = {
   sound?: ActuatorSound;
 };
 
+/** Sinal sonoro periódico de presença ("estou aqui, ativa"). */
+export type BeaconConfig = {
+  enabled: boolean;
+  /** intervalo entre bipes, em segundos */
+  everySec: number;
+};
+
+export const BEACON_PRESETS = [30, 60, 120, 300];
 
 type ActuatorsCtx = {
   vibrationOn: boolean;
@@ -48,6 +56,9 @@ type ActuatorsCtx = {
   audioSupported: boolean;
   vibrationConfig: ActuatorConfig;
   audioConfig: ActuatorConfig;
+  beacon: BeaconConfig;
+  beaconPulsing: boolean;
+  setBeacon: (c: BeaconConfig) => void;
   pulsing: { vibration: boolean; audio: boolean };
   toggleVibration: () => void;
   toggleAudio: () => void;
@@ -62,6 +73,9 @@ type ActuatorsCtx = {
 const STORAGE_KEY = "wimi.actuators.v1";
 
 const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed", sound: "soft" };
+
+const DEFAULT_BEACON: BeaconConfig = { enabled: false, everySec: 60 };
+
 
 /** intervalo de repetição do padrão sonoro no modo contínuo (ms) */
 const CONTINUOUS_PATTERN_MS = 2500;
