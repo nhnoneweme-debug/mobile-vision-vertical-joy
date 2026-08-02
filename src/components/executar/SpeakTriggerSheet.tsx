@@ -1,22 +1,28 @@
-// D2 — CRIAR GATILHO FALANDO.
+// D2 — CRIAR GATILHO FALANDO / MODO RÁPIDO.
 // O usuário descreve o gatilho inteiro (voz ou texto), a IA monta o rascunho
-// estruturado e ele é aberto no builder para revisão. Nunca salva direto.
+// estruturado e mostra um resumo legível. No modo rápido dá pra salvar direto
+// (ou abrir no builder para ajustar). Sem `onSave`, só o caminho do builder.
 
 import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { DualInput } from "./DualInput";
 import { interpretTriggerSpeech, resolveTriggerProposal } from "@/lib/triggers.functions";
-import type { TriggerDraft } from "@/lib/triggers";
+import { actionElements, describeTrigger, type TriggerDraft } from "@/lib/triggers";
 
 type Interpreted = TriggerDraft & { summary?: string };
 
 export function SpeakTriggerSheet({
   onClose,
   onUse,
+  onSave,
+  saving = false,
 }: {
   onClose: () => void;
   onUse: (draft: Interpreted) => void;
+  /** Modo rápido: salva o gatilho direto, sem passar pelo builder. */
+  onSave?: (draft: Interpreted) => void;
+  saving?: boolean;
 }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
