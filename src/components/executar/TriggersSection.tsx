@@ -818,7 +818,7 @@ export function TriggersSection() {
               >
                 <option value="">nenhum</option>
                 {triggers
-                  .filter((t) => t.id !== editing?.id)
+                  .filter((t) => t.id !== form.id)
                   .map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -835,7 +835,7 @@ export function TriggersSection() {
                 >
                   <option value="">nenhum</option>
                   {triggers
-                    .filter((t) => t.id !== editing?.id)
+                    .filter((t) => t.id !== form.id)
                     .map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
