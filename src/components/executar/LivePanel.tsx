@@ -236,6 +236,25 @@ export function LivePanel({
 
   const speech = useSpeechToText(onFinalText, { lang });
 
+  // Detector de silêncio do Live Dinâmico: passado o limite sem fala nova (e
+  // com a WiMi calada), emite o evento "silence" — quem escuta são os gatilhos.
+  useEffect(() => {
+    if (!dynamic || !speech.listening) return;
+    lastSpeechAtRef.current = Date.now();
+    const id = window.setInterval(() => {
+      if (actuators.speaking) {
+        lastSpeechAtRef.current = Date.now();
+        return;
+      }
+      if (Date.now() - lastSpeechAtRef.current < DYNAMIC_SILENCE_MS) return;
+      lastSpeechAtRef.current = Date.now();
+      emitEvent("silence", { silence_ms: DYNAMIC_SILENCE_MS });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [actuators.speaking, dynamic, emitEvent, speech.listening]);
+
+
+
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
     [liveLine, speech.interim],
