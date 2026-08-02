@@ -102,7 +102,9 @@ type FormState = {
   time: string;
   minutes: number;
   keyword: string;
+  liveEvent: LiveEventName;
   cooldown: number;
+
   vibrate: boolean;
   vibrateSec: number;
   tone: boolean;
