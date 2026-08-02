@@ -360,8 +360,11 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       }, dur * 1000);
     };
 
-    const periodMs =
-      audioConfig.mode === "continuous"
+    // ANTI-DUPLICAÇÃO: um só timer. Se o beacon está ligado, ele MANDA no
+    // intervalo — o padrão temporizado não abre um segundo fluxo de emissão.
+    const periodMs = audioConfig.beacon?.on
+      ? beaconIntervalSec(audioConfig.beacon) * 1000
+      : audioConfig.mode === "continuous"
         ? CONTINUOUS_PATTERN_MS
         : Math.max(1000, audioConfig.everySec * 1000);
 
