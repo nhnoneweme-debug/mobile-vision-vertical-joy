@@ -15,11 +15,18 @@ import {
   type ReactNode,
 } from "react";
 
+export type ActuatorMode = "timed" | "continuous";
+
 export type ActuatorConfig = {
   /** duração do pulso, em segundos */
   onSec: number;
   /** intervalo entre pulsos, em segundos */
   everySec: number;
+  /**
+   * "timed" = padrão temporizado (N seg a cada M seg).
+   * "continuous" = indefinido: fica ativo até o usuário desligar.
+   */
+  mode: ActuatorMode;
 };
 
 type ActuatorsCtx = {
@@ -39,7 +46,7 @@ type ActuatorsCtx = {
 
 const STORAGE_KEY = "wimi.actuators.v1";
 
-const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30 };
+const DEFAULT_CONFIG: ActuatorConfig = { onSec: 1, everySec: 30, mode: "timed" };
 
 const ActuatorsContext = createContext<ActuatorsCtx | null>(null);
 
@@ -49,14 +56,19 @@ function clampConfig(c: Partial<ActuatorConfig> | undefined): ActuatorConfig {
     3600,
     Math.max(5, Math.round(Number(c?.everySec ?? DEFAULT_CONFIG.everySec))),
   );
-  return { onSec, everySec: Math.max(everySec, onSec + 1) };
+  const mode: ActuatorMode = c?.mode === "continuous" ? "continuous" : "timed";
+  return { onSec, everySec: Math.max(everySec, onSec + 1), mode };
 }
 
 export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [vibrationOn, setVibrationOn] = useState(false);
   const [audioOn, setAudioOn] = useState(false);
   const [vibrationConfig, setVibrationConfigState] = useState<ActuatorConfig>(DEFAULT_CONFIG);
-  const [audioConfig, setAudioConfigState] = useState<ActuatorConfig>({ onSec: 1, everySec: 60 });
+  const [audioConfig, setAudioConfigState] = useState<ActuatorConfig>({
+    onSec: 1,
+    everySec: 60,
+    mode: "timed",
+  });
   const [vibrationSupported, setVibrationSupported] = useState(false);
   const [audioSupported, setAudioSupported] = useState(false);
   const [pulsing, setPulsing] = useState({ vibration: false, audio: false });
@@ -119,6 +131,34 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!vibrationOn || !vibrationSupported) return;
     let cancelled = false;
+
+    // Modo indefinido: mantém a vibração viva com pulsos longos encadeados
+    // (a API limita a duração de cada chamada), sem duração pré-definida.
+    if (vibrationConfig.mode === "continuous") {
+      const CHUNK = 5000;
+      const keepAlive = () => {
+        if (cancelled) return;
+        try {
+          navigator.vibrate(CHUNK);
+        } catch {
+          /* alguns browsers bloqueiam sem gesto */
+        }
+      };
+      keepAlive();
+      setPulsing((p) => ({ ...p, vibration: true }));
+      const idc = window.setInterval(keepAlive, CHUNK - 300);
+      return () => {
+        cancelled = true;
+        window.clearInterval(idc);
+        try {
+          navigator.vibrate(0);
+        } catch {
+          /* noop */
+        }
+        setPulsing((p) => ({ ...p, vibration: false }));
+      };
+    }
+
     const fire = () => {
       if (cancelled) return;
       try {
@@ -184,6 +224,34 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setPulsing((p) => ({ ...p, audio: false }));
       }, dur * 1000);
     };
+
+    if (audioConfig.mode === "continuous") {
+      const ctx = getCtx();
+      if (!ctx) return;
+      void ctx.resume().catch(() => {});
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 432;
+      const t0 = ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.3);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      setPulsing((p) => ({ ...p, audio: true }));
+      return () => {
+        cancelled = true;
+        try {
+          gain.gain.cancelScheduledValues(ctx.currentTime);
+          gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+          osc.stop(ctx.currentTime + 0.2);
+        } catch {
+          /* já parado */
+        }
+        setPulsing((p) => ({ ...p, audio: false }));
+      };
+    }
 
     fire();
     const id = window.setInterval(fire, audioConfig.everySec * 1000);
