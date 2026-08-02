@@ -508,12 +508,42 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         onFlipCamera={() => void camera.flip()}
         onExit={() => setStation(false)}
         onPauseAll={pauseAll}
+        overlay={
+          <<NextActionsOverlay
+          triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
+          sessionStartedAt={sessionStartedAt}
+          now={{
+            label: speech.listening
+              ? "ouvindo e transcrevendo"
+              : motionOn
+                ? "lendo movimento"
+                : "sessão Live parada",
+            detail: `${blocksSaved} blocos`,
+          }}
+            big
+          />
+        }
       />
     );
   }
 
   return (
     <div className="space-y-4">
+      <<NextActionsOverlay
+          triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
+          sessionStartedAt={sessionStartedAt}
+          now={{
+            label: speech.listening
+              ? "ouvindo e transcrevendo"
+              : motionOn
+                ? "lendo movimento"
+                : "sessão Live parada",
+            detail: `${blocksSaved} blocos`,
+          }}
+      />
+      {journeyLog ? (
+        <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
+      ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
           <WifiOff className="h-4 w-4 shrink-0" /> Você está offline. A captura fica pausada — nada
