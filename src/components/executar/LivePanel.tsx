@@ -289,7 +289,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         actuators.setAudio(true);
       }
       if (action.sensors) {
-        const { mic, camera: cam, motion: mot } = action.sensors;
+        const { mic, camera: cam } = action.sensors;
         if (mic === false && speech.listening) {
           speech.stop();
           flushTranscript();
@@ -297,9 +297,8 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         if (mic === true && !speech.listening) speech.start();
         if (cam === false) camera.stop();
         if (cam === true && !camera.live) void camera.toggle();
-        if (mot === false) setMotionOn(false);
-        if (mot === true) void toggleMotion();
       }
+
       if (action.custom?.plan || action.custom?.instruction) {
         toast(`gatilho: ${trigger.name}`, {
           description: action.custom.plan ?? action.custom.instruction,
