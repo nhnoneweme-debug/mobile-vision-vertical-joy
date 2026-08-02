@@ -92,6 +92,7 @@ type FormState = {
   micOff: boolean;
   cameraOff: boolean;
   message: string;
+  outcome: string;
   journeyLog: boolean;
   customInstruction: string;
   customPlan: string | null;
@@ -123,6 +124,7 @@ const EMPTY_FORM: FormState = {
   micOff: false,
   cameraOff: false,
   message: "",
+  outcome: "",
   journeyLog: false,
   customInstruction: "",
   customPlan: null,
@@ -179,6 +181,7 @@ function buildAction(f: FormState): TriggerAction {
   if (f.chainEnableId)
     a.trigger_enable = { trigger_id: f.chainEnableId, enabled: f.chainEnableValue };
   if (f.message.trim()) a.message = f.message.trim();
+  if (f.outcome.trim()) a.intended_outcome = f.outcome.trim();
   return a;
 }
 
@@ -232,6 +235,7 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     micOff: a.sensors?.mic === false,
     cameraOff: a.sensors?.camera === false,
     message: a.message ?? "",
+    outcome: a.intended_outcome ?? "",
     journeyLog: !!a.journey_log_prompt,
     customInstruction: a.custom?.instruction ?? "",
     customPlan: a.custom?.plan ?? null,
