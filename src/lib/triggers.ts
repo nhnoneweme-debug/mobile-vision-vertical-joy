@@ -52,7 +52,6 @@ export function triggerFamily(t: Pick<TriggerDefinition, "condition">): TriggerF
   return c?.source === "audio" ? "command" : "agent";
 }
 
-
 /** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
 export const MAX_CHAIN_DEPTH = 3;
 
@@ -482,7 +481,6 @@ export const FIRING_RESULT_LABEL: Record<FiringResult, string> = {
   suppressed_cooldown: "suprimido por cooldown",
 };
 
-
 export function describeCondition(t: TriggerDefinition): string {
   const c = t.condition as Record<string, unknown>;
   if (c.mode === "at_time") return `todo dia às ${String(c.time)}`;
@@ -739,9 +737,7 @@ export function upcomingActions(
   const eligible = triggers
     .filter(
       (t) =>
-        t.enabled &&
-        triggerFamily(t) === "agent" &&
-        isWithinWindow(t.active_window, new Date(now)),
+        t.enabled && triggerFamily(t) === "agent" && isWithinWindow(t.active_window, new Date(now)),
     )
     .sort((a, b) => a.position - b.position);
 
@@ -771,4 +767,3 @@ export function armedCommands(
       t.enabled && triggerFamily(t) === "command" && isWithinWindow(t.active_window, new Date(now)),
   );
 }
-

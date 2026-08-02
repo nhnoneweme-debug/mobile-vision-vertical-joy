@@ -178,10 +178,7 @@ export function GeneralReportSheet({
   const actuators = useActuators();
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const reports = useMemo(
-    () => buildReports(triggers, firings, 5),
-    [triggers, firings],
-  );
+  const reports = useMemo(() => buildReports(triggers, firings, 5), [triggers, firings]);
 
   const summarize = async () => {
     setLoading(true);

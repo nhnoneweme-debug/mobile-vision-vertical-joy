@@ -42,7 +42,6 @@ import {
   restoreRevision,
   triggerFamily,
   updateTrigger,
-
   updateTriggerVersioned,
   type ActiveWindow,
   type TriggerAction,
@@ -413,8 +412,7 @@ export function TriggersSection() {
           });
         if (a.prompt?.instruction)
           results.push({ action: "prompt", success: false, detail: "não executado em teste" });
-        if (a.message)
-          results.push({ action: "mensagem", success: true, detail: a.message });
+        if (a.message) results.push({ action: "mensagem", success: true, detail: a.message });
         await recordFiring({
           trigger_id: t.id,
           source_kind: "simulation",
@@ -543,128 +541,136 @@ export function TriggersSection() {
                   </p>
                   <p className="mb-2 text-[11px] text-muted-foreground">{fam.hint}</p>
                   <ul className="space-y-2">
-            {items.map(({ t, i }) => {
-              const s = stats[t.id];
-              const win = describeWindow(t.active_window);
-              const armed = fam.key === "command" && t.enabled;
-              return (
-                <li
-                  key={t.id}
-                  className={`rounded-xl border p-3 ${
-                    t.enabled ? "border-ember/40 bg-ember/5" : "border-border bg-charcoal-950/30"
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="mt-0.5 font-display text-[11px] text-muted-foreground">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-foreground">{t.name}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {describeCondition(t)}
-                        {win ? `, ${win}` : ""} → {describeAction(t, nameById)}
-                      </p>
-                      {t.enabled && nextChronosFireAt(t, sessionStartedAt, tick) != null ? (
-                        <p className="mt-0.5 text-[11px] text-ember">
-                          próximo disparo em{" "}
-                          {formatCountdown(
-                            (nextChronosFireAt(t, sessionStartedAt, tick) as number) - tick,
-                          )}
-                        </p>
-                      ) : null}
-                      {t.action?.intended_outcome ? (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          <span className="font-display uppercase tracking-wide text-ember">
-                            resultado pretendido ·{" "}
-                          </span>
-                          {t.action.intended_outcome}
-                        </p>
-                      ) : null}
-                      {armed ? (
-                        <p className="mt-0.5 text-[10px] uppercase tracking-wide text-ember">
-                          armado — esperando a frase
-                        </p>
-                      ) : null}
-                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        cooldown {formatCooldown(t.cooldown_seconds)} · {s?.total ?? 0} total · {s?.today ?? 0}{" "}
-                        hoje
-                        {s?.last
-                          ? ` · último ${new Date(s.last).toLocaleTimeString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleM.mutate({ id: t.id, enabled: !t.enabled })}
-                        aria-pressed={t.enabled}
-                        className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide ${
-                          t.enabled
-                            ? "bg-ember/20 text-ember"
-                            : "bg-charcoal-800 text-muted-foreground"
-                        }`}
-                      >
-                        {t.enabled ? "on" : "off"}
-                      </button>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          aria-label="Subir"
-                          onClick={() => move(i, -1)}
-                          className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
+                    {items.map(({ t, i }) => {
+                      const s = stats[t.id];
+                      const win = describeWindow(t.active_window);
+                      const armed = fam.key === "command" && t.enabled;
+                      return (
+                        <li
+                          key={t.id}
+                          className={`rounded-xl border p-3 ${
+                            t.enabled
+                              ? "border-ember/40 bg-ember/5"
+                              : "border-border bg-charcoal-950/30"
+                          }`}
                         >
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Descer"
-                          onClick={() => move(i, 1)}
-                          className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
-                        >
-                          <ArrowDown className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Excluir"
-                          onClick={() => deleteM.mutate(t.id)}
-                          className="rounded-md border border-border p-1 text-destructive active:scale-95"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                          <div className="flex items-start gap-2">
+                            <span className="mt-0.5 font-display text-[11px] text-muted-foreground">
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm text-foreground">{t.name}</p>
+                              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                {describeCondition(t)}
+                                {win ? `, ${win}` : ""} → {describeAction(t, nameById)}
+                              </p>
+                              {t.enabled && nextChronosFireAt(t, sessionStartedAt, tick) != null ? (
+                                <p className="mt-0.5 text-[11px] text-ember">
+                                  próximo disparo em{" "}
+                                  {formatCountdown(
+                                    (nextChronosFireAt(t, sessionStartedAt, tick) as number) - tick,
+                                  )}
+                                </p>
+                              ) : null}
+                              {t.action?.intended_outcome ? (
+                                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                  <span className="font-display uppercase tracking-wide text-ember">
+                                    resultado pretendido ·{" "}
+                                  </span>
+                                  {t.action.intended_outcome}
+                                </p>
+                              ) : null}
+                              {armed ? (
+                                <p className="mt-0.5 text-[10px] uppercase tracking-wide text-ember">
+                                  armado — esperando a frase
+                                </p>
+                              ) : null}
+                              <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                cooldown {formatCooldown(t.cooldown_seconds)} · {s?.total ?? 0}{" "}
+                                total · {s?.today ?? 0} hoje
+                                {s?.last
+                                  ? ` · último ${new Date(s.last).toLocaleTimeString("pt-BR", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}`
+                                  : ""}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleM.mutate({ id: t.id, enabled: !t.enabled })}
+                                aria-pressed={t.enabled}
+                                className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide ${
+                                  t.enabled
+                                    ? "bg-ember/20 text-ember"
+                                    : "bg-charcoal-800 text-muted-foreground"
+                                }`}
+                              >
+                                {t.enabled ? "on" : "off"}
+                              </button>
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  aria-label="Subir"
+                                  onClick={() => move(i, -1)}
+                                  className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
+                                >
+                                  <ArrowUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label="Descer"
+                                  onClick={() => move(i, 1)}
+                                  className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
+                                >
+                                  <ArrowDown className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label="Excluir"
+                                  onClick={() => deleteM.mutate(t.id)}
+                                  className="rounded-md border border-border p-1 text-destructive active:scale-95"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
 
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <MiniBtn icon={Play} label="Testar agora" onClick={() => void simulate(t)} />
-                    <MiniBtn
-                      icon={Pencil}
-                      label="Editar"
-                      onClick={() => {
-                        setForm(formFromTrigger(t));
-                        setOpen(true);
-                      }}
-                    />
-                    <MiniBtn
-                      icon={FileText}
-                      label="Relatório"
-                      onClick={() => setReportFor(t.id)}
-                    />
-                    <MiniBtn icon={Copy} label="Duplicar" onClick={() => dupM.mutate(t)} />
-                    <MiniBtn
-                      icon={History}
-                      label="Versões"
-                      onClick={() => setVersionsFor(versionsFor === t.id ? null : t.id)}
-                    />
-                  </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <MiniBtn
+                              icon={Play}
+                              label="Testar agora"
+                              onClick={() => void simulate(t)}
+                            />
+                            <MiniBtn
+                              icon={Pencil}
+                              label="Editar"
+                              onClick={() => {
+                                setForm(formFromTrigger(t));
+                                setOpen(true);
+                              }}
+                            />
+                            <MiniBtn
+                              icon={FileText}
+                              label="Relatório"
+                              onClick={() => setReportFor(t.id)}
+                            />
+                            <MiniBtn icon={Copy} label="Duplicar" onClick={() => dupM.mutate(t)} />
+                            <MiniBtn
+                              icon={History}
+                              label="Versões"
+                              onClick={() => setVersionsFor(versionsFor === t.id ? null : t.id)}
+                            />
+                          </div>
 
-                  {versionsFor === t.id ? <RevisionList trigger={t} onDone={invalidate} /> : null}
-                </li>
-              );
-            })}
+                          {versionsFor === t.id ? (
+                            <RevisionList trigger={t} onDone={invalidate} />
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </li>
               );
@@ -855,8 +861,6 @@ export function TriggersSection() {
                 className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
               />
             </Field>
-
-
 
             {/* ---------------------------------------- ELEMENTO PROMPT */}
             <Field label='prompt — "fale com a WiMi no disparo" (opcional)'>
@@ -1076,18 +1080,18 @@ export function TriggersSection() {
         )}
       </section>
 
-      {reportFor ? (
-        (() => {
-          const t = triggers.find((x) => x.id === reportFor);
-          return t ? (
-            <TriggerReportSheet
-              trigger={t}
-              firings={firingsQ.data ?? []}
-              onClose={() => setReportFor(null)}
-            />
-          ) : null;
-        })()
-      ) : null}
+      {reportFor
+        ? (() => {
+            const t = triggers.find((x) => x.id === reportFor);
+            return t ? (
+              <TriggerReportSheet
+                trigger={t}
+                firings={firingsQ.data ?? []}
+                onClose={() => setReportFor(null)}
+              />
+            ) : null;
+          })()
+        : null}
 
       {generalOpen ? (
         <GeneralReportSheet

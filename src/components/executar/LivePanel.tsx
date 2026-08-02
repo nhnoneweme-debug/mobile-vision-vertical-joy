@@ -50,7 +50,6 @@ import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
 import { ExecutionLogCard } from "./ExecutionLogCard";
 
-
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
@@ -88,7 +87,6 @@ export function LivePanel({
   /** Conteúdo da jornada renderizado logo abaixo do relógio. */
   header?: React.ReactNode;
 }) {
-
   const [sessionId] = useState(() => newId("sess"));
   const [station, setStation] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -292,7 +290,6 @@ export function LivePanel({
     [triggersQ.data],
   );
 
-
   const applyAction = useCallback(
     (action: TriggerAction, trigger: TriggerDefinition, info?: { matched_text?: string }) => {
       const results: import("@/lib/triggers").ActionResult[] = [];
@@ -477,7 +474,6 @@ export function LivePanel({
     },
     { applyAction },
   );
-
 
   const pauseAll = useCallback(() => {
     if (speech.listening) {
@@ -819,7 +815,6 @@ export function LivePanel({
       {/* REGISTRO — o log do antigo Palco, colapsável dentro do Live. */}
       <ExecutionLogCard />
     </div>
-
   );
 }
 
@@ -948,7 +943,6 @@ function ActuatorRow({
           ) : null}
 
           {showSound ? <BeaconConfig config={config} onConfig={onConfig} /> : null}
-
 
           {continuous ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
@@ -1108,8 +1102,8 @@ function BeaconConfig({
             })}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Enquanto ligado, o beacon manda no intervalo da emissão de áudio — não existe um
-            segundo som em paralelo.
+            Enquanto ligado, o beacon manda no intervalo da emissão de áudio — não existe um segundo
+            som em paralelo.
           </p>
         </>
       ) : null}

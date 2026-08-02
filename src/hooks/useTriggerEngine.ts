@@ -62,7 +62,6 @@ export function useTriggerEngine(
     ) => void
   >(() => {});
 
-
   const fire = useCallback(
     (
       t: TriggerDefinition,
@@ -129,7 +128,6 @@ export function useTriggerEngine(
           fired_client_at: new Date(now).toISOString(),
         },
       }).catch(() => {});
-
 
       // ------------------------------------------- encadeamento entre gatilhos
       if (action.trigger_enable?.trigger_id) {
@@ -203,7 +201,6 @@ export function useTriggerEngine(
       });
     }
   }, [signals.active, liveTextValue, liveEpoch, enabled, fire]);
-
 
   // ------------------------------------------------------------ CHRONOS
   useEffect(() => {
