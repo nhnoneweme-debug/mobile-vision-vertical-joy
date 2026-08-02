@@ -29,42 +29,39 @@ export function useCamera() {
     setStatus((s) => (s === "unsupported" ? s : "idle"));
   }, []);
 
-  const startWith = useCallback(
-    async (mode: CameraFacing) => {
-      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-        setStatus("unsupported");
-        return false;
+  const startWith = useCallback(async (mode: CameraFacing) => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setStatus("unsupported");
+      return false;
+    }
+    setStatus("requesting");
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode },
+        audio: false,
+      });
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        void videoRef.current.play().catch(() => {});
       }
-      setStatus("requesting");
-      setError(null);
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: mode },
-          audio: false,
-        });
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          void videoRef.current.play().catch(() => {});
-        }
-        setFacing(mode);
-        setStatus("live");
-        return true;
-      } catch (e) {
-        const name = (e as { name?: string })?.name;
-        if (name === "NotAllowedError" || name === "SecurityError") {
-          setStatus("denied");
-          setError("Permissão de câmera negada. Libere nas configurações do navegador.");
-        } else {
-          setStatus("error");
-          setError(e instanceof Error ? e.message : "Não foi possível abrir a câmera.");
-        }
-        return false;
+      setFacing(mode);
+      setStatus("live");
+      return true;
+    } catch (e) {
+      const name = (e as { name?: string })?.name;
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setStatus("denied");
+        setError("Permissão de câmera negada. Libere nas configurações do navegador.");
+      } else {
+        setStatus("error");
+        setError(e instanceof Error ? e.message : "Não foi possível abrir a câmera.");
       }
-    },
-    [],
-  );
+      return false;
+    }
+  }, []);
 
   const start = useCallback(() => startWith(facing), [facing, startWith]);
 
@@ -94,10 +91,13 @@ export function useCamera() {
     }
   }, []);
 
-  useEffect(() => () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-  }, []);
+  useEffect(
+    () => () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    },
+    [],
+  );
 
   return {
     status,

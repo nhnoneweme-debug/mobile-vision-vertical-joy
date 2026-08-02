@@ -215,7 +215,9 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     if (!target || !next || next === target.text) return;
     const revision = target.revision + 1;
     setBlocks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, text: next, revision, saved: !b.saved ? b.saved : b.saved } : b)),
+      prev.map((b) =>
+        b.id === id ? { ...b, text: next, revision, saved: !b.saved ? b.saved : b.saved } : b,
+      ),
     );
     if (!target.saved) return; // ainda não persistido: o texto corrigido é o que será salvo
     void persist({
@@ -512,9 +514,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           </div>
         </div>
 
-        {camera.error ? (
-          <p className="mt-2 text-[11px] text-destructive">{camera.error}</p>
-        ) : null}
+        {camera.error ? <p className="mt-2 text-[11px] text-destructive">{camera.error}</p> : null}
 
         <div className="relative mt-3 aspect-video overflow-hidden rounded-xl border border-border/60 bg-charcoal-950/60">
           {camera.live ? (

@@ -21,7 +21,6 @@ type UseSpeechToTextOptions = {
   lang?: string;
 };
 
-
 type RecentCommit = { norm: string; at: number };
 
 const RECENT_COMMIT_TTL = 20_000;
@@ -134,7 +133,10 @@ export function useSpeechToText(
   const commitFinalText = useCallback(
     (raw: string) => {
       let text = collapseImmediateEcho(raw);
-      text = subtractAlreadyCommitted(text, lastWords(committedTextRef.current, TAIL_WORDS_TO_COMPARE));
+      text = subtractAlreadyCommitted(
+        text,
+        lastWords(committedTextRef.current, TAIL_WORDS_TO_COMPARE),
+      );
       text = collapseImmediateEcho(text);
       if (!text) return;
 

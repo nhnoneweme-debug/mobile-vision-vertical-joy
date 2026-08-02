@@ -177,7 +177,9 @@ export function StationMode(props: StationProps) {
               <p
                 key={`${i}-${line.slice(0, 12)}`}
                 className={
-                  i === props.transcriptLines.length - 1 ? "text-foreground" : "text-muted-foreground"
+                  i === props.transcriptLines.length - 1
+                    ? "text-foreground"
+                    : "text-muted-foreground"
                 }
               >
                 {line}

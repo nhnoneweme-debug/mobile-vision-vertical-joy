@@ -83,7 +83,13 @@ export function useDeviceMotionAggregator({
     startedAt: Date.now(),
   });
   const lastSpikeRef = useRef(0);
-  const liveRef = useRef({ magnitude: 0, level: 0, dominant: "indefinido" as MotionAggregate["dominant"], beta: null as number | null, gamma: null as number | null });
+  const liveRef = useRef({
+    magnitude: 0,
+    level: 0,
+    dominant: "indefinido" as MotionAggregate["dominant"],
+    beta: null as number | null,
+    gamma: null as number | null,
+  });
   const lastPaintRef = useRef(0);
   const onAggRef = useRef(onAggregate);
   const onSpikeRef = useRef(onSpike);
