@@ -46,12 +46,23 @@ export function useTriggerEngine(
   signalsRef.current = signals;
   controlsRef.current = controls;
 
+  const fireRef = useRef<
+    (
+      t: TriggerDefinition,
+      sourceKind: string,
+      sourceRef: string,
+      meta: Record<string, unknown>,
+      depth?: number,
+    ) => void
+  >(() => {});
+
   const fire = useCallback(
     (
       t: TriggerDefinition,
       sourceKind: string,
       sourceRef: string,
       meta: Record<string, unknown>,
+      depth = 0,
     ) => {
       const key = `${t.id}:${sourceRef}`;
       if (doneRefsRef.current.has(key)) return;
@@ -73,9 +84,10 @@ export function useTriggerEngine(
       }
 
       lastFireRef.current[t.id] = now;
+      const action = t.action ?? {};
       let result: "executed" | "failed" = "executed";
       try {
-        controlsRef.current.applyAction(t.action ?? {}, t);
+        controlsRef.current.applyAction(action, t);
       } catch {
         result = "failed";
       }
@@ -86,10 +98,42 @@ export function useTriggerEngine(
         result,
         meta,
       }).catch(() => {});
+
+      // ------------------------------------------- encadeamento entre gatilhos
+      if (action.trigger_enable?.trigger_id) {
+        void updateTrigger(action.trigger_enable.trigger_id, {
+          enabled: action.trigger_enable.enabled,
+        }).catch(() => {});
+      }
+      const chainId = action.trigger_fire?.trigger_id;
+      if (chainId) {
+        const target = triggersRef.current.find((x) => x.id === chainId);
+        if (target) {
+          if (depth + 1 >= MAX_CHAIN_DEPTH) {
+            void recordFiring({
+              trigger_id: target.id,
+              source_kind: "chain",
+              source_ref: `chain:${sourceRef}:${depth + 1}`,
+              result: "failed",
+              meta: { reason: "chain_limit", chained_from: t.id, chained_from_name: t.name, depth: depth + 1 },
+            }).catch(() => {});
+          } else {
+            fireRef.current(
+              target,
+              "chain",
+              `chain:${sourceRef}:${depth + 1}`,
+              { chained_from: t.id, chained_from_name: t.name, depth: depth + 1 },
+              depth + 1,
+            );
+          }
+        }
+      }
       onFired?.();
     },
     [onFired],
   );
+  fireRef.current = fire;
+
 
   const enabled = useCallback(
     () =>
