@@ -336,3 +336,137 @@ export function describeAction(t: TriggerDefinition): string {
   if (a.message) parts.push(`avisar "${a.message}"`);
   return parts.length ? parts.join(" + ") : "nenhuma ação";
 }
+
+// ------------------------------------------------------------ janela ativa
+
+const DAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+function toMinutes(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/** Janela vazia = sempre elegível. Suporta janelas que cruzam a meia-noite. */
+export function isWithinWindow(w: ActiveWindow | null | undefined, at: Date = new Date()): boolean {
+  if (!w || (!w.start && !w.end && !(w.days && w.days.length))) return true;
+  if (w.days && w.days.length && !w.days.includes(at.getDay())) return false;
+  const start = w.start ? toMinutes(w.start) : null;
+  const end = w.end ? toMinutes(w.end) : null;
+  if (start == null || end == null) return true;
+  const now = at.getHours() * 60 + at.getMinutes();
+  if (start === end) return true;
+  if (start < end) return now >= start && now <= end;
+  return now >= start || now <= end; // cruza a meia-noite
+}
+
+export function describeWindow(w: ActiveWindow | null | undefined): string | null {
+  if (!w) return null;
+  const parts: string[] = [];
+  if (w.start && w.end) parts.push(`entre ${w.start}–${w.end}`);
+  if (w.days && w.days.length && w.days.length < 7) {
+    parts.push(`em ${w.days.slice().sort().map((d) => DAY_LABELS[d]).join("/")}`);
+  }
+  return parts.length ? parts.join(", ") : null;
+}
+
+/** Resumo legível completo, usado no preview ao vivo do Studio. */
+export function describeTrigger(t: {
+  condition: TriggerCondition;
+  action: TriggerAction;
+  active_window?: ActiveWindow;
+  cooldown_seconds?: number;
+}): string {
+  const fake = t as TriggerDefinition;
+  const win = describeWindow(t.active_window);
+  return `${describeCondition(fake)}${win ? `, ${win}` : ""} → ${describeAction(fake)}`;
+}
+
+// -------------------------------------------------------- biblioteca
+
+export type TriggerTemplate = { id: string; label: string; hint: string; draft: TriggerDraft };
+
+export const TRIGGER_TEMPLATES: TriggerTemplate[] = [
+  {
+    id: "codigo-off",
+    label: "Código off",
+    hint: "palavra-chave desliga todos os sensores",
+    draft: {
+      name: "código off",
+      enabled: false,
+      trigger_type: "event",
+      condition: { source: "audio", keyword: "código off" },
+      action: { sensors: { mic: false, camera: false, motion: false }, stop_actuators: true },
+      cooldown_seconds: 10,
+    },
+  },
+  {
+    id: "so-ouvidos",
+    label: "Código só ouvidos",
+    hint: "desliga câmera e movimento, mantém o mic",
+    draft: {
+      name: "código só ouvidos",
+      enabled: false,
+      trigger_type: "event",
+      condition: { source: "audio", keyword: "só ouvidos" },
+      action: { sensors: { camera: false, motion: false } },
+      cooldown_seconds: 10,
+    },
+  },
+  {
+    id: "pomodoro",
+    label: "Pomodoro 25/5",
+    hint: "a cada 25 min de Live: vibra + mensagem",
+    draft: {
+      name: "pomodoro 25/5",
+      enabled: false,
+      trigger_type: "chronos",
+      condition: { mode: "every", seconds: 1500 },
+      action: { vibrate: { onSec: 2 }, message: "25 min. Pausa de 5 e volta." },
+      cooldown_seconds: 60,
+    },
+  },
+  {
+    id: "hidratacao",
+    label: "Hidratação",
+    hint: "a cada 60 min: sino + mensagem",
+    draft: {
+      name: "hidratação",
+      enabled: false,
+      trigger_type: "chronos",
+      condition: { mode: "every", seconds: 3600 },
+      action: { audio_tone: { onSec: 1 }, message: "Bebe água." },
+      cooldown_seconds: 300,
+    },
+  },
+  {
+    id: "sentinela",
+    label: "Sentinela de movimento",
+    hint: "pico ≥ 8 m/s²: mensagem + sino",
+    draft: {
+      name: "sentinela de movimento",
+      enabled: false,
+      trigger_type: "event",
+      condition: { source: "motion", kind: "spike", min_magnitude: 8 },
+      action: { audio_tone: { onSec: 1 }, message: "Movimento brusco detectado." },
+      cooldown_seconds: 30,
+    },
+  },
+];
+
+// -------------------------------------------------------- estatísticas
+
+export type TriggerStats = { total: number; today: number; last: string | null };
+
+export function computeStats(firings: TriggerFiring[]): Record<string, TriggerStats> {
+  const todayKey = new Date().toDateString();
+  const map: Record<string, TriggerStats> = {};
+  for (const f of firings) {
+    if (f.result === "suppressed_cooldown") continue;
+    const s = (map[f.trigger_id] ??= { total: 0, today: 0, last: null });
+    s.total += 1;
+    if (new Date(f.fired_at).toDateString() === todayKey) s.today += 1;
+    if (!s.last || f.fired_at > s.last) s.last = f.fired_at;
+  }
+  return map;
+}
