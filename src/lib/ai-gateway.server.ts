@@ -10,10 +10,10 @@ const HAS_OPENAI = !!process.env.OPENAI_API_KEY;
 /**
  * Modelo principal. Default depende do provedor:
  *  - OpenAI direto: `gpt-4o` (ajuste via env `AI_CHAT_MODEL`, ex.: `gpt-4.1`, `o4-mini`).
- *  - Lovable Gateway: `openai/gpt-5.5`.
+ *  - Lovable Gateway: `openai/gpt-5.6-sol`.
  */
 export const AI_CHAT_MODEL =
-  process.env.AI_CHAT_MODEL ?? (HAS_OPENAI ? "gpt-4o" : "openai/gpt-5.5");
+  process.env.AI_CHAT_MODEL ?? (HAS_OPENAI ? "gpt-4o" : "openai/gpt-5.6-sol");
 
 /** Modelo de reserva (usado em 402 sem saldo / 429 rate limit). Mais barato/rápido. */
 export const AI_FALLBACK_MODEL =
@@ -23,11 +23,28 @@ export const AI_FALLBACK_MODEL =
 // parâmetro legado `max_tokens` ("Unsupported parameter... Use 'max_completion_tokens'
 // instead"). O @ai-sdk/openai-compatible sempre manda `max_tokens`, então remapeamos
 // aqui antes do envio.
-function remapMaxTokens(args: Record<string, unknown>): Record<string, unknown> {
-  if (!args || !("max_tokens" in args)) return args;
-  const { max_tokens, ...rest } = args;
-  return max_tokens == null ? rest : { ...rest, max_completion_tokens: max_tokens };
+//
+// Além disso, a família gpt-5.6 em /v1/chat/completions REJEITA (400) qualquer
+// `reasoning_effort` diferente de "none" quando há tools na requisição — então
+// normalizamos o campo aqui, no único ponto por onde todas as chamadas passam.
+function normalizeRequest(args: Record<string, unknown>): Record<string, unknown> {
+  let out = args;
+  if (out && "max_tokens" in out) {
+    const { max_tokens, ...rest } = out;
+    out = max_tokens == null ? rest : { ...rest, max_completion_tokens: max_tokens };
+  }
+  const model = String((out as { model?: unknown }).model ?? "");
+  if (/gpt-5\.6/.test(model)) {
+    const hasTools = Array.isArray((out as { tools?: unknown }).tools);
+    if (hasTools || (out as { reasoning_effort?: unknown }).reasoning_effort == null) {
+      out = { ...out, reasoning_effort: "none" };
+    }
+  }
+  return out;
 }
+
+const remapMaxTokens = normalizeRequest;
+
 
 export function createLovableAiGatewayProvider(lovableApiKey: string) {
   return createOpenAICompatible({
