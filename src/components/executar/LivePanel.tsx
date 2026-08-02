@@ -62,22 +62,19 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     };
   }, []);
 
-  const persist = useCallback(
-    async (payload: LogExecutionEventInput) => {
-      setSaving(true);
-      try {
-        await logExecutionEvent({ data: payload });
-        setError(null);
-        return true;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Falha ao salvar evento.");
-        return false;
-      } finally {
-        setSaving(false);
-      }
-    },
-    [],
-  );
+  const persist = useCallback(async (payload: LogExecutionEventInput) => {
+    setSaving(true);
+    try {
+      await logExecutionEvent({ data: payload });
+      setError(null);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao salvar evento.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   const flushTranscript = useCallback(() => {
     const text = bufferRef.current.join(" ").trim();
@@ -202,10 +199,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
     actuators.stopAll();
   }, [actuators, flushTranscript, speech]);
 
-  const preview = useMemo(
-    () => speech.preview || lastBlock || "",
-    [speech.preview, lastBlock],
-  );
+  const preview = useMemo(() => speech.preview || lastBlock || "", [speech.preview, lastBlock]);
 
   // Parada real ao desmontar: nada continua capturando em segundo plano.
   useEffect(() => {
@@ -318,7 +312,9 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             disabled={!motion.supported || offline}
             aria-pressed={motionOn}
             className={`shrink-0 rounded-full border px-4 py-2 text-xs disabled:opacity-40 active:scale-95 ${
-              motionOn ? "border-ember bg-ember/15 text-ember" : "border-border text-muted-foreground"
+              motionOn
+                ? "border-ember bg-ember/15 text-ember"
+                : "border-border text-muted-foreground"
             }`}
           >
             {motionOn ? "Ativo" : "Ativar"}

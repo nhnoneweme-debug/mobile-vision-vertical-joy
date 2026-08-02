@@ -45,7 +45,10 @@ export function MobileShell({
       }
     })();
     // Also flip hasUser when session becomes available later.
-    supabase.auth.getUser().then(({ data }) => setHasUser(!!data.user)).catch(() => {});
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setHasUser(!!data.user))
+      .catch(() => {});
   }, []);
 
   useWakeAlarmScheduler(hasUser && !hideNav);
@@ -58,7 +61,10 @@ export function MobileShell({
           {!hideNav && <DesktopSidebar />}
 
           <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[var(--shell-max)] flex-1 flex-col">
-            <main className="flex-1 pb-28 lg:pb-8" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+            <main
+              className="flex-1 pb-28 lg:pb-8"
+              style={{ paddingTop: "env(safe-area-inset-top)" }}
+            >
               {children}
             </main>
             {!hideNav && <AppBottomBar />}

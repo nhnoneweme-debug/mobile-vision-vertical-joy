@@ -37,7 +37,9 @@ function Big({
   return (
     <div
       className={`flex flex-col items-center justify-center rounded-2xl border p-4 text-center ${
-        on ? "border-ember/60 bg-ember/10 text-ember" : "border-border bg-charcoal-900/60 text-muted-foreground"
+        on
+          ? "border-ember/60 bg-ember/10 text-ember"
+          : "border-border bg-charcoal-900/60 text-muted-foreground"
       }`}
     >
       <div className={on ? "animate-pulse" : ""}>{icon}</div>

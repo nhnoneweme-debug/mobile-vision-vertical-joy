@@ -65,11 +65,15 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
 
   // Suporte + config persistida (client-only).
   useEffect(() => {
-    setVibrationSupported(typeof navigator !== "undefined" && typeof navigator.vibrate === "function");
+    setVibrationSupported(
+      typeof navigator !== "undefined" && typeof navigator.vibrate === "function",
+    );
     setAudioSupported(
       typeof window !== "undefined" &&
-        !!((window as unknown as { AudioContext?: unknown }).AudioContext ||
-          (window as unknown as { webkitAudioContext?: unknown }).webkitAudioContext),
+        !!(
+          (window as unknown as { AudioContext?: unknown }).AudioContext ||
+          (window as unknown as { webkitAudioContext?: unknown }).webkitAudioContext
+        ),
     );
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
