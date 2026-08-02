@@ -369,6 +369,19 @@ export function TriggersSection() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  /** Modo rápido — salva o rascunho da IA direto, já ligado. */
+  const quickSaveM = useMutation({
+    mutationFn: (draft: TriggerDraft) =>
+      createTrigger({ ...draft, enabled: true }, triggers.length),
+    onSuccess: () => {
+      setSpeakOpen(false);
+      setSpeakQuick(false);
+      invalidate();
+      toast.success("Gatilho criado e ligado.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const dupM = useMutation({
     mutationFn: (t: TriggerDefinition) => duplicateTrigger(t, triggers.length),
