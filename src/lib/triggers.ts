@@ -28,7 +28,17 @@ export type TriggerAction = {
   journey_log_prompt?: boolean;
   /** Ação personalizada descrita em linguagem natural e interpretada pela IA. */
   custom?: { instruction: string; plan?: string };
+  /** ELEMENTO PROMPT — instrução em linguagem natural executada pela LLM no disparo. */
+  prompt?: { instruction: string };
+  /** ENCADEAMENTO — executa as ações de outro gatilho imediatamente. */
+  trigger_fire?: { trigger_id: string };
+  /** ENCADEAMENTO — arma/desarma outro gatilho. */
+  trigger_enable?: { trigger_id: string; enabled: boolean };
 };
+
+/** Profundidade máxima de encadeamento entre gatilhos (proteção anti-ciclo). */
+export const MAX_CHAIN_DEPTH = 3;
+
 
 
 /** Janela de elegibilidade: horário e/ou dias da semana (0 = domingo). */
