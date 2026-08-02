@@ -21,6 +21,10 @@ const EVENT_KINDS = [
   "sensor_reading",
   "journey_log",
   "journey_log_declined",
+  // registro manual do usuário no Live (mic / câmera / dump)
+  "manual_log",
+  // ritual da noite: "registrar meu dia"
+  "day_review",
 ] as const;
 
 const PHASES = ["preEnd", "atEnd", "preStart", "atStart"] as const;
