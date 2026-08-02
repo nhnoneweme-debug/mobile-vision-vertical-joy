@@ -284,6 +284,12 @@ export function LivePanel({
 
   // -------------------------------------------------- MOTOR DE GATILHOS
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+  // Comandos de voz armados — contador discreto no overlay, nunca na fila.
+  const commandsArmed = useMemo(
+    () => armedCommands((triggersQ.data ?? []) as TriggerDefinition[]).length,
+    [triggersQ.data],
+  );
+
 
   const applyAction = useCallback(
     (action: TriggerAction, trigger: TriggerDefinition) => {
