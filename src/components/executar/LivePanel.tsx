@@ -704,6 +704,8 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
             config={actuators.audioConfig}
             onToggle={actuators.toggleAudio}
             onConfig={actuators.setAudioConfig}
+            showSound
+
           />
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
