@@ -306,7 +306,10 @@ export const SEED_TRIGGERS: TriggerDraft[] = [
   },
 ];
 
+export async function seedExampleTriggers(existing: TriggerDefinition[]) {
+  if (existing.length > 0) return false;
   for (let i = 0; i < SEED_TRIGGERS.length; i += 1) {
+
     await createTrigger(SEED_TRIGGERS[i], i);
   }
   return true;
