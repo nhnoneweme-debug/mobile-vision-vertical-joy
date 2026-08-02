@@ -75,7 +75,18 @@ function newId(prefix: string) {
   }
 }
 
-export function LivePanel({ missionId }: { missionId?: string | null }) {
+export function LivePanel({
+  missionId,
+  onOpenCommands,
+  header,
+}: {
+  missionId?: string | null;
+  /** Abre a área de Comandos (aba Gatilhos) a partir do contador do overlay. */
+  onOpenCommands?: () => void;
+  /** Conteúdo da jornada renderizado logo abaixo do relógio. */
+  header?: React.ReactNode;
+}) {
+
   const [sessionId] = useState(() => newId("sess"));
   const [station, setStation] = useState(false);
   const [offline, setOffline] = useState(false);
