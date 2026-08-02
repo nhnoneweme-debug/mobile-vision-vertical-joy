@@ -1,6 +1,6 @@
 // Painel LIVE do Executando — ouvidos (transcrição contínua multilíngue e
-// editável), giroscópio (leitura em tempo real, persistência agregada),
-// atuadores (temporizado ou indefinido) e câmera ao vivo.
+// editável), atuadores (vibração + emissão de áudio em bloco único, com voz
+// das manifestações) e câmera ao vivo. Sem sensores de movimento.
 // Tudo que é persistido vira evento append-only em execution_events.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +17,6 @@ import {
   SwitchCamera,
   Vibrate,
   Volume2,
-  Waves,
   WifiOff,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -73,16 +72,13 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   const [sessionId] = useState(() => newId("sess"));
   const [station, setStation] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [spikes, setSpikes] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [motionOn, setMotionOn] = useState(false);
   const [blocks, setBlocks] = useState<TranscriptBlock[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [lang, setLang] = useState<string>("pt-BR");
   const [lastBlock, setLastBlock] = useState<{ id: string; text: string } | null>(null);
-  const [lastSpike, setLastSpike] = useState<{ at: string; magnitude: number } | null>(null);
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
@@ -103,6 +99,10 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
   const [liveLine, setLiveLine] = useState("");
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
+
+  // Espelho das falas recentes para as manifestações contextuais.
+  const blocksRef = useRef<string[]>([]);
+  blocksRef.current = blocks.map((b) => b.text);
 
   useEffect(() => {
     try {
@@ -401,7 +401,6 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       sessionId,
       sessionStartedAt,
       speech,
-      toggleMotion,
     ],
   );
 
@@ -411,9 +410,6 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       active: !offline,
       sessionStartedAt,
       lastBlock,
-      lastSpike,
-      beta: motionOn ? motion.live.beta : null,
-      gamma: motionOn ? motion.live.gamma : null,
     },
     { applyAction },
   );
@@ -423,7 +419,6 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
       speech.stop();
       flushTranscript();
     }
-    setMotionOn(false);
     actuators.stopAll();
     camera.stop();
   }, [actuators, camera, flushTranscript, speech]);
@@ -502,16 +497,11 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         listening={speech.listening}
         micSupported={speech.supported}
         onToggleListening={toggleListening}
-        motionActive={motionOn && motion.supported}
-        motionMagnitude={motion.live.magnitude}
-        motionLevel={motion.live.level}
-        motionDominant={motion.live.dominant}
         vibrationOn={actuators.vibrationOn}
         audioOn={actuators.audioOn}
         wakeActive={wake.active}
         transcriptLines={[...blocks.slice(-3).map((b) => b.text), currentLine].filter(Boolean)}
         blocksSaved={blocksSaved}
-        spikes={spikes}
         offline={offline}
         cameraLive={camera.live}
         cameraNode={camera.live ? cameraVideo : null}
@@ -524,11 +514,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
           sessionStartedAt={sessionStartedAt}
           now={{
-            label: speech.listening
-              ? "ouvindo e transcrevendo"
-              : motionOn
-                ? "lendo movimento"
-                : "sessão Live parada",
+            label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
             detail: `${blocksSaved} blocos`,
           }}
             big
@@ -545,11 +531,7 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
           triggers={(triggersQ.data ?? []) as TriggerDefinition[]}
           sessionStartedAt={sessionStartedAt}
           now={{
-            label: speech.listening
-              ? "ouvindo e transcrevendo"
-              : motionOn
-                ? "lendo movimento"
-                : "sessão Live parada",
+            label: speech.listening ? "ouvindo e transcrevendo" : "sessão Live parada",
             detail: `${blocksSaved} blocos`,
           }}
       />
@@ -692,68 +674,6 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
         </p>
       </section>
 
-      {/* GIROSCÓPIO */}
-      <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Waves className="h-3.5 w-3.5" /> Movimento
-            </h3>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              {!motion.supported
-                ? "Sensores de movimento indisponíveis neste dispositivo."
-                : motion.permission === "denied"
-                  ? "Permissão de sensores negada."
-                  : motionOn
-                    ? `${motion.live.dominant} · ${motion.live.magnitude.toFixed(1)} m/s² · ${spikes} pico(s)`
-                    : "Leitura desligada."}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void toggleMotion()}
-            disabled={!motion.supported || offline}
-            aria-pressed={motionOn}
-            className={`shrink-0 rounded-full border px-4 py-2 text-xs disabled:opacity-40 active:scale-95 ${
-              motionOn
-                ? "border-ember bg-ember/15 text-ember"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {motionOn ? "Ativo" : "Ativar"}
-          </button>
-        </div>
-
-        {motionOn ? (
-          <div className="mt-3">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-charcoal-950/70">
-              <div
-                className="h-full rounded-full bg-ember transition-[width] duration-100"
-                style={{ width: `${Math.round(motion.live.level * 100)}%` }}
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              atividade ao vivo · β {motion.live.beta?.toFixed(0) ?? "—"}° / γ{" "}
-              {motion.live.gamma?.toFixed(0) ?? "—"}° · recebendo {motion.diag.eventsPerSec}{" "}
-              eventos/s ({motion.diag.totalEvents} no total)
-            </p>
-            {motion.diag.blocked ? (
-              <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-300">
-                Nenhum evento de sensor chegou.{" "}
-                {motion.inIframe
-                  ? "Esta tela está dentro de um iframe de preview, que costuma bloquear acelerômetro/giroscópio. Abra o app em aba própria ou instale como PWA."
-                  : "Verifique se o dispositivo tem giroscópio e se o site está em HTTPS."}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Leitura em tempo real na tela; no banco só o agregado de 30s, orientação dominante e
-          picos.
-        </p>
-      </section>
-
       {/* ATUADORES */}
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
         <h3 className="font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -785,15 +705,11 @@ export function LivePanel({ missionId }: { missionId?: string | null }) {
 
           />
         </div>
-        <BeaconRow
-          beacon={actuators.beacon}
-          pulsing={actuators.beaconPulsing}
-          supported={actuators.audioSupported}
-          soundLabel={
-            ACTUATOR_SOUNDS.find((s) => s.id === (actuators.audioConfig.sound ?? "soft"))?.label ??
-            "Suave"
-          }
-          onChange={actuators.setBeacon}
+        <VoiceRow
+          on={actuators.speechOn}
+          speaking={actuators.speaking}
+          supported={actuators.speechSupported}
+          onToggle={actuators.toggleSpeech}
         />
         <p className="mt-3 text-[11px] text-muted-foreground">
           Os padrões continuam rodando enquanto você navega no app, até desligar aqui.
@@ -1011,3 +927,55 @@ function ActuatorRow({
   );
 }
 
+function VoiceRow({
+  on,
+  speaking,
+  supported,
+  onToggle,
+}: {
+  on: boolean;
+  speaking: boolean;
+  supported: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={`mt-3 rounded-xl border p-3 ${
+        on ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
+      }`}
+    >
+      <button
+        type="button"
+        disabled={!supported}
+        aria-pressed={on}
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 text-left disabled:opacity-40 active:scale-[0.99]"
+      >
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+            on ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          } ${speaking ? "animate-pulse ring-2 ring-ember" : ""}`}
+        >
+          <Radio className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm text-foreground">Voz das manifestações</span>
+          <span className="block text-[11px] text-muted-foreground">
+            {!supported
+              ? "Síntese de voz indisponível neste navegador."
+              : on
+                ? "a WiMi fala o que se manifesta, com o contexto da sessão"
+                : "desligada · manifestações só em texto"}
+          </span>
+        </span>
+        <span
+          className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+            on ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          }`}
+        >
+          {on ? "on" : "off"}
+        </span>
+      </button>
+    </div>
+  );
+}
