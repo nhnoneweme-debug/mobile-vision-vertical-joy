@@ -1,26 +1,49 @@
-// Seção "Gatilhos" do Executando — lista sequencial, formulário direto e
-// histórico de disparos. A avaliação em tempo real acontece no painel Live.
+// Gatilho Studio — construtor guiado, biblioteca de modelos, teste simulado,
+// versões (append-only) e estatísticas por gatilho.
+// A avaliação em tempo real continua acontecendo no painel Live.
 
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Plus, Trash2, Zap } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  History,
+  LibraryBig,
+  Pencil,
+  Play,
+  Plus,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   DEFAULT_COOLDOWN,
+  TRIGGER_TEMPLATES,
+  computeStats,
   createTrigger,
   deleteTrigger,
   describeAction,
   describeCondition,
+  describeTrigger,
+  describeWindow,
+  duplicateTrigger,
   listFirings,
+  listRevisions,
   listTriggers,
+  recordFiring,
   reorderTriggers,
-  seedExampleTriggers,
+  restoreRevision,
   updateTrigger,
+  updateTriggerVersioned,
+  type ActiveWindow,
   type TriggerAction,
   type TriggerCondition,
   type TriggerDefinition,
   type TriggerDraft,
+  type TriggerRevision,
 } from "@/lib/triggers";
+import { useActuators } from "@/providers/ActuatorsProvider";
 
 type CondKind =
   | "at_time"
@@ -31,18 +54,31 @@ type CondKind =
   | "motion_angle"
   | "video";
 
-const COND_LABEL: Record<CondKind, string> = {
-  at_time: "Cronos · hora do dia",
-  every: "Cronos · a cada X min de Live",
-  after_session: "Cronos · após X min de sessão",
-  audio: "Evento · palavra-chave no áudio",
-  motion_spike: "Evento · movimento brusco",
-  motion_angle: "Evento · mudança de ângulo",
-  video: "Evento · vídeo (em breve)",
+type Source = "chronos" | "audio" | "motion" | "video";
+
+const SOURCE_LABEL: Record<Source, string> = {
+  chronos: "Cronos",
+  audio: "Áudio",
+  motion: "Movimento",
+  video: "Vídeo (em breve)",
 };
 
+const COND_LABEL: Record<CondKind, string> = {
+  at_time: "hora do dia",
+  every: "a cada X min de Live",
+  after_session: "após X min de sessão",
+  audio: "palavra-chave no áudio",
+  motion_spike: "movimento brusco (pico)",
+  motion_angle: "mudança de ângulo",
+  video: "detecção por vídeo",
+};
+
+const DAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
 type FormState = {
+  id: string | null;
   name: string;
+  source: Source;
   kind: CondKind;
   time: string;
   minutes: number;
@@ -59,10 +95,16 @@ type FormState = {
   cameraOff: boolean;
   motionOff: boolean;
   message: string;
+  useWindow: boolean;
+  winStart: string;
+  winEnd: string;
+  days: number[];
 };
 
 const EMPTY_FORM: FormState = {
+  id: null,
   name: "",
+  source: "audio",
   kind: "audio",
   time: "08:00",
   minutes: 25,
@@ -79,7 +121,18 @@ const EMPTY_FORM: FormState = {
   cameraOff: false,
   motionOff: false,
   message: "",
+  useWindow: false,
+  winStart: "08:00",
+  winEnd: "18:00",
+  days: [],
 };
+
+function kindsFor(source: Source): CondKind[] {
+  if (source === "chronos") return ["at_time", "every", "after_session"];
+  if (source === "audio") return ["audio"];
+  if (source === "motion") return ["motion_spike", "motion_angle"];
+  return ["video"];
+}
 
 function buildCondition(f: FormState): TriggerCondition {
   switch (f.kind) {
@@ -114,39 +167,109 @@ function buildAction(f: FormState): TriggerAction {
   return a;
 }
 
+function buildWindow(f: FormState): ActiveWindow {
+  if (!f.useWindow) return {};
+  const w: ActiveWindow = { start: f.winStart, end: f.winEnd };
+  if (f.days.length && f.days.length < 7) w.days = [...f.days].sort();
+  return w;
+}
+
+function buildDraft(f: FormState): TriggerDraft {
+  return {
+    name: f.name.trim(),
+    enabled: true,
+    trigger_type: f.source === "chronos" ? "chronos" : "event",
+    condition: buildCondition(f),
+    action: buildAction(f),
+    active_window: buildWindow(f),
+    cooldown_seconds: f.cooldown,
+  };
+}
+
+function formFromTrigger(t: TriggerDefinition): FormState {
+  const c = t.condition as Record<string, unknown>;
+  const a = t.action ?? {};
+  const w = t.active_window ?? {};
+  let source: Source = "audio";
+  let kind: CondKind = "audio";
+  if (c.mode) {
+    source = "chronos";
+    kind = c.mode as CondKind;
+  } else if (c.source === "motion") {
+    source = "motion";
+    kind = c.kind === "angle_change" ? "motion_angle" : "motion_spike";
+  } else if (c.source === "video") {
+    source = "video";
+    kind = "video";
+  }
+  return {
+    ...EMPTY_FORM,
+    id: t.id,
+    name: t.name,
+    source,
+    kind,
+    time: typeof c.time === "string" ? c.time : "08:00",
+    minutes: c.seconds ? Math.round(Number(c.seconds) / 60) : 25,
+    keyword: typeof c.keyword === "string" ? c.keyword : "",
+    magnitude: Number(c.min_magnitude ?? 8),
+    degrees: Number(c.min_degrees ?? 45),
+    cooldown: t.cooldown_seconds,
+    vibrate: !!a.vibrate,
+    vibrateSec: a.vibrate?.onSec ?? 2,
+    tone: !!a.audio_tone,
+    toneSec: a.audio_tone?.onSec ?? 1,
+    stopActuators: !!a.stop_actuators,
+    micOff: a.sensors?.mic === false,
+    cameraOff: a.sensors?.camera === false,
+    motionOff: a.sensors?.motion === false,
+    message: a.message ?? "",
+    useWindow: !!(w.start && w.end),
+    winStart: w.start ?? "08:00",
+    winEnd: w.end ?? "18:00",
+    days: w.days ?? [],
+  };
+}
+
 export function TriggersSection() {
   const qc = useQueryClient();
+  const actuators = useActuators();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [open, setOpen] = useState(false);
+  const [libOpen, setLibOpen] = useState(false);
+  const [versionsFor, setVersionsFor] = useState<string | null>(null);
 
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
-  const firingsQ = useQuery({ queryKey: ["trigger-firings"], queryFn: () => listFirings(25) });
+  const firingsQ = useQuery({ queryKey: ["trigger-firings"], queryFn: () => listFirings(200) });
 
   const triggers = useMemo(
     () => [...(triggersQ.data ?? [])].sort((a, b) => a.position - b.position),
     [triggersQ.data],
   );
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const f of firingsQ.data ?? []) {
-      if (f.result === "executed") map[f.trigger_id] = (map[f.trigger_id] ?? 0) + 1;
-    }
-    return map;
-  }, [firingsQ.data]);
+  const stats = useMemo(() => computeStats(firingsQ.data ?? []), [firingsQ.data]);
 
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ["triggers"] });
     void qc.invalidateQueries({ queryKey: ["trigger-firings"] });
+    void qc.invalidateQueries({ queryKey: ["trigger-revisions"] });
   }, [qc]);
 
-  const createM = useMutation({
-    mutationFn: (draft: TriggerDraft) => createTrigger(draft, triggers.length),
+  const saveM = useMutation({
+    mutationFn: async (f: FormState) => {
+      const draft = buildDraft(f);
+      if (f.id) {
+        const current = triggers.find((t) => t.id === f.id);
+        if (!current) throw new Error("Gatilho não encontrado.");
+        await updateTriggerVersioned(current, { ...draft, enabled: current.enabled });
+      } else {
+        await createTrigger(draft, triggers.length);
+      }
+    },
     onSuccess: () => {
       setForm(EMPTY_FORM);
       setOpen(false);
       invalidate();
-      toast.success("Gatilho criado.");
+      toast.success("Gatilho salvo.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -170,14 +293,67 @@ export function TriggersSection() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const seedM = useMutation({
-    mutationFn: () => seedExampleTriggers(triggers),
-    onSuccess: (did) => {
+  const templateM = useMutation({
+    mutationFn: (draft: TriggerDraft) => createTrigger(draft, triggers.length),
+    onSuccess: () => {
       invalidate();
-      if (did) toast.success("Dois gatilhos de exemplo criados (desligados).");
+      toast.success("Modelo aplicado (desligado) — revise e ligue.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const dupM = useMutation({
+    mutationFn: (t: TriggerDefinition) => duplicateTrigger(t, triggers.length),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Gatilho duplicado (desligado).");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Teste simulado: executa as ações agora, ignorando condição e cooldown. */
+  const simulate = useCallback(
+    async (t: TriggerDefinition) => {
+      const a = t.action ?? {};
+      try {
+        if (a.stop_actuators) actuators.stopAll();
+        if (a.vibrate) {
+          actuators.setVibrationConfig({
+            onSec: Math.min(10, Math.max(1, a.vibrate.onSec ?? 2)),
+            everySec: 30,
+            mode: "timed",
+          });
+          actuators.setVibration(true);
+          window.setTimeout(() => actuators.setVibration(false), (a.vibrate.onSec ?? 2) * 1000);
+        }
+        if (a.audio_tone) {
+          actuators.setAudioConfig({
+            onSec: Math.min(10, Math.max(1, a.audio_tone.onSec ?? 1)),
+            everySec: 30,
+            mode: "timed",
+            sound: "bell",
+          });
+          actuators.setAudio(true);
+          window.setTimeout(() => actuators.setAudio(false), (a.audio_tone.onSec ?? 1) * 1000);
+        }
+        if (a.message) toast(a.message);
+        if (a.sensors) {
+          toast.info("Ações de sensor só têm efeito com o painel Live aberto.");
+        }
+        await recordFiring({
+          trigger_id: t.id,
+          source_kind: "simulation",
+          source_ref: `sim:${Date.now()}`,
+          result: "simulated",
+          meta: { simulated: true },
+        });
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
+      invalidate();
+    },
+    [actuators, invalidate],
+  );
 
   const move = (index: number, dir: -1 | 1) => {
     const next = [...triggers];
@@ -199,102 +375,159 @@ export function TriggersSection() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Zap className="h-3.5 w-3.5" /> Lista sequencial
+              <Zap className="h-3.5 w-3.5" /> Gatilho Studio
             </h3>
             <p className="mt-1 text-[12px] text-muted-foreground">
               Avaliados na ordem, de cima pra baixo, enquanto o painel Live está aberto.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-2 text-xs text-ember active:scale-95"
-          >
-            <Plus className="h-3.5 w-3.5" /> Novo
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => setLibOpen((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs text-muted-foreground active:scale-95"
+            >
+              <LibraryBig className="h-3.5 w-3.5" /> Modelos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm(EMPTY_FORM);
+                setOpen(true);
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-ember/40 bg-ember/10 px-3 py-2 text-xs text-ember active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" /> Novo
+            </button>
+          </div>
         </div>
+
+        {libOpen ? (
+          <ul className="mt-3 space-y-2">
+            {TRIGGER_TEMPLATES.map((tpl) => (
+              <li
+                key={tpl.id}
+                className="flex items-center gap-2 rounded-xl border border-border bg-charcoal-950/30 p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-foreground">{tpl.label}</p>
+                  <p className="text-[11px] text-muted-foreground">{tpl.hint}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => templateM.mutate(tpl.draft)}
+                  className="shrink-0 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-[11px] text-ember active:scale-95"
+                >
+                  Aplicar
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         {triggersQ.isLoading ? (
           <p className="mt-3 text-[12px] text-muted-foreground">carregando…</p>
         ) : triggers.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-border/60 bg-charcoal-950/40 p-3">
-            <p className="text-[12px] text-muted-foreground">
-              Nenhum gatilho ainda. Posso criar dois exemplos desligados pra você ver o formato.
-            </p>
-            <button
-              type="button"
-              onClick={() => seedM.mutate()}
-              disabled={seedM.isPending}
-              className="mt-2 rounded-full border border-border px-3 py-1.5 text-[11px] text-muted-foreground active:scale-95"
-            >
-              Criar exemplos
-            </button>
-          </div>
+          <p className="mt-3 rounded-xl border border-border/60 bg-charcoal-950/40 p-3 text-[12px] text-muted-foreground">
+            Nenhum gatilho ainda. Comece pela biblioteca de <strong>Modelos</strong> ou crie um no
+            construtor.
+          </p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {triggers.map((t, i) => (
-              <li
-                key={t.id}
-                className={`rounded-xl border p-3 ${
-                  t.enabled ? "border-ember/40 bg-ember/5" : "border-border bg-charcoal-950/30"
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <span className="mt-0.5 font-display text-[11px] text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-foreground">{t.name}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {describeCondition(t)} → {describeAction(t)}
-                    </p>
-                    <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                      cooldown {t.cooldown_seconds}s · {counts[t.id] ?? 0} disparo(s) recentes
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleM.mutate({ id: t.id, enabled: !t.enabled })}
-                      aria-pressed={t.enabled}
-                      className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide ${
-                        t.enabled
-                          ? "bg-ember/20 text-ember"
-                          : "bg-charcoal-800 text-muted-foreground"
-                      }`}
-                    >
-                      {t.enabled ? "on" : "off"}
-                    </button>
-                    <div className="flex gap-1">
+            {triggers.map((t, i) => {
+              const s = stats[t.id];
+              const win = describeWindow(t.active_window);
+              return (
+                <li
+                  key={t.id}
+                  className={`rounded-xl border p-3 ${
+                    t.enabled ? "border-ember/40 bg-ember/5" : "border-border bg-charcoal-950/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 font-display text-[11px] text-muted-foreground">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-foreground">{t.name}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {describeCondition(t)}
+                        {win ? `, ${win}` : ""} → {describeAction(t)}
+                      </p>
+                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        cooldown {t.cooldown_seconds}s · {s?.total ?? 0} total · {s?.today ?? 0} hoje
+                        {s?.last
+                          ? ` · último ${new Date(s.last).toLocaleTimeString("pt-BR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
                       <button
                         type="button"
-                        aria-label="Subir"
-                        onClick={() => move(i, -1)}
-                        className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
+                        onClick={() => toggleM.mutate({ id: t.id, enabled: !t.enabled })}
+                        aria-pressed={t.enabled}
+                        className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide ${
+                          t.enabled
+                            ? "bg-ember/20 text-ember"
+                            : "bg-charcoal-800 text-muted-foreground"
+                        }`}
                       >
-                        <ArrowUp className="h-3.5 w-3.5" />
+                        {t.enabled ? "on" : "off"}
                       </button>
-                      <button
-                        type="button"
-                        aria-label="Descer"
-                        onClick={() => move(i, 1)}
-                        className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
-                      >
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="Excluir"
-                        onClick={() => deleteM.mutate(t.id)}
-                        className="rounded-md border border-border p-1 text-destructive active:scale-95"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          aria-label="Subir"
+                          onClick={() => move(i, -1)}
+                          className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Descer"
+                          onClick={() => move(i, 1)}
+                          className="rounded-md border border-border p-1 text-muted-foreground active:scale-95"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Excluir"
+                          onClick={() => deleteM.mutate(t.id)}
+                          className="rounded-md border border-border p-1 text-destructive active:scale-95"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
+
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <MiniBtn icon={Play} label="Testar agora" onClick={() => void simulate(t)} />
+                    <MiniBtn
+                      icon={Pencil}
+                      label="Editar"
+                      onClick={() => {
+                        setForm(formFromTrigger(t));
+                        setOpen(true);
+                      }}
+                    />
+                    <MiniBtn icon={Copy} label="Duplicar" onClick={() => dupM.mutate(t)} />
+                    <MiniBtn
+                      icon={History}
+                      label="Versões"
+                      onClick={() => setVersionsFor(versionsFor === t.id ? null : t.id)}
+                    />
+                  </div>
+
+                  {versionsFor === t.id ? <RevisionList trigger={t} onDone={invalidate} /> : null}
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -307,199 +540,261 @@ export function TriggersSection() {
       {open ? (
         <section className="rounded-2xl border border-ember/30 bg-charcoal-900/60 p-4">
           <h3 className="font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            Novo gatilho
+            {form.id ? "Editar gatilho" : "Construtor de gatilho"}
           </h3>
 
-          <label className="mt-3 block text-[11px] text-muted-foreground">
-            nome
+          <Step n={1} title="Nome">
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="ex.: código off"
-              className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none"
+              className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none"
             />
-          </label>
+          </Step>
 
-          <label className="mt-3 block text-[11px] text-muted-foreground">
-            condição
+          <Step n={2} title="Fonte">
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(SOURCE_LABEL) as Source[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  disabled={s === "video"}
+                  onClick={() => setForm({ ...form, source: s, kind: kindsFor(s)[0] })}
+                  className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-wide disabled:opacity-40 ${
+                    form.source === s
+                      ? "bg-ember/15 text-ember ring-1 ring-ember/40"
+                      : "text-muted-foreground ring-1 ring-border"
+                  }`}
+                >
+                  {SOURCE_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          </Step>
+
+          <Step n={3} title="Condição">
             <select
               value={form.kind}
               onChange={(e) => setForm({ ...form, kind: e.target.value as CondKind })}
-              className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none"
+              className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none"
             >
-              {(Object.keys(COND_LABEL) as CondKind[]).map((k) => (
-                <option key={k} value={k} disabled={k === "video"}>
+              {kindsFor(form.source).map((k) => (
+                <option key={k} value={k}>
                   {COND_LABEL[k]}
                 </option>
               ))}
             </select>
-          </label>
 
-          {form.kind === "at_time" ? (
-            <label className="mt-2 block text-[11px] text-muted-foreground">
-              hora
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+            {form.kind === "at_time" ? (
+              <Field label="hora">
+                <input
+                  type="time"
+                  value={form.time}
+                  onChange={(e) => setForm({ ...form, time: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                />
+              </Field>
+            ) : null}
+            {form.kind === "every" || form.kind === "after_session" ? (
+              <Field label="minutos">
+                <input
+                  type="number"
+                  min={1}
+                  max={600}
+                  value={form.minutes}
+                  onChange={(e) => setForm({ ...form, minutes: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                />
+              </Field>
+            ) : null}
+            {form.kind === "audio" ? (
+              <Field label="palavra ou frase (ignora maiúsculas e acentos)">
+                <input
+                  value={form.keyword}
+                  onChange={(e) => setForm({ ...form, keyword: e.target.value })}
+                  placeholder="ex.: código off"
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                />
+              </Field>
+            ) : null}
+            {form.kind === "motion_spike" ? (
+              <Field label="magnitude mínima (m/s²)">
+                <input
+                  type="number"
+                  min={1}
+                  max={40}
+                  value={form.magnitude}
+                  onChange={(e) => setForm({ ...form, magnitude: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                />
+              </Field>
+            ) : null}
+            {form.kind === "motion_angle" ? (
+              <Field label="variação mínima de ângulo (graus)">
+                <input
+                  type="number"
+                  min={5}
+                  max={180}
+                  value={form.degrees}
+                  onChange={(e) => setForm({ ...form, degrees: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                />
+              </Field>
+            ) : null}
+          </Step>
+
+          <Step n={4} title="Ações (pode combinar)">
+            <div className="space-y-2">
+              <CheckRow
+                label="Vibrar"
+                checked={form.vibrate}
+                onChange={(v) => setForm({ ...form, vibrate: v })}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={form.vibrateSec}
+                  onChange={(e) => setForm({ ...form, vibrateSec: Number(e.target.value) })}
+                  className="w-16 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
+                />
+              </CheckRow>
+              <CheckRow
+                label="Tom de áudio"
+                checked={form.tone}
+                onChange={(v) => setForm({ ...form, tone: v })}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={form.toneSec}
+                  onChange={(e) => setForm({ ...form, toneSec: Number(e.target.value) })}
+                  className="w-16 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
+                />
+              </CheckRow>
+              <CheckRow
+                label="Desligar atuadores"
+                checked={form.stopActuators}
+                onChange={(v) => setForm({ ...form, stopActuators: v })}
               />
-            </label>
-          ) : null}
-
-          {form.kind === "every" || form.kind === "after_session" ? (
-            <label className="mt-2 block text-[11px] text-muted-foreground">
-              minutos
-              <input
-                type="number"
-                min={1}
-                max={600}
-                value={form.minutes}
-                onChange={(e) => setForm({ ...form, minutes: Number(e.target.value) })}
-                className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              <CheckRow
+                label="Desligar microfone"
+                checked={form.micOff}
+                onChange={(v) => setForm({ ...form, micOff: v })}
               />
-            </label>
-          ) : null}
-
-          {form.kind === "audio" ? (
-            <label className="mt-2 block text-[11px] text-muted-foreground">
-              palavra ou frase (sem diferenciar maiúsculas/acentos, nos 3 idiomas)
-              <input
-                value={form.keyword}
-                onChange={(e) => setForm({ ...form, keyword: e.target.value })}
-                placeholder="ex.: código off"
-                className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              <CheckRow
+                label="Desligar câmera"
+                checked={form.cameraOff}
+                onChange={(v) => setForm({ ...form, cameraOff: v })}
               />
-            </label>
-          ) : null}
-
-          {form.kind === "motion_spike" ? (
-            <label className="mt-2 block text-[11px] text-muted-foreground">
-              magnitude mínima (m/s²)
-              <input
-                type="number"
-                min={1}
-                max={40}
-                value={form.magnitude}
-                onChange={(e) => setForm({ ...form, magnitude: Number(e.target.value) })}
-                className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              <CheckRow
+                label="Desligar movimento"
+                checked={form.motionOff}
+                onChange={(v) => setForm({ ...form, motionOff: v })}
               />
-            </label>
-          ) : null}
-
-          {form.kind === "motion_angle" ? (
-            <label className="mt-2 block text-[11px] text-muted-foreground">
-              variação mínima de ângulo (graus)
+            </div>
+            <Field label="mensagem (opcional)">
               <input
-                type="number"
-                min={5}
-                max={180}
-                value={form.degrees}
-                onChange={(e) => setForm({ ...form, degrees: Number(e.target.value) })}
-                className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
               />
-            </label>
-          ) : null}
+            </Field>
+          </Step>
 
-          <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">ação</p>
-          <div className="mt-2 space-y-2">
-            <CheckRow
-              label="Vibrar"
-              checked={form.vibrate}
-              onChange={(v) => setForm({ ...form, vibrate: v })}
-            >
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={form.vibrateSec}
-                onChange={(e) => setForm({ ...form, vibrateSec: Number(e.target.value) })}
-                className="w-16 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
-              />
-            </CheckRow>
-            <CheckRow
-              label="Tom de áudio"
-              checked={form.tone}
-              onChange={(v) => setForm({ ...form, tone: v })}
-            >
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={form.toneSec}
-                onChange={(e) => setForm({ ...form, toneSec: Number(e.target.value) })}
-                className="w-16 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1 text-sm text-foreground"
-              />
-            </CheckRow>
-            <CheckRow
-              label="Desligar atuadores"
-              checked={form.stopActuators}
-              onChange={(v) => setForm({ ...form, stopActuators: v })}
-            />
-            <CheckRow
-              label="Desligar microfone"
-              checked={form.micOff}
-              onChange={(v) => setForm({ ...form, micOff: v })}
-            />
-            <CheckRow
-              label="Desligar câmera"
-              checked={form.cameraOff}
-              onChange={(v) => setForm({ ...form, cameraOff: v })}
-            />
-            <CheckRow
-              label="Desligar movimento"
-              checked={form.motionOff}
-              onChange={(v) => setForm({ ...form, motionOff: v })}
-            />
-          </div>
-
-          <label className="mt-3 block text-[11px] text-muted-foreground">
-            mensagem (opcional)
-            <input
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
-            />
-          </label>
-
-          <label className="mt-3 block text-[11px] text-muted-foreground">
-            cooldown (segundos)
+          <Step n={5} title="Cooldown">
             <input
               type="number"
               min={0}
               max={3600}
               value={form.cooldown}
               onChange={(e) => setForm({ ...form, cooldown: Number(e.target.value) })}
-              className="mt-1 w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
             />
-          </label>
+          </Step>
+
+          <Step n={6} title="Janela ativa (opcional)">
+            <CheckRow
+              label="Só valer dentro de uma janela"
+              checked={form.useWindow}
+              onChange={(v) => setForm({ ...form, useWindow: v })}
+            />
+            {form.useWindow ? (
+              <>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="time"
+                    value={form.winStart}
+                    onChange={(e) => setForm({ ...form, winStart: e.target.value })}
+                    className="flex-1 rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                  />
+                  <input
+                    type="time"
+                    value={form.winEnd}
+                    onChange={(e) => setForm({ ...form, winEnd: e.target.value })}
+                    className="flex-1 rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {DAYS.map((d, i) => {
+                    const on = form.days.includes(i);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            days: on ? form.days.filter((x) => x !== i) : [...form.days, i],
+                          })
+                        }
+                        className={`rounded-full px-2.5 py-1 text-[10px] uppercase ${
+                          on
+                            ? "bg-ember/15 text-ember ring-1 ring-ember/40"
+                            : "text-muted-foreground ring-1 ring-border"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  nenhum dia marcado = todos os dias
+                </p>
+              </>
+            ) : null}
+          </Step>
+
+          <div className="mt-4 rounded-xl border border-ember/30 bg-ember/5 p-3">
+            <p className="font-display text-[10px] uppercase tracking-[0.16em] text-ember">
+              preview
+            </p>
+            <p className="mt-1 text-[12px] text-foreground">
+              {describeTrigger({
+                condition: buildCondition(form),
+                action: buildAction(form),
+                active_window: buildWindow(form),
+              })}
+            </p>
+          </div>
 
           <div className="mt-4 flex gap-2">
             <button
               type="button"
-              disabled={!form.name.trim() || createM.isPending}
-              onClick={() =>
-                createM.mutate({
-                  name: form.name.trim(),
-                  enabled: true,
-                  trigger_type:
-                    form.kind === "at_time" ||
-                    form.kind === "every" ||
-                    form.kind === "after_session"
-                      ? "chronos"
-                      : "event",
-                  condition: buildCondition(form),
-                  action: buildAction(form),
-                  cooldown_seconds: form.cooldown,
-                })
-              }
+              disabled={!form.name.trim() || saveM.isPending}
+              onClick={() => saveM.mutate(form)}
               className="flex-1 rounded-xl border border-ember/40 bg-ember/10 py-2.5 text-sm text-ember disabled:opacity-40 active:scale-95"
             >
-              Salvar gatilho
+              {form.id ? "Salvar edição (gera versão)" : "Salvar gatilho"}
             </button>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setForm(EMPTY_FORM);
+              }}
               className="rounded-xl border border-border px-4 py-2.5 text-sm text-muted-foreground active:scale-95"
             >
               Cancelar
@@ -516,7 +811,7 @@ export function TriggersSection() {
           <p className="mt-2 text-[12px] text-muted-foreground">nenhum disparo registrado ainda</p>
         ) : (
           <ul className="mt-2 space-y-1.5">
-            {(firingsQ.data ?? []).map((f) => (
+            {(firingsQ.data ?? []).slice(0, 30).map((f) => (
               <li key={f.id} className="flex items-center gap-2 text-[12px]">
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {new Date(f.fired_at).toLocaleTimeString("pt-BR", {
@@ -532,16 +827,20 @@ export function TriggersSection() {
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
                     f.result === "executed"
                       ? "bg-ember/15 text-ember"
-                      : f.result === "failed"
-                        ? "bg-destructive/15 text-destructive"
-                        : "bg-charcoal-800 text-muted-foreground"
+                      : f.result === "simulated"
+                        ? "bg-sky-500/15 text-sky-400"
+                        : f.result === "failed"
+                          ? "bg-destructive/15 text-destructive"
+                          : "bg-charcoal-800 text-muted-foreground"
                   }`}
                 >
                   {f.result === "executed"
                     ? "executado"
-                    : f.result === "failed"
-                      ? "falhou"
-                      : "cooldown"}
+                    : f.result === "simulated"
+                      ? "simulado"
+                      : f.result === "failed"
+                        ? "falhou"
+                        : "cooldown"}
                 </span>
               </li>
             ))}
@@ -549,6 +848,100 @@ export function TriggersSection() {
         )}
       </section>
     </div>
+  );
+}
+
+function RevisionList({ trigger, onDone }: { trigger: TriggerDefinition; onDone: () => void }) {
+  const revsQ = useQuery({
+    queryKey: ["trigger-revisions", trigger.id],
+    queryFn: () => listRevisions(trigger.id),
+  });
+
+  const restoreM = useMutation({
+    mutationFn: (rev: TriggerRevision) => restoreRevision(trigger, rev),
+    onSuccess: () => {
+      toast.success("Versão restaurada (nova revisão gravada).");
+      onDone();
+      void revsQ.refetch();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const revs = revsQ.data ?? [];
+
+  return (
+    <div className="mt-2 rounded-xl border border-border/60 bg-charcoal-950/40 p-3">
+      <p className="font-display text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        versões
+      </p>
+      {revsQ.isLoading ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">carregando…</p>
+      ) : revs.length === 0 ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          nenhuma versão anterior — este é o estado original
+        </p>
+      ) : (
+        <ul className="mt-1.5 space-y-1.5">
+          {revs.map((r) => (
+            <li key={r.id} className="flex items-center gap-2 text-[11px]">
+              <span className="font-mono text-muted-foreground">v{r.revision}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {new Date(r.changed_at).toLocaleString("pt-BR")}
+                {r.change_note ? ` · ${r.change_note}` : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => restoreM.mutate(r)}
+                disabled={restoreM.isPending}
+                className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[10px] text-muted-foreground active:scale-95"
+              >
+                restaurar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MiniBtn({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Play;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground active:scale-95"
+    >
+      <Icon className="h-3 w-3" /> {label}
+    </button>
+  );
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4">
+      <p className="mb-1.5 font-display text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        {n}. {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="mt-2 block text-[11px] text-muted-foreground">
+      {label}
+      <div className="mt-1">{children}</div>
+    </label>
   );
 }
 
