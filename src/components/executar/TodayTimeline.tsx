@@ -61,7 +61,9 @@ const RELEVANT: ExecutionEventRow["kind"][] = [
   "manifest_shown",
   "voice_note",
   "negotiation",
+  "dialog_turn",
 ];
+
 
 function describe(row: ExecutionEventRow): {
   kindLabel: string;
