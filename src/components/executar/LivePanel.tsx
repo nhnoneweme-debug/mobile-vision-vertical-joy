@@ -292,6 +292,28 @@ export function LivePanel({
     }
   }, []);
 
+  // STUDIO DE PERSONAS: o modelo ativo do usuário alimenta o roteamento e o
+  // prompt de sistema das manifestações. Sem modelo salvo, vale o preset padrão.
+  const personaDirectiveRef = useRef<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getActivePersonaModel()
+      .then((p) => {
+        if (alive && p) personaDirectiveRef.current = buildPersonaDirective(p);
+      })
+      .catch(() => {
+        /* sem modelo salvo: preset padrão do servidor */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const personaExtras = useCallback(
+    () => (personaDirectiveRef.current ? { persona_directive: personaDirectiveRef.current } : {}),
+    [],
+  );
+
+
   const changeLang = useCallback((code: string) => {
     setLang(code);
     try {
