@@ -12,6 +12,8 @@ export const SILENCE_TOKEN = "[SILENCIO]";
 
 // ---------------------------------------------------------- IDENTIDADES
 // Toda resposta falada sai assinada por UMA identidade do par WiMi.
+// Este é o PRESET PADRÃO: quando o usuário tem um modelo salvo no Studio de
+// Personas, o cliente envia `persona_directive` e ele tem precedência.
 const PERSONA_RULES = `IDENTIDADES DO PAR "WIMI" — toda resposta é assinada por UMA delas:
 • "wi" (Wi, TUTORA, tom acolhedor): acompanhamento do dia a dia, dúvidas práticas,
   instrução e explicação, incentivo, perguntas de log de jornada, rituais de noite/manhã.
@@ -19,10 +21,19 @@ const PERSONA_RULES = `IDENTIDADES DO PAR "WIMI" — toda resposta é assinada p
   com o que foi registrado antes, avaliação de progresso.
 Escolha a identidade pelo tipo de pedido, não pelo humor. Na dúvida, use "wi".`;
 
-const PERSONA_FORMAT = `FORMATO DE SAÍDA OBRIGATÓRIO: responda APENAS com JSON válido, sem markdown:
-{"persona":"wi"|"mi","message":"a fala"}`;
+// ------------------------------------------------------------- IDIOMA
+// Regra dura: a resposta sai SEMPRE no idioma da última mensagem do usuário.
+const LANG_RULE = `IDIOMA DA RESPOSTA (regra obrigatória): detecte o idioma da ÚLTIMA mensagem
+do usuário (falada ou digitada) e RESPONDA SEMPRE NO MESMO IDIOMA — inglês responde em inglês,
+espanhol em espanhol, português em português. Nunca traduza para o seu idioma preferido.
+Informe o idioma usado no campo "reply_lang" ('pt-BR', 'en-US', 'es-ES' ou o código BCP-47 do idioma).`;
 
-function parsePersonaReply(raw: string): { persona: "wi" | "mi"; message: string } {
+const PERSONA_FORMAT = `FORMATO DE SAÍDA OBRIGATÓRIO: responda APENAS com JSON válido, sem markdown:
+{"persona":"wi"|"mi","reply_lang":"pt-BR"|"en-US"|"es-ES","message":"a fala"}`;
+
+type PersonaReply = { persona: "wi" | "mi"; reply_lang: string | null; message: string };
+
+function parsePersonaReply(raw: string): PersonaReply {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?/i, "")
@@ -34,22 +45,33 @@ function parsePersonaReply(raw: string): { persona: "wi" | "mi"; message: string
     try {
       const obj = JSON.parse(cleaned.slice(start, end + 1)) as {
         persona?: unknown;
+        reply_lang?: unknown;
         message?: unknown;
       };
       const message = typeof obj.message === "string" ? obj.message.trim() : "";
-      if (message) return { persona: obj.persona === "mi" ? "mi" : "wi", message };
+      if (message)
+        return {
+          persona: obj.persona === "mi" ? "mi" : "wi",
+          reply_lang: typeof obj.reply_lang === "string" ? obj.reply_lang : null,
+          message,
+        };
     } catch {
       /* cai no fallback textual abaixo */
     }
   }
   // Fallback honesto: sem JSON válido, o texto vale como fala da Wi.
-  return { persona: "wi", message: cleaned };
+  return { persona: "wi", reply_lang: null, message: cleaned };
+}
+
+/** Diretiva do Studio de Personas quando existir; senão, o preset padrão. */
+function personaBlock(directive?: string): string {
+  return directive && directive.trim() ? directive.trim() : PERSONA_RULES;
 }
 
 const UNDERSTANDING_SYSTEM = `Você é a WiMi acompanhando uma conversa ao vivo EM TEMPO REAL.
-Receberá a transcrição corrente (pode estar incompleta). Devolva, em português e sem markdown,
-no MÁXIMO 2 frases curtas: o que está sendo tratado agora e o que provavelmente será pedido.
-Não responda ao usuário, não faça perguntas — isto é uma nota interna de compreensão.`;
+Receberá a transcrição corrente (pode estar incompleta). Devolva, no idioma da própria
+transcrição e sem markdown, no MÁXIMO 2 frases curtas: o que está sendo tratado agora e o que
+provavelmente será pedido. Não responda ao usuário, não faça perguntas — isto é uma nota interna.`;
 
 const understandingSchema = z.object({ transcript: z.string().min(1).max(6000) });
 
@@ -67,19 +89,23 @@ export const liveUnderstanding = createServerFn({ method: "POST" })
     return { understanding: text.trim().slice(0, 600) };
   });
 
-const REPLY_SYSTEM = `Você é a WiMi conversando por voz durante uma sessão de execução ao vivo.
+function replySystem(directive?: string): string {
+  return `Você é a WiMi conversando por voz durante uma sessão de execução ao vivo.
 Você já vinha acompanhando a conversa; agora o interlocutor passou o turno para você.
 
 REGRA DE ENDEREÇAMENTO: se a fala claramente NÃO é dirigida a você — conversa entre pessoas,
 vocativo com o nome de outra pessoa, instrução dada a terceiros — responda EXATAMENTE
 "${SILENCE_TOKEN}" e nada mais. Na dúvida, prefira o silêncio: nunca atrapalhe uma conversa humana.
 
-Se a fala é para você, responda em português, no máximo 3 frases curtas, sem markdown,
-como uma fala que será lida em voz alta. Seja específico com o que foi dito.
+Se a fala é para você, responda com frases curtas, sem markdown, como uma fala que será lida em
+voz alta. Seja específico com o que foi dito.
 
-${PERSONA_RULES}
+${LANG_RULE}
+
+${personaBlock(directive)}
 ${PERSONA_FORMAT}
-Se for silêncio, devolva {"persona":"wi","message":"${SILENCE_TOKEN}"}.`;
+Se for silêncio, devolva {"persona":"wi","reply_lang":"pt-BR","message":"${SILENCE_TOKEN}"}.`;
+}
 
 const replySchema = z.object({
   turn: z.string().min(1).max(4000),
@@ -87,6 +113,7 @@ const replySchema = z.object({
   recent: z.string().max(4000).optional(),
   addressed_by_code: z.boolean().optional(),
   force_persona: z.enum(["wi", "mi"]).optional(),
+  persona_directive: z.string().max(3000).optional(),
 });
 
 /** (2/3) Resposta no handover, já com o contexto montado durante a fala. */
@@ -108,7 +135,11 @@ export const liveHandoverReply = createServerFn({ method: "POST" })
     ]
       .filter(Boolean)
       .join("\n\n");
-    const { text } = await generateText({ model, system: REPLY_SYSTEM, prompt });
+    const { text } = await generateText({
+      model,
+      system: replySystem(data.persona_directive),
+      prompt,
+    });
     const parsed = parsePersonaReply(text);
     const persona = data.force_persona ?? parsed.persona;
     const message = parsed.message;
@@ -119,19 +150,34 @@ export const liveHandoverReply = createServerFn({ method: "POST" })
       table_name: "execution_events",
       action: "live.handover_reply",
       status: "applied",
-      payload: { turn: data.turn.slice(0, 2000), output: message, addressed, persona } as never,
+      payload: {
+        turn: data.turn.slice(0, 2000),
+        output: message,
+        addressed,
+        persona,
+        reply_lang: parsed.reply_lang,
+      } as never,
     });
-    return { message: addressed ? message : "", addressed, persona };
+    return {
+      message: addressed ? message : "",
+      addressed,
+      persona,
+      reply_lang: parsed.reply_lang,
+    };
   });
 
-const CHAT_SYSTEM = `Você é a WiMi conversando com o usuário SOBRE O CONTEÚDO COLETADO na sessão ao vivo
-(transcrição, registros e logs de jornada do dia). Baseie-se apenas nesse conteúdo e no histórico da conversa.
-Se algo não estiver no material, diga que não foi dito. Responda em português, sem markdown,
-curto e direto (até 6 frases). Quando pedirem tarefas ou plano, devolva uma lista simples em linhas.
+function chatSystem(directive?: string): string {
+  return `Você é a WiMi conversando com o usuário SOBRE O CONTEÚDO COLETADO na sessão ao vivo
+(transcrição, registros e logs de jornada do dia). Baseie-se apenas nesse conteúdo e no histórico
+da conversa. Se algo não estiver no material, diga que não foi dito. Responda sem markdown, curto
+e direto. Quando pedirem tarefas ou plano, devolva uma lista simples em linhas.
 
-${PERSONA_RULES}
+${LANG_RULE}
+
+${personaBlock(directive)}
 ${PERSONA_FORMAT}
-Nas listas, use "\n" dentro do campo message.`;
+Nas listas, use "\\n" dentro do campo message.`;
+}
 
 const chatSchema = z.object({
   session_context: z.string().max(12000),
@@ -141,6 +187,7 @@ const chatSchema = z.object({
     .optional(),
   question: z.string().min(1).max(2000),
   force_persona: z.enum(["wi", "mi"]).optional(),
+  persona_directive: z.string().max(3000).optional(),
 });
 
 /** (4) Conversa sobre a sessão: contexto = conteúdo coletado. */
@@ -155,14 +202,18 @@ export const liveSessionChat = createServerFn({ method: "POST" })
     const prompt = [
       `Conteúdo coletado na sessão:\n${data.session_context || "(sem conteúdo coletado)"}`,
       history ? `Conversa até aqui:\n${history}` : "",
-      `Pergunta do usuário: ${data.question}`,
+      `Pergunta do usuário (RESPONDA NO IDIOMA DESTA MENSAGEM): ${data.question}`,
       data.force_persona
         ? `O usuário chamou DIRETAMENTE a identidade "${data.force_persona}": responda como ela.`
         : "",
     ]
       .filter(Boolean)
       .join("\n\n");
-    const { text } = await generateText({ model, system: CHAT_SYSTEM, prompt });
+    const { text } = await generateText({
+      model,
+      system: chatSystem(data.persona_directive),
+      prompt,
+    });
     const parsed = parsePersonaReply(text);
     const persona = data.force_persona ?? parsed.persona;
     const message = parsed.message;
@@ -172,7 +223,12 @@ export const liveSessionChat = createServerFn({ method: "POST" })
       table_name: "execution_events",
       action: "live.session_chat",
       status: "applied",
-      payload: { question: data.question, output: message, persona } as never,
+      payload: {
+        question: data.question,
+        output: message,
+        persona,
+        reply_lang: parsed.reply_lang,
+      } as never,
     });
-    return { message, persona };
+    return { message, persona, reply_lang: parsed.reply_lang };
   });

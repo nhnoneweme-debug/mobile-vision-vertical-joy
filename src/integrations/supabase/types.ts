@@ -1726,6 +1726,48 @@ export type Database = {
         }
         Relationships: []
       }
+      persona_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          intent: string | null
+          is_active: boolean
+          mi: Json
+          name: string
+          routing: Json
+          schema_version: number
+          updated_at: string
+          user_id: string
+          wi: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intent?: string | null
+          is_active?: boolean
+          mi?: Json
+          name: string
+          routing?: Json
+          schema_version?: number
+          updated_at?: string
+          user_id: string
+          wi?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intent?: string | null
+          is_active?: boolean
+          mi?: Json
+          name?: string
+          routing?: Json
+          schema_version?: number
+          updated_at?: string
+          user_id?: string
+          wi?: Json
+        }
+        Relationships: []
+      }
       post_audience: {
         Row: {
           audience_id: string | null
