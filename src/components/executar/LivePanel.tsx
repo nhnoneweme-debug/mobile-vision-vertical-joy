@@ -1653,6 +1653,15 @@ function VoiceRow({
   const base = langBase(lang);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selected, setSelected] = useState<string>("");
+  const [engine, setEngineState] = useState<TtsEngine>("server");
+  const [serverVoice, setServerVoiceState] = useState<string>("nova");
+  const [degraded, setDegraded] = useState<DegradeReason | null>(null);
+
+  useEffect(() => {
+    setEngineState(getEngine());
+    setServerVoiceState(getServerVoice());
+    return onTtsDegrade(setDegraded);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -1672,6 +1681,25 @@ function VoiceRow({
     setVoicePref(base, voices.find((v) => v.voiceURI === uri) ?? null);
   };
 
+  const pickEngine = (next: TtsEngine) => {
+    setEngineState(next);
+    setEngine(next);
+    if (next !== "server") setDegraded(null);
+  };
+
+  const sample = (eng: TtsEngine) =>
+    void speakUnified(SAMPLE_PHRASES[base], {
+      lang: defaultLocale(base),
+      engine: eng,
+      noCache: true,
+    });
+
+  const ENGINES: { id: TtsEngine; label: string; hint: string }[] = [
+    { id: "server", label: "Voz do servidor", hint: "melhor qualidade · usa IA" },
+    { id: "device", label: "Voz do aparelho", hint: "gratuita · depende das vozes instaladas" },
+    { id: "text", label: "Só texto", hint: "sem áudio" },
+  ];
+
   return (
     <div
       className={`mt-3 rounded-xl border p-3 ${
@@ -1680,10 +1708,9 @@ function VoiceRow({
     >
       <button
         type="button"
-        disabled={!supported}
         aria-pressed={on}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 text-left disabled:opacity-40 active:scale-[0.99]"
+        className="flex w-full items-center gap-3 text-left active:scale-[0.99]"
       >
         <span
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
@@ -1695,11 +1722,13 @@ function VoiceRow({
         <span className="min-w-0 flex-1">
           <span className="block text-sm text-foreground">Voz das manifestações</span>
           <span className="block text-[11px] text-muted-foreground">
-            {!supported
-              ? "Síntese de voz indisponível neste navegador."
-              : on
-                ? "a WiMi fala o que se manifesta, com o contexto da sessão"
-                : "desligada · manifestações só em texto"}
+            {on
+              ? engine === "text"
+                ? "manifestações só em texto"
+                : engine === "server"
+                  ? "voz do servidor · cai na voz do aparelho se faltar rede/saldo"
+                  : "voz do aparelho (gratuita)"
+              : "desligada · manifestações só em texto"}
           </span>
         </span>
         <span
@@ -1711,39 +1740,91 @@ function VoiceRow({
         </span>
       </button>
 
-      {supported && on ? (
-        voices.length ? (
-          <div className="mt-3 space-y-2">
-            <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-              Voz ({base === "pt" ? "português" : base === "en" ? "inglês" : "espanhol"})
-            </label>
-            <select
-              value={selected}
-              onChange={(e) => onPick(e.target.value)}
-              className="w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-2 text-[12px] text-foreground"
-            >
-              {voices.map((v) => (
-                <option key={v.voiceURI} value={v.voiceURI}>
-                  {v.name} · {v.lang}
-                  {v.localService ? "" : " · online"}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() =>
-                void speakWithVoice(SAMPLE_PHRASES[base], { lang: defaultLocale(base) })
-              }
-              className="flex items-center gap-2 rounded-lg border border-ember/40 bg-ember/10 px-3 py-2 text-[12px] text-ember active:scale-95"
-            >
-              <Radio className="h-3.5 w-3.5" /> Ouvir amostra
-            </button>
+      {on ? (
+        <div className="mt-3 space-y-3">
+          <div className="space-y-2">
+            <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+              Motor de voz
+            </span>
+            {ENGINES.map((e) => (
+              <div
+                key={e.id}
+                className={`flex min-w-0 items-center gap-2 rounded-lg border p-2 ${
+                  engine === e.id ? "border-ember/50 bg-ember/10" : "border-border"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => pickEngine(e.id)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <span className="block truncate text-[12px] text-foreground">{e.label}</span>
+                  <span className="block truncate text-[10px] text-muted-foreground">{e.hint}</span>
+                </button>
+                {e.id !== "text" ? (
+                  <button
+                    type="button"
+                    onClick={() => sample(e.id)}
+                    className="shrink-0 rounded-lg border border-ember/40 bg-ember/10 px-2 py-1 text-[11px] text-ember active:scale-95"
+                  >
+                    amostra
+                  </button>
+                ) : null}
+              </div>
+            ))}
           </div>
-        ) : (
-          <p className="mt-3 rounded-lg border border-border bg-charcoal-950/50 p-2 text-[11px] text-muted-foreground">
-            {NO_VOICE_HINT[base]}
-          </p>
-        )
+
+          {engine === "server" ? (
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                Timbre do servidor
+              </label>
+              <select
+                value={serverVoice}
+                onChange={(e) => {
+                  setServerVoiceState(e.target.value);
+                  setServerVoice(e.target.value);
+                }}
+                className="w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-2 text-[12px] text-foreground"
+              >
+                {SERVER_VOICES.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+              {degraded ? (
+                <p className="rounded-lg border border-border bg-charcoal-950/50 p-2 text-[11px] text-muted-foreground">
+                  {DEGRADE_HINT[degraded]}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {engine !== "text" && supported && voices.length ? (
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                Voz do aparelho ({base === "pt" ? "português" : base === "en" ? "inglês" : "espanhol"})
+              </label>
+              <select
+                value={selected}
+                onChange={(e) => onPick(e.target.value)}
+                className="w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-2 text-[12px] text-foreground"
+              >
+                {voices.map((v) => (
+                  <option key={v.voiceURI} value={v.voiceURI}>
+                    {v.name} · {v.lang}
+                    {v.localService ? "" : " · online"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : engine !== "text" && !voices.length ? (
+            <p className="rounded-lg border border-border bg-charcoal-950/50 p-2 text-[11px] text-muted-foreground">
+              {NO_VOICE_HINT[base]}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
