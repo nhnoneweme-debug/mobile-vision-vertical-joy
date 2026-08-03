@@ -1285,6 +1285,7 @@ export function LivePanel({
           speaking={actuators.speaking}
           supported={actuators.speechSupported}
           onToggle={actuators.toggleSpeech}
+          lang={lang}
         />
         <p className="mt-3 text-[11px] text-muted-foreground">
           Os padrões continuam rodando enquanto você navega no app, até desligar aqui.
@@ -1634,12 +1635,36 @@ function VoiceRow({
   speaking,
   supported,
   onToggle,
+  lang,
 }: {
   on: boolean;
   speaking: boolean;
   supported: boolean;
   onToggle: () => void;
+  lang: string;
 }) {
+  const base = langBase(lang);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selected, setSelected] = useState<string>("");
+
+  useEffect(() => {
+    let alive = true;
+    void ensureVoices().then(() => {
+      if (!alive) return;
+      const list = listVoices(base);
+      setVoices(list);
+      setSelected(pickVoice(base)?.voiceURI ?? "");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [base]);
+
+  const onPick = (uri: string) => {
+    setSelected(uri);
+    setVoicePref(base, voices.find((v) => v.voiceURI === uri) ?? null);
+  };
+
   return (
     <div
       className={`mt-3 rounded-xl border p-3 ${
@@ -1666,7 +1691,7 @@ function VoiceRow({
             {!supported
               ? "Síntese de voz indisponível neste navegador."
               : on
-                ? "a WiMi fala o que se manifesta, com o contexto da sessão"
+                ? "a WiMi fala o que se manifeste, com o contexto da sessão"
                 : "desligada · manifestações só em texto"}
           </span>
         </span>
@@ -1678,6 +1703,41 @@ function VoiceRow({
           {on ? "on" : "off"}
         </span>
       </button>
+
+      {supported && on ? (
+        voices.length ? (
+          <div className="mt-3 space-y-2">
+            <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+              Voz ({base === "pt" ? "português" : base === "en" ? "inglês" : "espanhol"})
+            </label>
+            <select
+              value={selected}
+              onChange={(e) => onPick(e.target.value)}
+              className="w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-2 text-[12px] text-foreground"
+            >
+              {voices.map((v) => (
+                <option key={v.voiceURI} value={v.voiceURI}>
+                  {v.name} · {v.lang}
+                  {v.localService ? "" : " · online"}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                void speakWithVoice(SAMPLE_PHRASES[base], { lang: defaultLocale(base) })
+              }
+              className="flex items-center gap-2 rounded-lg border border-ember/40 bg-ember/10 px-3 py-2 text-[12px] text-ember active:scale-95"
+            >
+              <Radio className="h-3.5 w-3.5" /> Ouvir amostra
+            </button>
+          </div>
+        ) : (
+          <p className="mt-3 rounded-lg border border-border bg-charcoal-950/50 p-2 text-[11px] text-muted-foreground">
+            {NO_VOICE_HINT[base]}
+          </p>
+        )
+      ) : null}
     </div>
   );
 }
