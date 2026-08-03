@@ -57,6 +57,18 @@ import {
   SAMPLE_PHRASES,
   NO_VOICE_HINT,
 } from "@/lib/tts-voices";
+import {
+  DEGRADE_HINT,
+  SERVER_VOICES,
+  getEngine,
+  getServerVoice,
+  onTtsDegrade,
+  setEngine,
+  setServerVoice,
+  speakUnified,
+  type DegradeReason,
+  type TtsEngine,
+} from "@/lib/tts-engine";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
 import { NextActionsOverlay } from "./NextActionsOverlay";
