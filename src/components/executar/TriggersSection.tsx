@@ -19,6 +19,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { PersonaChoice } from "@/lib/personas";
 import {
   DEFAULT_COOLDOWN,
   TRIGGER_TEMPLATES,
