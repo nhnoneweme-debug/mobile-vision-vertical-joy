@@ -657,12 +657,6 @@ export function LivePanel({
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
 
-  // Rolagem automática enquanto a fala acontece.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el && editingId == null) el.scrollTop = el.scrollHeight;
-  }, [blocks, currentLine, editingId]);
-
   // Flush periódico (~15s) enquanto estiver ouvindo.
   useEffect(() => {
     if (!speech.listening) return;
@@ -1968,6 +1962,15 @@ function VoiceRow({
       noCache: true,
     });
 
+  const samplePersona = (persona: Persona) =>
+    void speakUnified(`${PERSONA_LABEL[persona]} aqui. ${SAMPLE_PHRASES[base]}`, {
+      lang: defaultLocale(base),
+      engine,
+      noCache: true,
+      voice: getPersonaServerVoice(persona),
+      deviceVoiceURI: getPersonaDeviceVoice(persona, base) ?? undefined,
+    });
+
   const ENGINES: { id: TtsEngine; label: string; hint: string }[] = [
     { id: "server", label: "Voz do servidor", hint: "melhor qualidade · usa IA" },
     { id: "device", label: "Voz do aparelho", hint: "gratuita · depende das vozes instaladas" },
@@ -2048,10 +2051,29 @@ function VoiceRow({
             ))}
           </div>
 
+          {/* IDENTIDADES — cada uma com voz própria e amostra. */}
+          {engine !== "text" ? (
+            <div className="space-y-2">
+              <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                Vozes das identidades
+              </span>
+              {(["wi", "mi"] as const).map((persona) => (
+                <PersonaVoice
+                  key={persona}
+                  persona={persona}
+                  base={base}
+                  engine={engine}
+                  voices={voices}
+                  onSample={() => samplePersona(persona)}
+                />
+              ))}
+            </div>
+          ) : null}
+
           {engine === "server" ? (
             <div className="space-y-2">
               <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-                Timbre do servidor
+                Timbre padrão do servidor (usado quando não há identidade)
               </label>
               <select
                 value={serverVoice}
@@ -2100,6 +2122,90 @@ function VoiceRow({
             </p>
           ) : null}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Voz de UMA identidade: Wi (tutora, feminina) e Mi (mentor, masculino) têm
+ * timbre de servidor e voz de aparelho independentes.
+ */
+function PersonaVoice({
+  persona,
+  base,
+  engine,
+  voices,
+  onSample,
+}: {
+  persona: Persona;
+  base: ReturnType<typeof langBase>;
+  engine: TtsEngine;
+  voices: SpeechSynthesisVoice[];
+  onSample: () => void;
+}) {
+  const [serverVoice, setServer] = useState<string>(PERSONA_DEFAULT_SERVER_VOICE[persona]);
+  const [deviceVoice, setDevice] = useState<string>("");
+
+  useEffect(() => {
+    setServer(getPersonaServerVoice(persona));
+    setDevice(getPersonaDeviceVoice(persona, base) ?? "");
+  }, [base, persona]);
+
+  return (
+    <div className="rounded-lg border border-border p-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ember/20 text-[11px] font-bold text-ember">
+          {PERSONA_LABEL[persona]}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[12px] text-foreground">
+            {PERSONA_LABEL[persona]} · {PERSONA_ROLE[persona]}
+          </span>
+          <span className="block truncate text-[10px] text-muted-foreground">
+            {persona === "wi" ? "voz feminina" : "voz masculina"}
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={onSample}
+          className="shrink-0 rounded-lg border border-ember/40 bg-ember/10 px-2 py-1 text-[11px] text-ember active:scale-95"
+        >
+          amostra
+        </button>
+      </div>
+
+      {engine === "server" ? (
+        <select
+          value={serverVoice}
+          onChange={(e) => {
+            setServer(e.target.value);
+            setPersonaServerVoice(persona, e.target.value);
+          }}
+          className="mt-2 w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1.5 text-[12px] text-foreground"
+        >
+          {SERVER_VOICES.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.label}
+            </option>
+          ))}
+        </select>
+      ) : voices.length ? (
+        <select
+          value={deviceVoice}
+          onChange={(e) => {
+            setDevice(e.target.value);
+            setPersonaDeviceVoice(persona, base, e.target.value || null);
+          }}
+          className="mt-2 w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1.5 text-[12px] text-foreground"
+        >
+          <option value="">automática</option>
+          {voices.map((v) => (
+            <option key={v.voiceURI} value={v.voiceURI}>
+              {v.name} · {v.lang}
+            </option>
+          ))}
+        </select>
       ) : null}
     </div>
   );
