@@ -369,8 +369,8 @@ export function LivePanel({
       }
     },
     // changeAddressMode é estável (definido abaixo com useCallback sem deps)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [actuators, openSessionTalk],
+    [actuators, changeAddressMode, openSessionTalk],
+
   );
 
   // -------------------------------------- (3) HANDOVER (~2s de silêncio)
