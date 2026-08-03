@@ -125,7 +125,16 @@ function describe(row: ExecutionEventRow): {
         icon: Mic,
         highlight: true,
       };
+    case "dialog_turn":
+      return {
+        kindLabel:
+          metaOf(row).role === "assistant" ? "conversa · WiMi" : "conversa · você",
+        title: row.note?.slice(0, 120) ?? "turno de conversa",
+        icon: MessageSquareText,
+        highlight: metaOf(row).role !== "assistant",
+      };
     case "mission_started":
+
       return { kindLabel: "evento", title: `iniciou · ${t}`, icon: Radio, highlight: false };
     case "mission_ended":
       return { kindLabel: "evento", title: `encerrou · ${t}`, icon: Radio, highlight: false };
