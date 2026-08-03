@@ -565,12 +565,14 @@ export function LivePanel({
         respondingRef.current = false;
       };
       try {
+        const direct = detectDirectPersona(turn);
         const res = await liveHandoverReply({
           data: {
             turn: question.slice(0, 4000),
             understanding: understandingRef.current || undefined,
             recent: blocksRef.current.slice(-6).join("\n").slice(-4000) || undefined,
             addressed_by_code: !!code,
+            ...(direct ? { force_persona: direct } : {}),
           },
         });
         // (c) heurística de ambiente: na dúvida, silêncio + registro.
@@ -588,6 +590,7 @@ export function LivePanel({
         }
 
         setHandoverState(null);
+        const persona = normalizePersona(res.persona);
         actuators.chime("tick");
         if (wasListening) speechRef.current.stop();
         void persist({
@@ -602,10 +605,10 @@ export function LivePanel({
           kind: "dialog_turn",
           channel: "foreground",
           note: res.message.slice(0, 4000),
-          meta: { session_id: sessionId, role: "assistant", source: "live_handover" },
+          meta: { session_id: sessionId, role: "assistant", source: "live_handover", persona },
         });
-        toast("WiMi", { description: res.message, duration: 12000 });
-        speakLive(res.message, {
+        toast(PERSONA_LABEL[persona], { description: res.message, duration: 12000 });
+        manifest(res.message, persona, {
           onEnd: () => {
             actuators.chime("soft");
             if (wasListening) speechRef.current.start();
@@ -618,7 +621,7 @@ export function LivePanel({
         release();
       }
     },
-    [actuators, missionId, persist, sessionId, speakLive],
+    [actuators, manifest, missionId, persist, sessionId],
   );
 
   // Detector de fim de turno: ~2s sem fala nova e com a WiMi calada.
@@ -735,6 +738,8 @@ export function LivePanel({
         results.push({ action: label, success: true, detail });
       const fail = (label: string, detail: string) =>
         results.push({ action: label, success: false, detail });
+      // QUEM MANIFESTA — "auto" (padrão) deixa o modelo escolher entre Wi e Mi.
+      const triggerPersona = resolvePersonaChoice(action.persona);
 
       try {
         if (action.stop_actuators) {
@@ -810,11 +815,16 @@ export function LivePanel({
             instruction: action.prompt.instruction,
             context: contextText,
             trigger_name: trigger.name,
+            ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string }) => {
-            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            speakLive(res.message);
+          .then((res: { message: string; persona?: string }) => {
+            const persona = normalizePersona(res.persona);
+            toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
+              description: res.message,
+              duration: 12000,
+            });
+            manifest(res.message, persona);
             // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
             // uma linha própria (append-only) para aparecer no relatório.
             void recordFiring({
@@ -878,11 +888,16 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string }) => {
-            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            speakLive(res.message, {
+          .then((res: { message: string; persona?: string }) => {
+            const persona = normalizePersona(res.persona);
+            toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
+              description: res.message,
+              duration: 12000,
+            });
+            manifest(res.message, persona, {
               onEnd: () => {
                 // devolve o turno: toque curto e microfone de volta.
                 actuators.chime("soft");
@@ -952,21 +967,22 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...(triggerPersona ? { force_persona: triggerPersona } : { force_persona: "wi" }),
           },
         })
-          .then((res: { message: string }) => {
+          .then((res: { message: string; persona?: string }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
-            speakLive(res.message);
+            manifest(res.message, normalizePersona(res.persona));
           })
           .catch(() => {
-            speakLive("O que você está executando agora?");
+            manifest("O que você está executando agora?", "wi");
           });
       }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? info?.matched_text ?? undefined,
       });
       if (action.message) {
-        speakLive(action.message);
+        manifest(action.message, triggerPersona ?? DEFAULT_PERSONA);
         ok("mensagem falada", action.message);
       }
 
@@ -991,10 +1007,10 @@ export function LivePanel({
       camera,
       flushTranscript,
       missionId,
+      manifest,
       persist,
       sessionId,
       sessionStartedAt,
-      speakLive,
       speech,
     ],
   );
