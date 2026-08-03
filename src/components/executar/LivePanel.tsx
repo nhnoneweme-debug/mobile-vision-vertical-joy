@@ -366,11 +366,31 @@ export function LivePanel({
       bufferRef.current.push(text);
       turnRef.current.push(text);
       setLiveLine(bufferRef.current.join(" "));
+      // SELETOR INVISÍVEL: o reconhecedor nativo exige idioma fixo. Se o texto
+      // transcrito sair consistentemente em outro idioma suportado, trocamos o
+      // reconhecedor sozinhos (custo conhecido: ~1 frase de atraso na virada).
+      const guess = detectLang(text);
+      if (guess) {
+        const hist = [...langHistoryRef.current.slice(-1), guess];
+        langHistoryRef.current = hist;
+        if (
+          hist.length === 2 &&
+          hist[0] === guess &&
+          guess !== langRef.current &&
+          LANGS.some((l) => l.code === guess)
+        ) {
+          langHistoryRef.current = [];
+          changeLang(guess);
+          setLangNote(`escutando em ${langName(guess).toLowerCase()}`);
+          window.setTimeout(() => setLangNote(null), 6000);
+        }
+      }
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
     },
-    [flushTranscript],
+    [changeLang, flushTranscript],
   );
+
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
