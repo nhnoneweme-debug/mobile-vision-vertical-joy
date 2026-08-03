@@ -1126,8 +1126,11 @@ function ActuatorRow({
 
           {continuous ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Sem duração definida: o padrão se repete a cada ~2,5s até você desligar.
+              {showSound
+                ? "Padrão contínuo: quando disparado, o timbre se repete uma vez em rajada curta."
+                : "Sem duração definida: o padrão se repete até você desligar."}
             </p>
+
           ) : (
             <>
               <div className="mt-3 flex items-center gap-3">
