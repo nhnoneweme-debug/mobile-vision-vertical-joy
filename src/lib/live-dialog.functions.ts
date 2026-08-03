@@ -25,8 +25,8 @@ const PERSONA_FORMAT = `FORMATO DE SAÍDA OBRIGATÓRIO: responda APENAS com JSON
 function parsePersonaReply(raw: string): { persona: "wi" | "mi"; message: string } {
   const cleaned = raw
     .trim()
-    .replace(/^\`\`\`(?:json)?/i, "")
-    .replace(/\`\`\`$/, "")
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
     .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
