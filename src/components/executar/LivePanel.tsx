@@ -663,6 +663,7 @@ export function LivePanel({
         });
         toast(PERSONA_LABEL[persona], { description: res.message, duration: 12000 });
         manifest(res.message, persona, {
+          lang: res.reply_lang,
           onEnd: () => {
             actuators.chime("soft");
             if (wasListening) speechRef.current.start();
@@ -874,7 +875,7 @@ export function LivePanel({
               description: res.message,
               duration: 12000,
             });
-            manifest(res.message, persona);
+            manifest(res.message, persona, { lang: res.reply_lang ?? null });
             // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
             // uma linha própria (append-only) para aparecer no relatório.
             void recordFiring({
@@ -950,6 +951,7 @@ export function LivePanel({
               duration: 12000,
             });
             manifest(res.message, persona, {
+              lang: res.reply_lang ?? null,
               onEnd: () => {
                 // devolve o turno: toque curto e microfone de volta.
                 actuators.chime("soft");
@@ -1026,7 +1028,9 @@ export function LivePanel({
         })
           .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
-            manifest(res.message, normalizePersona(res.persona));
+            manifest(res.message, normalizePersona(res.persona), {
+              lang: res.reply_lang ?? null,
+            });
           })
           .catch(() => {
             manifest("O que você está executando agora?", "wi");
