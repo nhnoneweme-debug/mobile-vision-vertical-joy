@@ -376,24 +376,25 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const beaconOn = audioConfig.beacon?.on === true;
   const beaconSec = beaconIntervalSec(audioConfig.beacon ?? { value: 60, unit: "s" });
   const audioMode = audioConfig.mode;
-  const audioEverySec = audioConfig.everySec;
   const audioSound = audioConfig.sound ?? "soft";
 
-  // AGENDADOR ÚNICO DE ÁUDIO — um só timer, um só timbre por vez.
+  // FATIA 3.5.2 — NOVO CONTRATO DO BLOCO DE ÁUDIO.
   //
-  // FATIA 3.5.1 — o beacon agora é um PORTÃO, não só um seletor de intervalo:
-  // ele só entra no cálculo quando `beacon.on` é verdadeiro, o timer vive num
-  // ref (nunca sobrevive a uma reconfiguração) e a emissão imediata acontece
-  // apenas na transição desligado→ligado. Antes, qualquer edição de config
-  // reexecutava o efeito e disparava um som fora de fase, o que soava como um
-  // segundo emissor rodando em paralelo ao padrão do modo contínuo.
+  // "Emissão de áudio" ON, sozinha, é ARMADA E SILENCIOSA: nenhuma emissão
+  // periódica automática. Modo (temporizado/contínuo), duração e timbre são
+  // apenas CONFIGURAÇÃO do padrão que toca quando algo dispara — um gatilho,
+  // uma manifestação, ou o Beacon.
+  //
+  // O ÚNICO emissor autônomo e periódico é o BEACON DE PRESENÇA, com seu
+  // próprio toggle e seu próprio intervalo. Beacon OFF = silêncio total.
   useEffect(() => {
-    if (!audioOn || !audioSupported) {
+    if (!audioOn || !audioSupported || !beaconOn) {
       audioStartedRef.current = false;
       if (audioTimerRef.current) {
         window.clearInterval(audioTimerRef.current);
         audioTimerRef.current = null;
       }
+      setPulsing((p) => (p.audio ? { ...p, audio: false } : p));
       return;
     }
     let cancelled = false;
@@ -421,18 +422,20 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       if (!ctx) return;
       void ctx.resume().catch(() => {});
       const dur = playSound(ctx, sound);
+      // No modo contínuo o "padrão" é repetido em rajada curta dentro do
+      // próprio pulso do beacon; no temporizado é uma emissão única.
+      if (audioMode === "continuous") {
+        window.setTimeout(() => {
+          if (!cancelled) playSound(ctx, sound);
+        }, CONTINUOUS_PATTERN_MS);
+      }
       setPulsing((p) => ({ ...p, audio: true }));
       window.setTimeout(() => {
         if (!cancelled) setPulsing((p) => ({ ...p, audio: false }));
       }, dur * 1000);
     };
 
-    // Portão explícito: com o beacon desligado ele não influencia nada.
-    const periodMs = beaconOn
-      ? beaconSec * 1000
-      : audioMode === "continuous"
-        ? CONTINUOUS_PATTERN_MS
-        : Math.max(1000, audioEverySec * 1000);
+    const periodMs = Math.max(1000, beaconSec * 1000);
 
     // Um só timer vivo: derruba qualquer resíduo antes de criar o novo.
     if (audioTimerRef.current) {
@@ -453,7 +456,8 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       }
       setPulsing((p) => ({ ...p, audio: false }));
     };
-  }, [audioOn, audioSupported, beaconOn, beaconSec, audioMode, audioEverySec, audioSound]);
+  }, [audioOn, audioSupported, beaconOn, beaconSec, audioMode, audioSound]);
+
 
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;

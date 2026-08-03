@@ -1041,11 +1041,14 @@ function ActuatorRow({
               : on
                 ? config.beacon?.on
                   ? `beacon · a cada ${config.beacon.value} ${config.beacon.unit}`
-                  : continuous
-                    ? "ativo · contínuo indefinido (até desligar)"
-                    : `ativo · ${config.onSec}s a cada ${config.everySec}s`
+                  : showSound
+                    ? "armado · silencioso (só toca quando algo dispara)"
+                    : continuous
+                      ? "ativo · contínuo indefinido (até desligar)"
+                      : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
+
         </span>
         <span
           className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
@@ -1058,7 +1061,14 @@ function ActuatorRow({
 
       {supported ? (
         <>
+          {showSound ? (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Configuração do padrão sonoro. Ligado sozinho, o áudio fica armado e silencioso — só
+              toca quando um gatilho, uma manifestação ou o beacon abaixo disparar.
+            </p>
+          ) : null}
           <div className="mt-3 flex gap-2">
+
             <button
               type="button"
               onClick={() => onConfig({ ...config, mode: "timed" })}
@@ -1116,7 +1126,9 @@ function ActuatorRow({
 
           {continuous ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Sem duração definida: o padrão se repete a cada ~2,5s até você desligar.
+              {showSound
+                ? "Padrão contínuo: quando disparado, o timbre se repete uma vez em rajada curta."
+                : "Sem duração definida: o padrão se repete até você desligar."}
             </p>
           ) : (
             <>
@@ -1272,9 +1284,10 @@ function BeaconConfig({
             })}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Enquanto ligado, o beacon manda no intervalo da emissão de áudio — não existe um segundo
-            som em paralelo.
+            O beacon é a única fonte de som periódico automático. Desligado, o bloco de áudio fica em
+            silêncio total.
           </p>
+
         </>
       ) : null}
     </div>

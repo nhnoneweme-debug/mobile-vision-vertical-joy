@@ -21,7 +21,7 @@ export function ActuatorsIndicator() {
       {audioOn ? (
         <Volume2 className={`h-3.5 w-3.5 ${pulsing.audio ? "animate-pulse" : ""}`} />
       ) : null}
-      {beacon ? `${beacon.value}${beacon.unit}` : "on"}
+      {beacon ? `${beacon.value}${beacon.unit}` : "armado"}
     </button>
   );
 }
