@@ -193,18 +193,24 @@ export function LivePanel({
   const [codeDraft, setCodeDraft] = useState("");
   const [understanding, setUnderstanding] = useState<string | null>(null);
   const [handoverState, setHandoverState] = useState<string | null>(null);
-  const [sessionTalk, setSessionTalk] = useState<SessionTalkContext | null>(null);
+
+  // Chat fluido: tudo que não vem do microfone entra aqui e é mesclado por hora.
+  const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const [composer, setComposer] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [stick, setStick] = useState(true);
+  const [unread, setUnread] = useState(false);
 
   const addressModeRef = useRef<AddressMode>("addressed");
   const callCodesRef = useRef<string[]>([]);
   const understandingRef = useRef<string | null>(null);
-  const sessionTalkRef = useRef(false);
   const respondingRef = useRef(false);
+  /** histórico curto da conversa (composer + manifestações) para o contexto */
+  const chatHistoryRef = useRef<{ role: "user" | "assistant"; text: string }[]>([]);
   /** fala acumulada do turno atual (esvaziada a cada handover) */
   const turnRef = useRef<string[]>([]);
   addressModeRef.current = addressMode;
   callCodesRef.current = callCodes;
-  sessionTalkRef.current = sessionTalk != null;
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -221,6 +227,13 @@ export function LivePanel({
     const clean = Array.from(new Set(codes.map((c) => c.trim()).filter(Boolean)));
     setCallCodes(clean);
     saveCallCodes(clean);
+  }, []);
+
+  const pushFeed = useCallback((entry: Omit<FeedEntry, "id" | "at"> & { at?: number }) => {
+    setFeed((prev) => [
+      ...prev.slice(-60),
+      { id: newId("fd"), at: entry.at ?? Date.now(), ...entry },
+    ]);
   }, []);
 
   const [liveEvent, setLiveEvent] = useState<{
@@ -319,7 +332,14 @@ export function LivePanel({
     const blockId = newId("blk");
     setBlocks((prev) => [
       ...prev.slice(-40),
-      { id: blockId, text, saved: false, revision: 0, at: endedAt },
+      {
+        id: blockId,
+        text,
+        saved: false,
+        revision: 0,
+        at: endedAt,
+        durationMs: startedAt ? endedAt - startedAt : undefined,
+      },
     ]);
     setLastBlock({ id: blockId, text });
     void persist({
@@ -357,8 +377,19 @@ export function LivePanel({
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
-    (text: string, opts?: { onEnd?: () => void }) => actuators.speak(text, { ...opts, lang }),
+    (text: string, opts?: { onEnd?: () => void; persona?: Persona }) =>
+      actuators.speak(text, { ...opts, lang, persona: opts?.persona ?? DEFAULT_PERSONA }),
     [actuators, lang],
+  );
+
+  /** Manifestação assinada: entra no fluxo e é lida com a voz da identidade. */
+  const manifest = useCallback(
+    (text: string, persona: Persona, opts?: { onEnd?: () => void }) => {
+      pushFeed({ kind: "assistant", text, persona });
+      chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
+      speakLive(text, { persona, onEnd: opts?.onEnd });
+    },
+    [pushFeed, speakLive],
   );
 
   const speech = useSpeechToText(onFinalText, { lang });
