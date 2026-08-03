@@ -231,6 +231,7 @@ export function LivePanel({
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
       lastSpeechAtRef.current = Date.now();
       bufferRef.current.push(text);
+      turnRef.current.push(text);
       setLiveLine(bufferRef.current.join(" "));
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
@@ -239,23 +240,196 @@ export function LivePanel({
   );
 
   const speech = useSpeechToText(onFinalText, { lang });
+  const speechRef = useRef(speech);
+  speechRef.current = speech;
 
-  // Detector de silêncio do Live Dinâmico: passado o limite sem fala nova (e
-  // com a WiMi calada), emite o evento "silence" — quem escuta são os gatilhos.
+  // -------------------------------------------------- CONTEÚDO DA SESSÃO
+  const sessionContent = useCallback(
+    () =>
+      [
+        ...blocksRef.current,
+        turnRef.current.join(" "),
+        speechRef.current.interim,
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .slice(-12000),
+    [],
+  );
+
+  const openSessionTalk = useCallback(
+    (initialQuestion?: string) => {
+      setSessionTalk({
+        sessionId,
+        missionId: missionId ?? null,
+        content: sessionContent(),
+        initialQuestion: initialQuestion ?? null,
+      });
+    },
+    [missionId, sessionContent, sessionId],
+  );
+
+  // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
+  //
+  // A cada 2 blocos fechados, uma chamada leve atualiza o "entendimento da
+  // conversa". Quando o handover chega, o contexto JÁ está montado.
+  useEffect(() => {
+    if (!dynamic || blocks.length === 0 || blocks.length % 2 !== 0) return;
+    const transcript = blocksRef.current.slice(-10).join("\n").slice(-6000);
+    if (!transcript.trim()) return;
+    let alive = true;
+    void liveUnderstanding({ data: { transcript } })
+      .then((r: { understanding: string }) => {
+        if (alive) {
+          understandingRef.current = r.understanding;
+          setUnderstanding(r.understanding);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [blocks.length, dynamic]);
+
+  // -------------------------------- (2) CÓDIGOS DE COMUNICAÇÃO (no interim)
+  //
+  // Modo livre / só quando eu chamar / conversar sobre a sessão são detectados
+  // continuamente no texto parcial, sem esperar o fim do bloco.
+  const handleCodes = useCallback(
+    (text: string) => {
+      const tail = text.slice(-160);
+      if (!tail.trim()) return;
+      const code = hasCallCode(tail, callCodesRef.current);
+      if (!code) return;
+      const mode = detectModeCommand(tail);
+      if (mode && mode !== addressModeRef.current) {
+        changeAddressMode(mode);
+        actuators.chime("soft");
+        actuators.speak(
+          mode === "free" ? "Modo livre: respondo a tudo." : "Ok, só quando você me chamar.",
+        );
+        turnRef.current = [];
+        return;
+      }
+      if (detectSessionTalk(tail) && !sessionTalkRef.current) {
+        turnRef.current = [];
+        openSessionTalk("Do que a gente falou até agora? Faça um resumo do que foi dito.");
+      }
+    },
+    // changeAddressMode é estável (definido abaixo com useCallback sem deps)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [actuators, openSessionTalk],
+  );
+
+  // -------------------------------------- (3) HANDOVER (~2s de silêncio)
+  const handleHandover = useCallback(
+    async (turn: string) => {
+      const codes = callCodesRef.current;
+      const code = hasCallCode(turn, codes);
+      const free = addressModeRef.current === "free";
+
+      // NÃO ENDEREÇADA: só escuta e registra. Nunca interrompe.
+      if (!code && !free) {
+        setHandoverState("fala sem código de chamada — só registrei.");
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "sensor_reading",
+          channel: "foreground",
+          note: turn.slice(0, 2000),
+          meta: {
+            session_id: sessionId,
+            type: "handover_skipped",
+            reason: "sem_codigo_de_chamada",
+          },
+        });
+        return;
+      }
+
+      respondingRef.current = true;
+      setHandoverState("preparando resposta…");
+      const wasListening = speechRef.current.listening;
+      const question = stripCallCode(turn, codes) || turn;
+      const release = () => {
+        respondingRef.current = false;
+      };
+      try {
+        const res = await liveHandoverReply({
+          data: {
+            turn: question.slice(0, 4000),
+            understanding: understandingRef.current || undefined,
+            recent: blocksRef.current.slice(-6).join("\n").slice(-4000) || undefined,
+            addressed_by_code: !!code,
+          },
+        });
+        // (c) heurística de ambiente: na dúvida, silêncio + registro.
+        if (!res.addressed || !res.message) {
+          setHandoverState("parecia conversa com outra pessoa — fiquei quieta e registrei.");
+          void persist({
+            mission_id: missionId ?? null,
+            kind: "sensor_reading",
+            channel: "foreground",
+            note: turn.slice(0, 2000),
+            meta: { session_id: sessionId, type: "handover_skipped", reason: "terceiros" },
+          });
+          release();
+          return;
+        }
+
+        setHandoverState(null);
+        actuators.chime("tick");
+        if (wasListening) speechRef.current.stop();
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "voice",
+          note: question.slice(0, 4000),
+          meta: { session_id: sessionId, role: "user", source: "live_handover" },
+        });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "foreground",
+          note: res.message.slice(0, 4000),
+          meta: { session_id: sessionId, role: "assistant", source: "live_handover" },
+        });
+        toast("WiMi", { description: res.message, duration: 12000 });
+        actuators.speak(res.message, {
+          onEnd: () => {
+            actuators.chime("soft");
+            if (wasListening) speechRef.current.start();
+            release();
+          },
+        });
+      } catch (e) {
+        setHandoverState(null);
+        toast.error(e instanceof Error ? e.message : "Falha ao responder.");
+        release();
+      }
+    },
+    [actuators, missionId, persist, sessionId],
+  );
+
+  // Detector de fim de turno: ~2s sem fala nova e com a WiMi calada.
   useEffect(() => {
     if (!dynamic || !speech.listening) return;
     lastSpeechAtRef.current = Date.now();
     const id = window.setInterval(() => {
-      if (actuators.speaking) {
+      if (actuators.speaking || respondingRef.current) {
         lastSpeechAtRef.current = Date.now();
         return;
       }
-      if (Date.now() - lastSpeechAtRef.current < DYNAMIC_SILENCE_MS) return;
+      if (Date.now() - lastSpeechAtRef.current < HANDOVER_MS) return;
+      const turn = turnRef.current.join(" ").trim();
       lastSpeechAtRef.current = Date.now();
-      emitEvent("silence", { silence_ms: DYNAMIC_SILENCE_MS });
-    }, 1000);
+      if (!turn) return;
+      turnRef.current = [];
+      // o evento continua existindo para gatilhos de evento "silêncio".
+      emitEvent("silence", { silence_ms: HANDOVER_MS });
+      void handleHandover(turn);
+    }, 400);
     return () => window.clearInterval(id);
-  }, [actuators.speaking, dynamic, emitEvent, speech.listening]);
+  }, [actuators.speaking, dynamic, emitEvent, handleHandover, speech.listening]);
+
 
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
