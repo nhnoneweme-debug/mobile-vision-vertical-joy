@@ -500,6 +500,7 @@ export function LivePanel({
             history: chatHistoryRef.current.slice(-10),
             question: q.slice(0, 2000),
             ...(forced ? { force_persona: forced } : {}),
+            ...personaExtras(),
           },
         });
         const persona = normalizePersona(res.persona);
@@ -619,6 +620,7 @@ export function LivePanel({
             recent: blocksRef.current.slice(-6).join("\n").slice(-4000) || undefined,
             addressed_by_code: !!code,
             ...(direct ? { force_persona: direct } : {}),
+            ...personaExtras(),
           },
         });
         // (c) heurística de ambiente: na dúvida, silêncio + registro.
@@ -855,6 +857,8 @@ export function LivePanel({
             instruction: action.prompt.instruction,
             context: contextText,
             trigger_name: trigger.name,
+            ...personaExtras(),
+            session_lang: langRef.current,
             ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
@@ -928,6 +932,8 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...personaExtras(),
+            session_lang: langRef.current,
             ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
@@ -1007,6 +1013,8 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...personaExtras(),
+            session_lang: langRef.current,
             ...(triggerPersona ? { force_persona: triggerPersona } : { force_persona: "wi" }),
           },
         })
