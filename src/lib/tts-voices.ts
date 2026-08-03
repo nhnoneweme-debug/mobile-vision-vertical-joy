@@ -71,11 +71,6 @@ export function cachedVoices(): SpeechSynthesisVoice[] {
   return voicesCache;
 }
 
-/** Vozes do idioma pedido, ordenadas por qualidade provável. */
-export function voicesForLang(base: TtsLangCode, all = cachedVoices()): SpeechSynthesisVoice[] {
-  return all.filter((v) => v.lang?.toLowerCase().startsWith(base)).sort((a, b) => score(b, a));
-}
-
 const GOOD_NAMES = [
   "google português do brasil",
   "google português",
@@ -88,7 +83,7 @@ const GOOD_NAMES = [
   "google",
 ];
 
-function score(v: SpeechSynthesisVoice, _other?: SpeechSynthesisVoice): number {
+function score(v: SpeechSynthesisVoice): number {
   const name = (v.name || "").toLowerCase();
   const lang = (v.lang || "").toLowerCase().replace("_", "-");
   let s = 0;
@@ -101,12 +96,11 @@ function score(v: SpeechSynthesisVoice, _other?: SpeechSynthesisVoice): number {
   return s;
 }
 
-// sort comparator helper (score desc)
 function byScoreDesc(a: SpeechSynthesisVoice, b: SpeechSynthesisVoice): number {
   return score(b) - score(a);
 }
 
-/** Lista ordenada corretamente (usa comparador dedicado). */
+/** Vozes do idioma pedido, ordenadas por qualidade provável. */
 export function listVoices(base: TtsLangCode, all = cachedVoices()): SpeechSynthesisVoice[] {
   return all.filter((v) => v.lang?.toLowerCase().startsWith(base)).sort(byScoreDesc);
 }
