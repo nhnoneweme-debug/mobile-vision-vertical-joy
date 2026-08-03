@@ -3,6 +3,8 @@ import { useState } from "react";
 import {
   User,
   ShoppingBag,
+  Sparkles,
+
   Trophy,
   Users,
   LineChart,
