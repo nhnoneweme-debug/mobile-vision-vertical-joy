@@ -931,6 +931,14 @@ export function LivePanel({
         {journeyLog ? (
           <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
         ) : null}
+        {sessionTalk ? (
+          <SessionTalkSheet
+            context={sessionTalk}
+            onSpeak={(t) => actuators.speak(t)}
+            onClose={() => setSessionTalk(null)}
+          />
+
+        ) : null}
         <StationMode
           listening={speech.listening}
           micSupported={speech.supported}
