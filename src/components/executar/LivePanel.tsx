@@ -1041,11 +1041,14 @@ function ActuatorRow({
               : on
                 ? config.beacon?.on
                   ? `beacon · a cada ${config.beacon.value} ${config.beacon.unit}`
-                  : continuous
-                    ? "ativo · contínuo indefinido (até desligar)"
-                    : `ativo · ${config.onSec}s a cada ${config.everySec}s`
+                  : showSound
+                    ? "armado · silencioso (só toca quando algo dispara)"
+                    : continuous
+                      ? "ativo · contínuo indefinido (até desligar)"
+                      : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
+
         </span>
         <span
           className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
