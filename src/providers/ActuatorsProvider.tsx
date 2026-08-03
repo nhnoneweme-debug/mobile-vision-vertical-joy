@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { speakWithVoice, langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
+import { langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
 import { speakUnified, stopSpeaking } from "@/lib/tts-engine";
 // Atuadores persistentes da WiMi (vibração + emissão de áudio + voz).
 //
