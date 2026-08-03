@@ -115,6 +115,8 @@ type FormState = {
   cameraOff: boolean;
   message: string;
   outcome: string;
+  /** QUEM MANIFESTA — Automático (modelo decide) | Wi | Mi */
+  persona: PersonaChoice;
   journeyLog: boolean;
   customInstruction: string;
   customPlan: string | null;
@@ -150,6 +152,7 @@ const EMPTY_FORM: FormState = {
   cameraOff: false,
   message: "",
   outcome: "",
+  persona: "auto",
   journeyLog: false,
   customInstruction: "",
   customPlan: null,
@@ -216,6 +219,7 @@ function buildAction(f: FormState): TriggerAction {
     a.trigger_enable = { trigger_id: f.chainEnableId, enabled: f.chainEnableValue };
   if (f.message.trim()) a.message = f.message.trim();
   if (f.outcome.trim()) a.intended_outcome = f.outcome.trim();
+  if (f.persona === "wi" || f.persona === "mi") a.persona = f.persona;
   return a;
 }
 
@@ -274,6 +278,7 @@ function formFromTrigger(t: TriggerDefinition): FormState {
     cameraOff: a.sensors?.camera === false,
     message: a.message ?? "",
     outcome: a.intended_outcome ?? "",
+    persona: a.persona === "wi" || a.persona === "mi" ? a.persona : "auto",
     journeyLog: !!a.journey_log_prompt,
     customInstruction: a.custom?.instruction ?? "",
     customPlan: a.custom?.plan ?? null,
@@ -929,6 +934,33 @@ export function TriggersSection() {
                 placeholder="ex.: ambiente em silêncio, só os ouvidos ligados"
                 className="w-full rounded-lg border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground"
               />
+            </Field>
+
+            {/* QUEM MANIFESTA — identidade do par WiMi que assina a fala. */}
+            <Field label="quem manifesta">
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["auto", "Automático"],
+                    ["wi", "Wi · tutora"],
+                    ["mi", "Mi · mentor"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, persona: value }))}
+                    aria-pressed={form.persona === value}
+                    className={`min-w-0 rounded-full border px-3 py-1.5 text-[11px] active:scale-95 ${
+                      form.persona === value
+                        ? "border-ember bg-ember/15 text-ember"
+                        : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    <span className="truncate">{label}</span>
+                  </button>
+                ))}
+              </div>
             </Field>
 
             {/* ---------------------------------------- ELEMENTO PROMPT */}
