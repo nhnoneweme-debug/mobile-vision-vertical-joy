@@ -1816,7 +1816,8 @@ function VoiceRow({
           {engine !== "text" && supported && voices.length ? (
             <div className="space-y-2">
               <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-                Voz do aparelho ({base === "pt" ? "português" : base === "en" ? "inglês" : "espanhol"})
+                Voz do aparelho (
+                {base === "pt" ? "português" : base === "en" ? "inglês" : "espanhol"})
               </label>
               <select
                 value={selected}
