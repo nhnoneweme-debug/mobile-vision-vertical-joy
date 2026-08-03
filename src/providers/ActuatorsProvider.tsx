@@ -260,31 +260,35 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     });
   }, [audioConfig, persist, vibrationConfig]);
 
+  // Ponto de entrada ÚNICO de fala: servidor → voz do aparelho → texto.
   const speak = useCallback(
     (text: string, opts?: { onEnd?: () => void; lang?: string }) => {
-      if (!speechOn || !speechSupported) {
+      if (!speechOn) {
         opts?.onEnd?.();
         return;
       }
-      void speakWithVoice(text, {
+      void speakUnified(text, {
         lang: opts?.lang ?? "pt-BR",
         onStart: () => setSpeaking(true),
         onEnd: () => {
           setSpeaking(false);
           opts?.onEnd?.();
         },
-      }).then((result) => {
-        if (result === "no-voice") {
+      }).then((outcome) => {
+        if (outcome === "no-voice") {
           setSpeaking(false);
+          opts?.onEnd?.();
           const base = langBase(opts?.lang ?? "pt-BR");
           if (!noVoiceWarnedRef.current.has(base)) {
             noVoiceWarnedRef.current.add(base);
             toast.warning(NO_VOICE_HINT[base]);
           }
+        } else if (outcome === "text-only" || outcome === "empty") {
+          setSpeaking(false);
         }
       });
     },
-    [speechOn, speechSupported],
+    [speechOn],
   );
 
   /**
