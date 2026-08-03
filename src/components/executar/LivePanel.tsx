@@ -811,7 +811,7 @@ export function LivePanel({
           ))}
         </div>
 
-        {/* LIVE DINÂMICO — silêncio prolongado vira turno da WiMi. */}
+        {/* LIVE DINÂMICO — análise contínua + endereçamento + handover. */}
         <button
           type="button"
           onClick={() => setDynamic((v) => !v)}
@@ -827,8 +827,10 @@ export function LivePanel({
             <span className="block text-sm text-foreground">Live dinâmico</span>
             <span className="block text-[11px] text-muted-foreground">
               {dynamic
-                ? "após ~8s de silêncio a WiMi toma a palavra (gatilhos de evento “silêncio”)."
-                : "conversa por turnos com a WiMi durante a escuta."}
+                ? addressMode === "free"
+                  ? "modo livre: ela acompanha e responde ao fim do seu turno."
+                  : "ela acompanha tudo e só responde quando você usa o código de chamada."
+                : "conversa por turnos: ela analisa enquanto você fala e responde no handover."}
             </span>
           </span>
           <span
@@ -839,6 +841,87 @@ export function LivePanel({
             {dynamic ? "on" : "off"}
           </span>
         </button>
+
+        {dynamic ? (
+          <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">responde</span>
+              {(
+                [
+                  ["addressed", "só quando eu chamar"],
+                  ["free", "modo livre"],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => changeAddressMode(m)}
+                  aria-pressed={addressMode === m}
+                  className={`rounded-full border px-3 py-1 text-[11px] active:scale-95 ${
+                    addressMode === m
+                      ? "border-ember bg-ember/15 text-ember"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">códigos de chamada</span>
+              {callCodes.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => changeCodes(callCodes.filter((x) => x !== c))}
+                  className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground active:scale-95"
+                  aria-label={`remover código ${c}`}
+                >
+                  {c} ×
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={codeDraft}
+                onChange={(e) => setCodeDraft(e.target.value)}
+                placeholder="novo código (ex.: assistente)"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1.5 text-[12px] text-foreground outline-none focus:border-ember/50"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const c = codeDraft.trim();
+                  if (!c) return;
+                  changeCodes([...callCodes, c]);
+                  setCodeDraft("");
+                }}
+                className="rounded-lg border border-ember/40 bg-ember/10 px-3 py-1.5 text-[12px] text-ember active:scale-95"
+              >
+                add
+              </button>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              {understanding
+                ? `entendimento atual: ${understanding}`
+                : "diga “WiMi, modo livre” para liberar, ou “WiMi, só quando eu chamar” para voltar."}
+            </p>
+            {handoverState ? (
+              <p className="text-[11px] text-ember">{handoverState}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => openSessionTalk()}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2 text-[12px] text-muted-foreground active:scale-95"
+        >
+          <MessagesSquare className="h-4 w-4" /> Conversar sobre a sessão
+        </button>
+
 
         {transcriptView}
 
