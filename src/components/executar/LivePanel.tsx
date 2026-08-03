@@ -302,6 +302,12 @@ export function LivePanel({
     [flushTranscript],
   );
 
+  /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
+  const speakLive = useCallback(
+    (text: string, opts?: { onEnd?: () => void }) => actuators.speak(text, { ...opts, lang }),
+    [actuators, lang],
+  );
+
   const speech = useSpeechToText(onFinalText, { lang });
   const speechRef = useRef(speech);
   speechRef.current = speech;
@@ -368,7 +374,7 @@ export function LivePanel({
       if (mode && mode !== addressModeRef.current) {
         changeAddressMode(mode);
         actuators.chime("soft");
-        actuators.speak(
+        speakLive(
           mode === "free" ? "Modo livre: respondo a tudo." : "Ok, só quando você me chamar.",
         );
         turnRef.current = [];
@@ -456,7 +462,7 @@ export function LivePanel({
           meta: { session_id: sessionId, role: "assistant", source: "live_handover" },
         });
         toast("WiMi", { description: res.message, duration: 12000 });
-        actuators.speak(res.message, {
+        speakLive(res.message, {
           onEnd: () => {
             actuators.chime("soft");
             if (wasListening) speechRef.current.start();
@@ -669,7 +675,7 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            actuators.speak(res.message);
+            speakLive(res.message);
             // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
             // uma linha própria (append-only) para aparecer no relatório.
             void recordFiring({
@@ -737,7 +743,7 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            actuators.speak(res.message, {
+            speakLive(res.message, {
               onEnd: () => {
                 // devolve o turno: toque curto e microfone de volta.
                 actuators.chime("soft");
@@ -811,17 +817,17 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
-            actuators.speak(res.message);
+            speakLive(res.message);
           })
           .catch(() => {
-            actuators.speak("O que você está executando agora?");
+            speakLive("O que você está executando agora?");
           });
       }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? info?.matched_text ?? undefined,
       });
       if (action.message) {
-        actuators.speak(action.message);
+        speakLive(action.message);
         ok("mensagem falada", action.message);
       }
 
@@ -945,7 +951,7 @@ export function LivePanel({
         {sessionTalk ? (
           <SessionTalkSheet
             context={sessionTalk}
-            onSpeak={(t) => actuators.speak(t)}
+            onSpeak={(t) => speakLive(t)}
             onClose={() => setSessionTalk(null)}
           />
 
@@ -1008,7 +1014,7 @@ export function LivePanel({
       {sessionTalk ? (
         <SessionTalkSheet
           context={sessionTalk}
-          onSpeak={(t) => actuators.speak(t)}
+          onSpeak={(t) => speakLive(t)}
           onClose={() => setSessionTalk(null)}
         />
 
