@@ -1061,7 +1061,14 @@ function ActuatorRow({
 
       {supported ? (
         <>
+          {showSound ? (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Configuração do padrão sonoro. Ligado sozinho, o áudio fica armado e silencioso — só
+              toca quando um gatilho, uma manifestação ou o beacon abaixo disparar.
+            </p>
+          ) : null}
           <div className="mt-3 flex gap-2">
+
             <button
               type="button"
               onClick={() => onConfig({ ...config, mode: "timed" })}
