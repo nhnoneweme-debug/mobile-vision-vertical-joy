@@ -1366,7 +1366,13 @@ export function LivePanel({
               {l.label}
             </button>
           ))}
+          {langNote ? (
+            <span className="text-[10px] text-ember" role="status">
+              {langNote}
+            </span>
+          ) : null}
         </div>
+
 
         {/* LIVE DINÂMICO — análise contínua + endereçamento + handover. */}
         <button
