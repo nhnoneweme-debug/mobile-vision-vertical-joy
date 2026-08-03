@@ -379,7 +379,7 @@ export function LivePanel({
       }
     },
     // changeAddressMode é estável (definido abaixo com useCallback sem deps)
-    [actuators, changeAddressMode, openSessionTalk],
+    [actuators, changeAddressMode, openSessionTalk, speakLive],
   );
 
   // -------------------------------------- (3) HANDOVER (~2s de silêncio)
@@ -467,7 +467,7 @@ export function LivePanel({
         release();
       }
     },
-    [actuators, missionId, persist, sessionId],
+    [actuators, missionId, persist, sessionId, speakLive],
   );
 
   // Detector de fim de turno: ~2s sem fala nova e com a WiMi calada.
@@ -835,7 +835,17 @@ export function LivePanel({
 
       return results;
     },
-    [actuators, camera, flushTranscript, missionId, persist, sessionId, sessionStartedAt, speech],
+    [
+      actuators,
+      camera,
+      flushTranscript,
+      missionId,
+      persist,
+      sessionId,
+      sessionStartedAt,
+      speakLive,
+      speech,
+    ],
   );
 
   // Época da escuta: muda a cada bloco fechado, reiniciando as âncoras de
