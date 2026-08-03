@@ -179,7 +179,13 @@ export function LivePanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [lang, setLang] = useState<string>("pt-BR");
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  /** últimas detecções de idioma; 2 seguidas viram troca do reconhecedor. */
+  const langHistoryRef = useRef<ReplyLang[]>([]);
+  const [langNote, setLangNote] = useState<string | null>(null);
   const [lastBlock, setLastBlock] = useState<{ id: string; text: string } | null>(null);
+
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
