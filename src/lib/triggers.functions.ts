@@ -46,6 +46,30 @@ em ações primitivas de um app de execução. Responda SEMPRE apenas com JSON v
 }
 Inclua apenas as chaves relevantes. Se nada primitivo servir, use somente "message".`;
 
+/** Extrai {persona,message}; sem JSON válido, o texto vale como fala da Wi. */
+function parsePersonaReply(raw: string): { persona: "wi" | "mi"; message: string } {
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try {
+      const obj = JSON.parse(cleaned.slice(start, end + 1)) as {
+        persona?: unknown;
+        message?: unknown;
+      };
+      const message = typeof obj.message === "string" ? obj.message.trim() : "";
+      if (message) return { persona: obj.persona === "mi" ? "mi" : "wi", message };
+    } catch {
+      /* fallback textual */
+    }
+  }
+  return { persona: "wi", message: cleaned };
+}
+
 function parseJson(text: string): string {
   const cleaned = text
     .trim()
@@ -117,12 +141,21 @@ export const interpretCustomAction = createServerFn({ method: "POST" })
 const PROMPT_SYSTEM = `Você é a WiMi se manifestando durante uma sessão de execução ao vivo.
 Recebe uma INSTRUÇÃO escrita pelo próprio usuário (elemento "Prompt" de um gatilho) e o
 contexto da sessão. Responda em português, direto, no máximo 3 frases curtas, sem markdown,
-como uma fala que será mostrada e lida em voz alta no momento do disparo.`;
+como uma fala que será mostrada e lida em voz alta no momento do disparo.
+
+IDENTIDADES DO PAR "WIMI" — a fala é assinada por UMA delas:
+• "wi" (Wi, TUTORA, acolhedora): acompanhamento, prática, instrução, incentivo, rituais.
+• "mi" (Mi, MENTOR, direto): decisão, estratégia, revisão crítica, avaliação de progresso.
+FORMATO OBRIGATÓRIO: responda APENAS com JSON válido, sem markdown:
+{"persona":"wi"|"mi","message":"a fala"}
+Na dúvida, use "wi".`;
 
 const runPromptSchema = z.object({
   instruction: z.string().min(3).max(2000),
   context: z.string().max(4000).optional(),
   trigger_name: z.string().max(120).optional(),
+  /** "quem manifesta" definido no gatilho; ausente = o modelo decide. */
+  force_persona: z.enum(["wi", "mi"]).optional(),
 });
 
 /** Adendo D — ELEMENTO PROMPT: executa a instrução em linguagem natural no disparo. */
@@ -134,20 +167,25 @@ export const runTriggerPrompt = createServerFn({ method: "POST" })
     const prompt = [
       `Instrução do gatilho${data.trigger_name ? ` "${data.trigger_name}"` : ""}: ${data.instruction}`,
       data.context ? `Contexto da sessão ao vivo:\n${data.context}` : "",
+      data.force_persona
+        ? `Este gatilho é destinado à identidade "${data.force_persona}": responda como ela.`
+        : "",
     ]
       .filter(Boolean)
       .join("\n\n");
     const { text } = await generateText({ model, system: PROMPT_SYSTEM, prompt });
-    const message = text.trim();
+    const parsed = parsePersonaReply(text);
+    const persona = data.force_persona ?? parsed.persona;
+    const message = parsed.message;
     const { supabase, userId } = context;
     await supabase.from("ai_audit_log").insert({
       user_id: userId,
       table_name: "trigger_definitions",
       action: "trigger.prompt_run",
       status: "applied",
-      payload: { instruction: data.instruction, output: message } as never,
+      payload: { instruction: data.instruction, output: message, persona } as never,
     });
-    return { message };
+    return { message, persona };
   });
 
 const resolveSchema = z.object({
