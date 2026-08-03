@@ -488,13 +488,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const stopAll = useCallback(() => {
     setVibrationOn(false);
     setAudioOn(false);
-    try {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    } catch {
-      /* noop */
-    }
+    stopSpeaking();
     setSpeaking(false);
   }, []);
 
