@@ -121,8 +121,44 @@ export function LivePanel({
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
-  // LIVE DINÂMICO — a WiMi toma a palavra sozinha quando o silêncio se estende.
+  // LIVE DINÂMICO — análise contínua, endereçamento e handover por silêncio.
   const [dynamic, setDynamic] = useState(false);
+  const [addressMode, setAddressMode] = useState<AddressMode>("addressed");
+  const [callCodes, setCallCodes] = useState<string[]>([]);
+  const [codeDraft, setCodeDraft] = useState("");
+  const [understanding, setUnderstanding] = useState<string | null>(null);
+  const [handoverState, setHandoverState] = useState<string | null>(null);
+  const [sessionTalk, setSessionTalk] = useState<SessionTalkContext | null>(null);
+
+  const addressModeRef = useRef<AddressMode>("addressed");
+  const callCodesRef = useRef<string[]>([]);
+  const understandingRef = useRef<string | null>(null);
+  const sessionTalkRef = useRef(false);
+  const respondingRef = useRef(false);
+  /** fala acumulada do turno atual (esvaziada a cada handover) */
+  const turnRef = useRef<string[]>([]);
+  addressModeRef.current = addressMode;
+  callCodesRef.current = callCodes;
+  sessionTalkRef.current = sessionTalk != null;
+
+  // Preferências de endereçamento persistem por ambiente.
+  useEffect(() => {
+    setAddressMode(loadAddressMode());
+    setCallCodes(loadCallCodes());
+  }, []);
+
+  const changeAddressMode = useCallback((mode: AddressMode) => {
+    setAddressMode(mode);
+    saveAddressMode(mode);
+  }, []);
+
+  const changeCodes = useCallback((codes: string[]) => {
+    const clean = Array.from(new Set(codes.map((c) => c.trim()).filter(Boolean)));
+    setCallCodes(clean);
+    saveCallCodes(clean);
+  }, []);
+
+
   const [liveEvent, setLiveEvent] = useState<{
     name: LiveEventName;
     ref: string;
