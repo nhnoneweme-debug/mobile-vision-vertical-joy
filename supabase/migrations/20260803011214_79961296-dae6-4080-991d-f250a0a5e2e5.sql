@@ -1,0 +1,2 @@
+ALTER TABLE public.execution_events DROP CONSTRAINT execution_events_kind_check;
+ALTER TABLE public.execution_events ADD CONSTRAINT execution_events_kind_check CHECK (kind = ANY (ARRAY['manifest_shown','manifest_ack','mission_done','mission_skipped','mission_extended','mission_started','mission_ended','voice_note','negotiation','live_transcript','sensor_reading','journey_log','journey_log_declined','manual_log','day_review','dialog_turn']));

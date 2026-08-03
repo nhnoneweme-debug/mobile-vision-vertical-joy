@@ -25,6 +25,9 @@ const EVENT_KINDS = [
   "manual_log",
   // ritual da noite: "registrar meu dia"
   "day_review",
+  // turno de conversa (Live dinâmico / conversar sobre a sessão)
+  "dialog_turn",
+
 ] as const;
 
 const PHASES = ["preEnd", "atEnd", "preStart", "atStart"] as const;

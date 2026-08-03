@@ -11,7 +11,9 @@ import {
   Ear,
   Maximize2,
   Mic,
+  MessagesSquare,
   MicOff,
+
   Pencil,
   Radio,
   SwitchCamera,
@@ -52,12 +54,26 @@ import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
 import { ExecutionLogCard } from "./ExecutionLogCard";
+import { SessionTalkSheet, type SessionTalkContext } from "./SessionTalkSheet";
+import { liveHandoverReply, liveUnderstanding } from "@/lib/live-dialog.functions";
+import {
+  detectModeCommand,
+  detectSessionTalk,
+  hasCallCode,
+  loadAddressMode,
+  loadCallCodes,
+  saveAddressMode,
+  saveCallCodes,
+  stripCallCode,
+  type AddressMode,
+} from "@/lib/live-dialog";
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
-/** silêncio que dá o turno à WiMi no Live Dinâmico */
-const DYNAMIC_SILENCE_MS = 8_000;
+/** fim de turno: silêncio curto que passa a palavra à WiMi */
+const HANDOVER_MS = 2_000;
+
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
@@ -105,8 +121,44 @@ export function LivePanel({
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
-  // LIVE DINÂMICO — a WiMi toma a palavra sozinha quando o silêncio se estende.
+  // LIVE DINÂMICO — análise contínua, endereçamento e handover por silêncio.
   const [dynamic, setDynamic] = useState(false);
+  const [addressMode, setAddressMode] = useState<AddressMode>("addressed");
+  const [callCodes, setCallCodes] = useState<string[]>([]);
+  const [codeDraft, setCodeDraft] = useState("");
+  const [understanding, setUnderstanding] = useState<string | null>(null);
+  const [handoverState, setHandoverState] = useState<string | null>(null);
+  const [sessionTalk, setSessionTalk] = useState<SessionTalkContext | null>(null);
+
+  const addressModeRef = useRef<AddressMode>("addressed");
+  const callCodesRef = useRef<string[]>([]);
+  const understandingRef = useRef<string | null>(null);
+  const sessionTalkRef = useRef(false);
+  const respondingRef = useRef(false);
+  /** fala acumulada do turno atual (esvaziada a cada handover) */
+  const turnRef = useRef<string[]>([]);
+  addressModeRef.current = addressMode;
+  callCodesRef.current = callCodes;
+  sessionTalkRef.current = sessionTalk != null;
+
+  // Preferências de endereçamento persistem por ambiente.
+  useEffect(() => {
+    setAddressMode(loadAddressMode());
+    setCallCodes(loadCallCodes());
+  }, []);
+
+  const changeAddressMode = useCallback((mode: AddressMode) => {
+    setAddressMode(mode);
+    saveAddressMode(mode);
+  }, []);
+
+  const changeCodes = useCallback((codes: string[]) => {
+    const clean = Array.from(new Set(codes.map((c) => c.trim()).filter(Boolean)));
+    setCallCodes(clean);
+    saveCallCodes(clean);
+  }, []);
+
+
   const [liveEvent, setLiveEvent] = useState<{
     name: LiveEventName;
     ref: string;
@@ -231,6 +283,7 @@ export function LivePanel({
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
       lastSpeechAtRef.current = Date.now();
       bufferRef.current.push(text);
+      turnRef.current.push(text);
       setLiveLine(bufferRef.current.join(" "));
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
@@ -239,28 +292,211 @@ export function LivePanel({
   );
 
   const speech = useSpeechToText(onFinalText, { lang });
+  const speechRef = useRef(speech);
+  speechRef.current = speech;
 
-  // Detector de silêncio do Live Dinâmico: passado o limite sem fala nova (e
-  // com a WiMi calada), emite o evento "silence" — quem escuta são os gatilhos.
+  // -------------------------------------------------- CONTEÚDO DA SESSÃO
+  const sessionContent = useCallback(
+    () =>
+      [
+        ...blocksRef.current,
+        turnRef.current.join(" "),
+        speechRef.current.interim,
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .slice(-12000),
+    [],
+  );
+
+  const openSessionTalk = useCallback(
+    (initialQuestion?: string) => {
+      setSessionTalk({
+        sessionId,
+        missionId: missionId ?? null,
+        content: sessionContent(),
+        initialQuestion: initialQuestion ?? null,
+      });
+    },
+    [missionId, sessionContent, sessionId],
+  );
+
+  // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
+  //
+  // A cada 2 blocos fechados, uma chamada leve atualiza o "entendimento da
+  // conversa". Quando o handover chega, o contexto JÁ está montado.
+  useEffect(() => {
+    if (!dynamic || blocks.length === 0 || blocks.length % 2 !== 0) return;
+    const transcript = blocksRef.current.slice(-10).join("\n").slice(-6000);
+    if (!transcript.trim()) return;
+    let alive = true;
+    void liveUnderstanding({ data: { transcript } })
+      .then((r: { understanding: string }) => {
+        if (alive) {
+          understandingRef.current = r.understanding;
+          setUnderstanding(r.understanding);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [blocks.length, dynamic]);
+
+  // -------------------------------- (2) CÓDIGOS DE COMUNICAÇÃO (no interim)
+  //
+  // Modo livre / só quando eu chamar / conversar sobre a sessão são detectados
+  // continuamente no texto parcial, sem esperar o fim do bloco.
+  const handleCodes = useCallback(
+    (text: string) => {
+      const tail = text.slice(-160);
+      if (!tail.trim()) return;
+      const code = hasCallCode(tail, callCodesRef.current);
+      if (!code) return;
+      const mode = detectModeCommand(tail);
+      if (mode && mode !== addressModeRef.current) {
+        changeAddressMode(mode);
+        actuators.chime("soft");
+        actuators.speak(
+          mode === "free" ? "Modo livre: respondo a tudo." : "Ok, só quando você me chamar.",
+        );
+        turnRef.current = [];
+        return;
+      }
+      if (detectSessionTalk(tail) && !sessionTalkRef.current) {
+        turnRef.current = [];
+        openSessionTalk("Do que a gente falou até agora? Faça um resumo do que foi dito.");
+      }
+    },
+    // changeAddressMode é estável (definido abaixo com useCallback sem deps)
+    [actuators, changeAddressMode, openSessionTalk],
+
+  );
+
+  // -------------------------------------- (3) HANDOVER (~2s de silêncio)
+  const handleHandover = useCallback(
+    async (turn: string) => {
+      const codes = callCodesRef.current;
+      const code = hasCallCode(turn, codes);
+      const free = addressModeRef.current === "free";
+
+      // NÃO ENDEREÇADA: só escuta e registra. Nunca interrompe.
+      if (!code && !free) {
+        setHandoverState("fala sem código de chamada — só registrei.");
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "sensor_reading",
+          channel: "foreground",
+          note: turn.slice(0, 2000),
+          meta: {
+            session_id: sessionId,
+            type: "handover_skipped",
+            reason: "sem_codigo_de_chamada",
+          },
+        });
+        return;
+      }
+
+      respondingRef.current = true;
+      setHandoverState("preparando resposta…");
+      const wasListening = speechRef.current.listening;
+      const question = stripCallCode(turn, codes) || turn;
+      const release = () => {
+        respondingRef.current = false;
+      };
+      try {
+        const res = await liveHandoverReply({
+          data: {
+            turn: question.slice(0, 4000),
+            understanding: understandingRef.current || undefined,
+            recent: blocksRef.current.slice(-6).join("\n").slice(-4000) || undefined,
+            addressed_by_code: !!code,
+          },
+        });
+        // (c) heurística de ambiente: na dúvida, silêncio + registro.
+        if (!res.addressed || !res.message) {
+          setHandoverState("parecia conversa com outra pessoa — fiquei quieta e registrei.");
+          void persist({
+            mission_id: missionId ?? null,
+            kind: "sensor_reading",
+            channel: "foreground",
+            note: turn.slice(0, 2000),
+            meta: { session_id: sessionId, type: "handover_skipped", reason: "terceiros" },
+          });
+          release();
+          return;
+        }
+
+        setHandoverState(null);
+        actuators.chime("tick");
+        if (wasListening) speechRef.current.stop();
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "voice",
+          note: question.slice(0, 4000),
+          meta: { session_id: sessionId, role: "user", source: "live_handover" },
+        });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "foreground",
+          note: res.message.slice(0, 4000),
+          meta: { session_id: sessionId, role: "assistant", source: "live_handover" },
+        });
+        toast("WiMi", { description: res.message, duration: 12000 });
+        actuators.speak(res.message, {
+          onEnd: () => {
+            actuators.chime("soft");
+            if (wasListening) speechRef.current.start();
+            release();
+          },
+        });
+      } catch (e) {
+        setHandoverState(null);
+        toast.error(e instanceof Error ? e.message : "Falha ao responder.");
+        release();
+      }
+    },
+    [actuators, missionId, persist, sessionId],
+  );
+
+  // Detector de fim de turno: ~2s sem fala nova e com a WiMi calada.
   useEffect(() => {
     if (!dynamic || !speech.listening) return;
     lastSpeechAtRef.current = Date.now();
     const id = window.setInterval(() => {
-      if (actuators.speaking) {
+      if (actuators.speaking || respondingRef.current) {
         lastSpeechAtRef.current = Date.now();
         return;
       }
-      if (Date.now() - lastSpeechAtRef.current < DYNAMIC_SILENCE_MS) return;
+      if (Date.now() - lastSpeechAtRef.current < HANDOVER_MS) return;
+      const turn = turnRef.current.join(" ").trim();
       lastSpeechAtRef.current = Date.now();
-      emitEvent("silence", { silence_ms: DYNAMIC_SILENCE_MS });
-    }, 1000);
+      if (!turn) return;
+      turnRef.current = [];
+      // o evento continua existindo para gatilhos de evento "silêncio".
+      emitEvent("silence", { silence_ms: HANDOVER_MS });
+      void handleHandover(turn);
+    }, 400);
     return () => window.clearInterval(id);
-  }, [actuators.speaking, dynamic, emitEvent, speech.listening]);
+  }, [actuators.speaking, dynamic, emitEvent, handleHandover, speech.listening]);
+
 
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
     [liveLine, speech.interim],
   );
+
+  // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
+  useEffect(() => {
+    if (!dynamic || !currentLine) return;
+    lastSpeechAtRef.current = Date.now();
+    handleCodes(currentLine);
+  }, [currentLine, dynamic, handleCodes]);
+
+
+
 
   // Rolagem automática enquanto a fala acontece.
   useEffect(() => {
@@ -695,6 +931,14 @@ export function LivePanel({
         {journeyLog ? (
           <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
         ) : null}
+        {sessionTalk ? (
+          <SessionTalkSheet
+            context={sessionTalk}
+            onSpeak={(t) => actuators.speak(t)}
+            onClose={() => setSessionTalk(null)}
+          />
+
+        ) : null}
         <StationMode
           listening={speech.listening}
           micSupported={speech.supported}
@@ -749,6 +993,14 @@ export function LivePanel({
 
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
+      ) : null}
+      {sessionTalk ? (
+        <SessionTalkSheet
+          context={sessionTalk}
+          onSpeak={(t) => actuators.speak(t)}
+          onClose={() => setSessionTalk(null)}
+        />
+
       ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
@@ -811,7 +1063,7 @@ export function LivePanel({
           ))}
         </div>
 
-        {/* LIVE DINÂMICO — silêncio prolongado vira turno da WiMi. */}
+        {/* LIVE DINÂMICO — análise contínua + endereçamento + handover. */}
         <button
           type="button"
           onClick={() => setDynamic((v) => !v)}
@@ -827,8 +1079,10 @@ export function LivePanel({
             <span className="block text-sm text-foreground">Live dinâmico</span>
             <span className="block text-[11px] text-muted-foreground">
               {dynamic
-                ? "após ~8s de silêncio a WiMi toma a palavra (gatilhos de evento “silêncio”)."
-                : "conversa por turnos com a WiMi durante a escuta."}
+                ? addressMode === "free"
+                  ? "modo livre: ela acompanha e responde ao fim do seu turno."
+                  : "ela acompanha tudo e só responde quando você usa o código de chamada."
+                : "conversa por turnos: ela analisa enquanto você fala e responde no handover."}
             </span>
           </span>
           <span
@@ -839,6 +1093,87 @@ export function LivePanel({
             {dynamic ? "on" : "off"}
           </span>
         </button>
+
+        {dynamic ? (
+          <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">responde</span>
+              {(
+                [
+                  ["addressed", "só quando eu chamar"],
+                  ["free", "modo livre"],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => changeAddressMode(m)}
+                  aria-pressed={addressMode === m}
+                  className={`rounded-full border px-3 py-1 text-[11px] active:scale-95 ${
+                    addressMode === m
+                      ? "border-ember bg-ember/15 text-ember"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">códigos de chamada</span>
+              {callCodes.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => changeCodes(callCodes.filter((x) => x !== c))}
+                  className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground active:scale-95"
+                  aria-label={`remover código ${c}`}
+                >
+                  {c} ×
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={codeDraft}
+                onChange={(e) => setCodeDraft(e.target.value)}
+                placeholder="novo código (ex.: assistente)"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1.5 text-[12px] text-foreground outline-none focus:border-ember/50"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const c = codeDraft.trim();
+                  if (!c) return;
+                  changeCodes([...callCodes, c]);
+                  setCodeDraft("");
+                }}
+                className="rounded-lg border border-ember/40 bg-ember/10 px-3 py-1.5 text-[12px] text-ember active:scale-95"
+              >
+                add
+              </button>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              {understanding
+                ? `entendimento atual: ${understanding}`
+                : "diga “WiMi, modo livre” para liberar, ou “WiMi, só quando eu chamar” para voltar."}
+            </p>
+            {handoverState ? (
+              <p className="text-[11px] text-ember">{handoverState}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => openSessionTalk()}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2 text-[12px] text-muted-foreground active:scale-95"
+        >
+          <MessagesSquare className="h-4 w-4" /> Conversar sobre a sessão
+        </button>
+
 
         {transcriptView}
 
