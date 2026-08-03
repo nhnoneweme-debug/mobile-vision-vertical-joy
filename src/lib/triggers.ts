@@ -57,6 +57,11 @@ export type TriggerAction = {
    * nova no banco.
    */
   intended_outcome?: string;
+  /**
+   * QUEM MANIFESTA — identidade do par WiMi que assina a fala do disparo.
+   * Ausente ou "auto": o modelo decide (Wi tutora / Mi mentor).
+   */
+  persona?: "auto" | "wi" | "mi";
 };
 
 /**
@@ -560,6 +565,8 @@ export function actionElements(
       }"`,
     );
   if (act.message) parts.push(`avisar "${act.message}"`);
+  if (act.persona === "wi" || act.persona === "mi")
+    parts.push(`quem manifesta: ${act.persona === "wi" ? "Wi (tutora)" : "Mi (mentor)"}`);
   return parts;
 }
 

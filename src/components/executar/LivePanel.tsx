@@ -15,6 +15,7 @@ import {
   MicOff,
   Pencil,
   Radio,
+  Send,
   SwitchCamera,
   Vibrate,
   Volume2,
@@ -75,9 +76,24 @@ import { NextActionsOverlay } from "./NextActionsOverlay";
 import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
+import { useTodayEntries } from "./TodayTimeline";
 import { ExecutionLogCard } from "./ExecutionLogCard";
-import { SessionTalkSheet, type SessionTalkContext } from "./SessionTalkSheet";
-import { liveHandoverReply, liveUnderstanding } from "@/lib/live-dialog.functions";
+import { DualInput } from "./DualInput";
+import { liveHandoverReply, liveSessionChat, liveUnderstanding } from "@/lib/live-dialog.functions";
+import {
+  DEFAULT_PERSONA,
+  PERSONA_LABEL,
+  PERSONA_ROLE,
+  PERSONA_DEFAULT_SERVER_VOICE,
+  detectDirectPersona,
+  getPersonaDeviceVoice,
+  getPersonaServerVoice,
+  normalizePersona,
+  resolvePersonaChoice,
+  setPersonaDeviceVoice,
+  setPersonaServerVoice,
+  type Persona,
+} from "@/lib/personas";
 import {
   detectModeCommand,
   detectSessionTalk,
@@ -108,7 +124,32 @@ type TranscriptBlock = {
   saved: boolean;
   revision: number;
   at: number;
+  /** duração da fala captada (quando fizer sentido mostrar) */
+  durationMs?: number;
 };
+
+/**
+ * FLUXO ÚNICO DO OUVIDO — transcrição, digitação, manifestações da WiMi e
+ * eventos de sistema convivem na MESMA superfície cronológica.
+ */
+type FeedKind = "typed" | "assistant" | "system";
+
+type FeedEntry = {
+  id: string;
+  kind: FeedKind;
+  text: string;
+  at: number;
+  persona?: Persona;
+  label?: string;
+};
+
+type ChatItem =
+  | { key: string; at: number; type: "mic"; block: TranscriptBlock }
+  | { key: string; at: number; type: "feed"; entry: FeedEntry };
+
+function clock(at: number): string {
+  return new Date(at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
 
 function newId(prefix: string) {
   try {
@@ -149,18 +190,24 @@ export function LivePanel({
   const [codeDraft, setCodeDraft] = useState("");
   const [understanding, setUnderstanding] = useState<string | null>(null);
   const [handoverState, setHandoverState] = useState<string | null>(null);
-  const [sessionTalk, setSessionTalk] = useState<SessionTalkContext | null>(null);
+
+  // Chat fluido: tudo que não vem do microfone entra aqui e é mesclado por hora.
+  const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const [composer, setComposer] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [stick, setStick] = useState(true);
+  const [unread, setUnread] = useState(false);
 
   const addressModeRef = useRef<AddressMode>("addressed");
   const callCodesRef = useRef<string[]>([]);
   const understandingRef = useRef<string | null>(null);
-  const sessionTalkRef = useRef(false);
   const respondingRef = useRef(false);
+  /** histórico curto da conversa (composer + manifestações) para o contexto */
+  const chatHistoryRef = useRef<{ role: "user" | "assistant"; text: string }[]>([]);
   /** fala acumulada do turno atual (esvaziada a cada handover) */
   const turnRef = useRef<string[]>([]);
   addressModeRef.current = addressMode;
   callCodesRef.current = callCodes;
-  sessionTalkRef.current = sessionTalk != null;
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -177,6 +224,13 @@ export function LivePanel({
     const clean = Array.from(new Set(codes.map((c) => c.trim()).filter(Boolean)));
     setCallCodes(clean);
     saveCallCodes(clean);
+  }, []);
+
+  const pushFeed = useCallback((entry: Omit<FeedEntry, "id" | "at"> & { at?: number }) => {
+    setFeed((prev) => [
+      ...prev.slice(-60),
+      { id: newId("fd"), at: entry.at ?? Date.now(), ...entry },
+    ]);
   }, []);
 
   const [liveEvent, setLiveEvent] = useState<{
@@ -275,7 +329,14 @@ export function LivePanel({
     const blockId = newId("blk");
     setBlocks((prev) => [
       ...prev.slice(-40),
-      { id: blockId, text, saved: false, revision: 0, at: endedAt },
+      {
+        id: blockId,
+        text,
+        saved: false,
+        revision: 0,
+        at: endedAt,
+        durationMs: startedAt ? endedAt - startedAt : undefined,
+      },
     ]);
     setLastBlock({ id: blockId, text });
     void persist({
@@ -313,8 +374,19 @@ export function LivePanel({
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
-    (text: string, opts?: { onEnd?: () => void }) => actuators.speak(text, { ...opts, lang }),
+    (text: string, opts?: { onEnd?: () => void; persona?: Persona }) =>
+      actuators.speak(text, { ...opts, lang, persona: opts?.persona ?? DEFAULT_PERSONA }),
     [actuators, lang],
+  );
+
+  /** Manifestação assinada: entra no fluxo e é lida com a voz da identidade. */
+  const manifest = useCallback(
+    (text: string, persona: Persona, opts?: { onEnd?: () => void }) => {
+      pushFeed({ kind: "assistant", text, persona });
+      chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
+      speakLive(text, { persona, onEnd: opts?.onEnd });
+    },
+    [pushFeed, speakLive],
   );
 
   const speech = useSpeechToText(onFinalText, { lang });
@@ -322,25 +394,85 @@ export function LivePanel({
   speechRef.current = speech;
 
   // -------------------------------------------------- CONTEÚDO DA SESSÃO
+  //
+  // O chat do ouvido enxerga TUDO que foi coletado: transcrição da sessão,
+  // o que foi digitado/respondido no fluxo e os registros reais do dia.
+  const todayEntries = useTodayEntries();
+  const todayRef = useRef<string>("");
+  todayRef.current = todayEntries
+    .map((e) => `${e.time} · ${e.kindLabel}: ${e.title}${e.detail ? ` — ${e.detail}` : ""}`)
+    .join("\n");
+  const feedRef = useRef<FeedEntry[]>([]);
+  feedRef.current = feed;
+
   const sessionContent = useCallback(
     () =>
-      [...blocksRef.current, turnRef.current.join(" "), speechRef.current.interim]
+      [
+        blocksRef.current.length ? `Transcrição da sessão:\n${blocksRef.current.join("\n")}` : "",
+        turnRef.current.join(" "),
+        speechRef.current.interim,
+        feedRef.current.length
+          ? `Fluxo da conversa:\n${feedRef.current
+              .map(
+                (f) =>
+                  `${clock(f.at)} ${
+                    f.kind === "assistant" ? PERSONA_LABEL[f.persona ?? DEFAULT_PERSONA] : "Você"
+                  }: ${f.text}`,
+              )
+              .join("\n")}`
+          : "",
+        todayRef.current ? `Registros e jornada de hoje:\n${todayRef.current}` : "",
+      ]
         .filter(Boolean)
-        .join("\n")
+        .join("\n\n")
         .slice(-12000),
     [],
   );
 
-  const openSessionTalk = useCallback(
-    (initialQuestion?: string) => {
-      setSessionTalk({
-        sessionId,
-        missionId: missionId ?? null,
-        content: sessionContent(),
-        initialQuestion: initialQuestion ?? null,
-      });
+  /**
+   * Pergunta ao par WiMi dentro do próprio fluxo (sem tela separada).
+   * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
+   */
+  const askSession = useCallback(
+    async (question: string) => {
+      const q = question.trim();
+      if (!q || chatBusy) return;
+      const forced = detectDirectPersona(q);
+      pushFeed({ kind: "typed", text: q });
+      chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
+      setChatBusy(true);
+      try {
+        const res = await liveSessionChat({
+          data: {
+            session_context: sessionContent(),
+            history: chatHistoryRef.current.slice(-10),
+            question: q.slice(0, 2000),
+            ...(forced ? { force_persona: forced } : {}),
+          },
+        });
+        const persona = normalizePersona(res.persona);
+        manifest(res.message, persona);
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "manual",
+          note: q.slice(0, 4000),
+          meta: { session_id: sessionId, role: "user", source: "live_chat" },
+        });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "foreground",
+          note: res.message.slice(0, 4000),
+          meta: { session_id: sessionId, role: "assistant", source: "live_chat", persona },
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao responder.");
+      } finally {
+        setChatBusy(false);
+      }
     },
-    [missionId, sessionContent, sessionId],
+    [chatBusy, manifest, missionId, persist, pushFeed, sessionContent, sessionId],
   );
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
@@ -379,19 +511,20 @@ export function LivePanel({
       if (mode && mode !== addressModeRef.current) {
         changeAddressMode(mode);
         actuators.chime("soft");
-        speakLive(
+        manifest(
           mode === "free" ? "Modo livre: respondo a tudo." : "Ok, só quando você me chamar.",
+          "wi",
         );
         turnRef.current = [];
         return;
       }
-      if (detectSessionTalk(tail) && !sessionTalkRef.current) {
+      if (detectSessionTalk(tail)) {
         turnRef.current = [];
-        openSessionTalk("Do que a gente falou até agora? Faça um resumo do que foi dito.");
+        void askSession("Do que a gente falou até agora? Faça um resumo do que foi dito.");
       }
     },
     // changeAddressMode é estável (definido abaixo com useCallback sem deps)
-    [actuators, changeAddressMode, openSessionTalk, speakLive],
+    [actuators, askSession, changeAddressMode, manifest],
   );
 
   // -------------------------------------- (3) HANDOVER (~2s de silêncio)
@@ -426,12 +559,14 @@ export function LivePanel({
         respondingRef.current = false;
       };
       try {
+        const direct = detectDirectPersona(turn);
         const res = await liveHandoverReply({
           data: {
             turn: question.slice(0, 4000),
             understanding: understandingRef.current || undefined,
             recent: blocksRef.current.slice(-6).join("\n").slice(-4000) || undefined,
             addressed_by_code: !!code,
+            ...(direct ? { force_persona: direct } : {}),
           },
         });
         // (c) heurística de ambiente: na dúvida, silêncio + registro.
@@ -449,6 +584,7 @@ export function LivePanel({
         }
 
         setHandoverState(null);
+        const persona = normalizePersona(res.persona);
         actuators.chime("tick");
         if (wasListening) speechRef.current.stop();
         void persist({
@@ -463,10 +599,10 @@ export function LivePanel({
           kind: "dialog_turn",
           channel: "foreground",
           note: res.message.slice(0, 4000),
-          meta: { session_id: sessionId, role: "assistant", source: "live_handover" },
+          meta: { session_id: sessionId, role: "assistant", source: "live_handover", persona },
         });
-        toast("WiMi", { description: res.message, duration: 12000 });
-        speakLive(res.message, {
+        toast(PERSONA_LABEL[persona], { description: res.message, duration: 12000 });
+        manifest(res.message, persona, {
           onEnd: () => {
             actuators.chime("soft");
             if (wasListening) speechRef.current.start();
@@ -479,7 +615,7 @@ export function LivePanel({
         release();
       }
     },
-    [actuators, missionId, persist, sessionId, speakLive],
+    [actuators, manifest, missionId, persist, sessionId],
   );
 
   // Detector de fim de turno: ~2s sem fala nova e com a WiMi calada.
@@ -514,12 +650,6 @@ export function LivePanel({
     lastSpeechAtRef.current = Date.now();
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
-
-  // Rolagem automática enquanto a fala acontece.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el && editingId == null) el.scrollTop = el.scrollHeight;
-  }, [blocks, currentLine, editingId]);
 
   // Flush periódico (~15s) enquanto estiver ouvindo.
   useEffect(() => {
@@ -596,6 +726,8 @@ export function LivePanel({
         results.push({ action: label, success: true, detail });
       const fail = (label: string, detail: string) =>
         results.push({ action: label, success: false, detail });
+      // QUEM MANIFESTA — "auto" (padrão) deixa o modelo escolher entre Wi e Mi.
+      const triggerPersona = resolvePersonaChoice(action.persona);
 
       try {
         if (action.stop_actuators) {
@@ -671,11 +803,16 @@ export function LivePanel({
             instruction: action.prompt.instruction,
             context: contextText,
             trigger_name: trigger.name,
+            ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string }) => {
-            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            speakLive(res.message);
+          .then((res: { message: string; persona?: string }) => {
+            const persona = normalizePersona(res.persona);
+            toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
+              description: res.message,
+              duration: 12000,
+            });
+            manifest(res.message, persona);
             // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
             // uma linha própria (append-only) para aparecer no relatório.
             void recordFiring({
@@ -739,11 +876,16 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string }) => {
-            toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            speakLive(res.message, {
+          .then((res: { message: string; persona?: string }) => {
+            const persona = normalizePersona(res.persona);
+            toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
+              description: res.message,
+              duration: 12000,
+            });
+            manifest(res.message, persona, {
               onEnd: () => {
                 // devolve o turno: toque curto e microfone de volta.
                 actuators.chime("soft");
@@ -813,21 +955,22 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...(triggerPersona ? { force_persona: triggerPersona } : { force_persona: "wi" }),
           },
         })
-          .then((res: { message: string }) => {
+          .then((res: { message: string; persona?: string }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
-            speakLive(res.message);
+            manifest(res.message, normalizePersona(res.persona));
           })
           .catch(() => {
-            speakLive("O que você está executando agora?");
+            manifest("O que você está executando agora?", "wi");
           });
       }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? info?.matched_text ?? undefined,
       });
       if (action.message) {
-        speakLive(action.message);
+        manifest(action.message, triggerPersona ?? DEFAULT_PERSONA);
         ok("mensagem falada", action.message);
       }
 
@@ -852,10 +995,10 @@ export function LivePanel({
       camera,
       flushTranscript,
       missionId,
+      manifest,
       persist,
       sessionId,
       sessionStartedAt,
-      speakLive,
       speech,
     ],
   );
@@ -895,50 +1038,160 @@ export function LivePanel({
     };
   }, []);
 
-  const transcriptView = (
-    <div
-      ref={scrollRef}
-      className="mt-3 max-h-40 min-h-[72px] space-y-1 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
-    >
-      {blocks.length === 0 && !currentLine ? (
-        <p className="text-muted-foreground">
-          {speech.listening ? "ouvindo…" : "nenhuma transcrição ainda"}
-        </p>
+  // ------------------------------------------------ FLUXO ÚNICO (chat fluido)
+  const chatItems = useMemo<ChatItem[]>(() => {
+    const items: ChatItem[] = [
+      ...blocks.map((b) => ({ key: b.id, at: b.at, type: "mic" as const, block: b })),
+      ...feed.map((f) => ({ key: f.id, at: f.at, type: "feed" as const, entry: f })),
+    ];
+    return items.sort((a, b) => a.at - b.at);
+  }, [blocks, feed]);
+
+  // Auto-scroll respeitando a leitura em curso.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || editingId != null) return;
+    if (stick) el.scrollTop = el.scrollHeight;
+    else setUnread(true);
+  }, [chatItems.length, currentLine, editingId, stick]);
+
+  const jumpToEnd = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setStick(true);
+    setUnread(false);
+  }, []);
+
+  const chatView = (
+    <div className="relative mt-3">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+          setStick(atEnd);
+          if (atEnd) setUnread(false);
+        }}
+        // altura fixa ≈ 3 blocos: o histórico fica acessível por rolagem.
+        className="h-64 space-y-2 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
+      >
+        {chatItems.length === 0 && !currentLine ? (
+          <p className="text-muted-foreground">
+            {speech.listening
+              ? "ouvindo…"
+              : "nada ainda — fale, escreva ou ligue o microfone. Tudo entra aqui."}
+          </p>
+        ) : null}
+
+        {chatItems.map((item) =>
+          item.type === "mic" ? (
+            editingId === item.block.id ? (
+              <textarea
+                key={item.key}
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    commitEdit();
+                  }
+                  if (e.key === "Escape") setEditingId(null);
+                }}
+                rows={2}
+                className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
+              />
+            ) : (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => startEdit(item.block)}
+                className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
+              >
+                <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
+                  {item.block.durationMs != null && item.block.durationMs > 1500 ? (
+                    <span>· {Math.round(item.block.durationMs / 1000)}s</span>
+                  ) : null}
+                  {item.block.revision > 0 ? <span className="text-ember">· corrigido</span> : null}
+                  {!item.block.saved ? <span className="text-amber-400">· não salvo</span> : null}
+                </span>
+                <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
+              </button>
+            )
+          ) : item.entry.kind === "system" ? (
+            <p
+              key={item.key}
+              className="text-center text-[10px] uppercase tracking-wide text-muted-foreground"
+            >
+              {clock(item.at)} · {item.entry.text}
+            </p>
+          ) : item.entry.kind === "typed" ? (
+            <div key={item.key} className="flex justify-end">
+              <div className="max-w-[85%] rounded-xl rounded-br-sm bg-ember px-3 py-1.5 text-ember-foreground">
+                <span className="block text-[10px] uppercase tracking-wide opacity-80">
+                  você · {clock(item.at)}
+                </span>
+                <span className="block whitespace-pre-wrap">{item.entry.text}</span>
+              </div>
+            </div>
+          ) : (
+            <div key={item.key} className="max-w-[92%]">
+              <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-ember/20 text-[8px] font-bold">
+                  {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]}
+                </span>
+                {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
+                {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
+              </span>
+              <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
+            </div>
+          ),
+        )}
+
+        {currentLine ? (
+          <p className="text-foreground">
+            <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
+            {currentLine}
+          </p>
+        ) : null}
+        {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
+      </div>
+
+      {unread && !stick ? (
+        <button
+          type="button"
+          onClick={jumpToEnd}
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-ember/40 bg-charcoal-950/90 px-3 py-1 text-[11px] text-ember active:scale-95"
+        >
+          ↓ novas interações
+        </button>
       ) : null}
-      {blocks.map((b) =>
-        editingId === b.id ? (
-          <textarea
-            key={b.id}
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                commitEdit();
-              }
-              if (e.key === "Escape") setEditingId(null);
-            }}
-            rows={2}
-            className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
-          />
-        ) : (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => startEdit(b)}
-            className="block w-full text-left text-muted-foreground active:opacity-70"
-          >
-            {b.text}
-            {b.revision > 0 ? (
-              <span className="ml-1 text-[10px] uppercase tracking-wide text-ember">corrigido</span>
-            ) : null}
-            {!b.saved ? <span className="ml-1 text-[10px] text-amber-400">não salvo</span> : null}
-          </button>
-        ),
-      )}
-      {currentLine ? <p className="text-foreground">{currentLine}</p> : null}
+    </div>
+  );
+
+  const composerView = (
+    <div className="mt-3">
+      <DualInput
+        value={composer}
+        onChange={setComposer}
+        rows={2}
+        lang={lang}
+        placeholder="Fale ou escreva com a WiMi sobre a sessão…"
+      />
+      <button
+        type="button"
+        disabled={!composer.trim() || chatBusy}
+        onClick={() => {
+          const q = composer;
+          setComposer("");
+          void askSession(q);
+        }}
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
+      >
+        <Send className="h-4 w-4" /> {chatBusy ? "respondendo…" : "Enviar para a WiMi"}
+      </button>
     </div>
   );
 
@@ -958,13 +1211,6 @@ export function LivePanel({
         {journeyLog ? (
           <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
         ) : null}
-        {sessionTalk ? (
-          <SessionTalkSheet
-            context={sessionTalk}
-            onSpeak={(t) => speakLive(t)}
-            onClose={() => setSessionTalk(null)}
-          />
-        ) : null}
         <StationMode
           listening={speech.listening}
           micSupported={speech.supported}
@@ -972,7 +1218,20 @@ export function LivePanel({
           vibrationOn={actuators.vibrationOn}
           audioOn={actuators.audioOn}
           wakeActive={wake.active}
-          transcriptLines={[...blocks.slice(-3).map((b) => b.text), currentLine].filter(Boolean)}
+          transcriptLines={[
+            ...chatItems
+              .slice(-3)
+              .map((i) =>
+                i.type === "mic"
+                  ? i.block.text
+                  : `${
+                      i.entry.kind === "assistant"
+                        ? PERSONA_LABEL[i.entry.persona ?? DEFAULT_PERSONA]
+                        : "você"
+                    }: ${i.entry.text}`,
+              ),
+            currentLine,
+          ].filter(Boolean)}
           blocksSaved={blocksSaved}
           offline={offline}
           cameraLive={camera.live}
@@ -1019,13 +1278,6 @@ export function LivePanel({
 
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
-      ) : null}
-      {sessionTalk ? (
-        <SessionTalkSheet
-          context={sessionTalk}
-          onSpeak={(t) => speakLive(t)}
-          onClose={() => setSessionTalk(null)}
-        />
       ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
@@ -1189,18 +1441,16 @@ export function LivePanel({
           </div>
         ) : null}
 
-        <button
-          type="button"
-          onClick={() => openSessionTalk()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2 text-[12px] text-muted-foreground active:scale-95"
-        >
-          <MessagesSquare className="h-4 w-4" /> Conversar sobre a sessão
-        </button>
+        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <MessagesSquare className="h-3.5 w-3.5 shrink-0" /> Fluxo único: o que você fala, o que
+          você escreve e o que a Wi ou o Mi respondem — tudo aqui, em ordem.
+        </p>
 
-        {transcriptView}
+        {chatView}
+        {composerView}
 
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Pencil className="h-3 w-3" /> toque em qualquer linha para corrigir — o mic continua
+          <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
         </p>
       </section>
@@ -1706,6 +1956,15 @@ function VoiceRow({
       noCache: true,
     });
 
+  const samplePersona = (persona: Persona) =>
+    void speakUnified(`${PERSONA_LABEL[persona]} aqui. ${SAMPLE_PHRASES[base]}`, {
+      lang: defaultLocale(base),
+      engine,
+      noCache: true,
+      voice: getPersonaServerVoice(persona),
+      deviceVoiceURI: getPersonaDeviceVoice(persona, base) ?? undefined,
+    });
+
   const ENGINES: { id: TtsEngine; label: string; hint: string }[] = [
     { id: "server", label: "Voz do servidor", hint: "melhor qualidade · usa IA" },
     { id: "device", label: "Voz do aparelho", hint: "gratuita · depende das vozes instaladas" },
@@ -1786,10 +2045,29 @@ function VoiceRow({
             ))}
           </div>
 
+          {/* IDENTIDADES — cada uma com voz própria e amostra. */}
+          {engine !== "text" ? (
+            <div className="space-y-2">
+              <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                Vozes das identidades
+              </span>
+              {(["wi", "mi"] as const).map((persona) => (
+                <PersonaVoice
+                  key={persona}
+                  persona={persona}
+                  base={base}
+                  engine={engine}
+                  voices={voices}
+                  onSample={() => samplePersona(persona)}
+                />
+              ))}
+            </div>
+          ) : null}
+
           {engine === "server" ? (
             <div className="space-y-2">
               <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-                Timbre do servidor
+                Timbre padrão do servidor (usado quando não há identidade)
               </label>
               <select
                 value={serverVoice}
@@ -1838,6 +2116,90 @@ function VoiceRow({
             </p>
           ) : null}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Voz de UMA identidade: Wi (tutora, feminina) e Mi (mentor, masculino) têm
+ * timbre de servidor e voz de aparelho independentes.
+ */
+function PersonaVoice({
+  persona,
+  base,
+  engine,
+  voices,
+  onSample,
+}: {
+  persona: Persona;
+  base: ReturnType<typeof langBase>;
+  engine: TtsEngine;
+  voices: SpeechSynthesisVoice[];
+  onSample: () => void;
+}) {
+  const [serverVoice, setServer] = useState<string>(PERSONA_DEFAULT_SERVER_VOICE[persona]);
+  const [deviceVoice, setDevice] = useState<string>("");
+
+  useEffect(() => {
+    setServer(getPersonaServerVoice(persona));
+    setDevice(getPersonaDeviceVoice(persona, base) ?? "");
+  }, [base, persona]);
+
+  return (
+    <div className="rounded-lg border border-border p-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ember/20 text-[11px] font-bold text-ember">
+          {PERSONA_LABEL[persona]}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[12px] text-foreground">
+            {PERSONA_LABEL[persona]} · {PERSONA_ROLE[persona]}
+          </span>
+          <span className="block truncate text-[10px] text-muted-foreground">
+            {persona === "wi" ? "voz feminina" : "voz masculina"}
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={onSample}
+          className="shrink-0 rounded-lg border border-ember/40 bg-ember/10 px-2 py-1 text-[11px] text-ember active:scale-95"
+        >
+          amostra
+        </button>
+      </div>
+
+      {engine === "server" ? (
+        <select
+          value={serverVoice}
+          onChange={(e) => {
+            setServer(e.target.value);
+            setPersonaServerVoice(persona, e.target.value);
+          }}
+          className="mt-2 w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1.5 text-[12px] text-foreground"
+        >
+          {SERVER_VOICES.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.label}
+            </option>
+          ))}
+        </select>
+      ) : voices.length ? (
+        <select
+          value={deviceVoice}
+          onChange={(e) => {
+            setDevice(e.target.value);
+            setPersonaDeviceVoice(persona, base, e.target.value || null);
+          }}
+          className="mt-2 w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-1.5 text-[12px] text-foreground"
+        >
+          <option value="">automática</option>
+          {voices.map((v) => (
+            <option key={v.voiceURI} value={v.voiceURI}>
+              {v.name} · {v.lang}
+            </option>
+          ))}
+        </select>
       ) : null}
     </div>
   );

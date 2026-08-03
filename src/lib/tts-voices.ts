@@ -156,6 +156,8 @@ export type SpeakResult = "spoken" | "no-voice" | "unsupported" | "empty";
 export type SpeakOptions = {
   /** idioma da manifestação (pt-BR, en-US, es-ES…) */
   lang?: string;
+  /** força uma voz específica do aparelho (identidades Wi/Mi) */
+  voiceURI?: string;
   rate?: number;
   pitch?: number;
   onStart?: () => void;
@@ -179,7 +181,10 @@ export async function speakWithVoice(text: string, opts: SpeakOptions = {}): Pro
   }
   const base = langBase(opts.lang);
   await ensureVoices();
-  const voice = pickVoice(base);
+  const forced = opts.voiceURI
+    ? (listVoices(base).find((v) => v.voiceURI === opts.voiceURI) ?? null)
+    : null;
+  const voice = forced ?? pickVoice(base);
   if (!voice) {
     opts.onEnd?.();
     return "no-voice";

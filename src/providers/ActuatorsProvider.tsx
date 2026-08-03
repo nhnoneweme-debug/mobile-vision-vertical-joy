@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
 import { speakUnified, stopSpeaking } from "@/lib/tts-engine";
+import { getPersonaDeviceVoice, getPersonaServerVoice, type Persona } from "@/lib/personas";
 // Atuadores persistentes da WiMi (vibração + emissão de áudio + voz).
 //
 // Vivem acima das rotas (montados no MobileShell) pra que o padrão continue
@@ -85,7 +86,7 @@ type ActuatorsCtx = {
   toggleSpeech: () => void;
   speaking: boolean;
   /** fala um texto se a voz estiver ligada; no-op caso contrário */
-  speak: (text: string, opts?: { onEnd?: () => void; lang?: string }) => void;
+  speak: (text: string, opts?: { onEnd?: () => void; lang?: string; persona?: Persona }) => void;
   /** toque curto de turno (turn-taking) — independe dos loops de atuador */
   chime: (sound?: ActuatorSound) => void;
   stopAll: () => void;
@@ -260,13 +261,21 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
 
   // Ponto de entrada ÚNICO de fala: servidor → voz do aparelho → texto.
   const speak = useCallback(
-    (text: string, opts?: { onEnd?: () => void; lang?: string }) => {
+    (text: string, opts?: { onEnd?: () => void; lang?: string; persona?: Persona }) => {
       if (!speechOn) {
         opts?.onEnd?.();
         return;
       }
+      const persona = opts?.persona;
+      const base = langBase(opts?.lang ?? "pt-BR");
       void speakUnified(text, {
         lang: opts?.lang ?? "pt-BR",
+        ...(persona
+          ? {
+              voice: getPersonaServerVoice(persona),
+              deviceVoiceURI: getPersonaDeviceVoice(persona, base) ?? undefined,
+            }
+          : {}),
         onStart: () => setSpeaking(true),
         onEnd: () => {
           setSpeaking(false);
