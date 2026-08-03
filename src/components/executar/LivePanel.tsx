@@ -11,7 +11,9 @@ import {
   Ear,
   Maximize2,
   Mic,
+  MessagesSquare,
   MicOff,
+
   Pencil,
   Radio,
   SwitchCamera,
