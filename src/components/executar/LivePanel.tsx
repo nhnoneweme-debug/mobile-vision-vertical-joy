@@ -23,7 +23,11 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
+import { buildPersonaDirective, getActivePersonaModel } from "@/lib/persona-studio";
+
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import {
   armedCommands,
@@ -179,7 +183,13 @@ export function LivePanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [lang, setLang] = useState<string>("pt-BR");
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  /** últimas detecções de idioma; 2 seguidas viram troca do reconhecedor. */
+  const langHistoryRef = useRef<ReplyLang[]>([]);
+  const [langNote, setLangNote] = useState<string | null>(null);
   const [lastBlock, setLastBlock] = useState<{ id: string; text: string } | null>(null);
+
   const [sessionStartedAt] = useState(() => Date.now());
   const [journeyLog, setJourneyLog] = useState<JourneyLogContext | null>(null);
 
@@ -284,6 +294,28 @@ export function LivePanel({
     }
   }, []);
 
+  // STUDIO DE PERSONAS: o modelo ativo do usuário alimenta o roteamento e o
+  // prompt de sistema das manifestações. Sem modelo salvo, vale o preset padrão.
+  const personaDirectiveRef = useRef<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getActivePersonaModel()
+      .then((p) => {
+        if (alive && p) personaDirectiveRef.current = buildPersonaDirective(p);
+      })
+      .catch(() => {
+        /* sem modelo salvo: preset padrão do servidor */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const personaExtras = useCallback(
+    () => (personaDirectiveRef.current ? { persona_directive: personaDirectiveRef.current } : {}),
+    [],
+  );
+
+
   const changeLang = useCallback((code: string) => {
     setLang(code);
     try {
@@ -366,25 +398,51 @@ export function LivePanel({
       bufferRef.current.push(text);
       turnRef.current.push(text);
       setLiveLine(bufferRef.current.join(" "));
+      // SELETOR INVISÍVEL: o reconhecedor nativo exige idioma fixo. Se o texto
+      // transcrito sair consistentemente em outro idioma suportado, trocamos o
+      // reconhecedor sozinhos (custo conhecido: ~1 frase de atraso na virada).
+      const guess = detectLang(text);
+      if (guess) {
+        const hist = [...langHistoryRef.current.slice(-1), guess];
+        langHistoryRef.current = hist;
+        if (
+          hist.length === 2 &&
+          hist[0] === guess &&
+          guess !== langRef.current &&
+          LANGS.some((l) => l.code === guess)
+        ) {
+          langHistoryRef.current = [];
+          changeLang(guess);
+          setLangNote(`escutando em ${langName(guess).toLowerCase()}`);
+          window.setTimeout(() => setLangNote(null), 6000);
+        }
+      }
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
     },
-    [flushTranscript],
+    [changeLang, flushTranscript],
   );
+
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
-    (text: string, opts?: { onEnd?: () => void; persona?: Persona }) =>
-      actuators.speak(text, { ...opts, lang, persona: opts?.persona ?? DEFAULT_PERSONA }),
+    (text: string, opts?: { onEnd?: () => void; persona?: Persona; lang?: string }) =>
+      actuators.speak(text, {
+        ...opts,
+        // A fala sai no idioma que o modelo respondeu (reply_lang); sem ele,
+        // no idioma corrente da sessão.
+        lang: opts?.lang ?? lang,
+        persona: opts?.persona ?? DEFAULT_PERSONA,
+      }),
     [actuators, lang],
   );
 
   /** Manifestação assinada: entra no fluxo e é lida com a voz da identidade. */
   const manifest = useCallback(
-    (text: string, persona: Persona, opts?: { onEnd?: () => void }) => {
+    (text: string, persona: Persona, opts?: { onEnd?: () => void; lang?: string | null }) => {
       pushFeed({ kind: "assistant", text, persona });
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
-      speakLive(text, { persona, onEnd: opts?.onEnd });
+      speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
     },
     [pushFeed, speakLive],
   );
@@ -448,10 +506,11 @@ export function LivePanel({
             history: chatHistoryRef.current.slice(-10),
             question: q.slice(0, 2000),
             ...(forced ? { force_persona: forced } : {}),
+            ...personaExtras(),
           },
         });
         const persona = normalizePersona(res.persona);
-        manifest(res.message, persona);
+        manifest(res.message, persona, { lang: res.reply_lang });
         void persist({
           mission_id: missionId ?? null,
           kind: "dialog_turn",
@@ -567,6 +626,7 @@ export function LivePanel({
             recent: blocksRef.current.slice(-6).join("\n").slice(-4000) || undefined,
             addressed_by_code: !!code,
             ...(direct ? { force_persona: direct } : {}),
+            ...personaExtras(),
           },
         });
         // (c) heurística de ambiente: na dúvida, silêncio + registro.
@@ -603,6 +663,7 @@ export function LivePanel({
         });
         toast(PERSONA_LABEL[persona], { description: res.message, duration: 12000 });
         manifest(res.message, persona, {
+          lang: res.reply_lang,
           onEnd: () => {
             actuators.chime("soft");
             if (wasListening) speechRef.current.start();
@@ -803,16 +864,18 @@ export function LivePanel({
             instruction: action.prompt.instruction,
             context: contextText,
             trigger_name: trigger.name,
+            ...personaExtras(),
+            session_lang: langRef.current,
             ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string; persona?: string }) => {
+          .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             const persona = normalizePersona(res.persona);
             toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
               description: res.message,
               duration: 12000,
             });
-            manifest(res.message, persona);
+            manifest(res.message, persona, { lang: res.reply_lang ?? null });
             // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
             // uma linha própria (append-only) para aparecer no relatório.
             void recordFiring({
@@ -876,16 +939,19 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...personaExtras(),
+            session_lang: langRef.current,
             ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string; persona?: string }) => {
+          .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             const persona = normalizePersona(res.persona);
             toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
               description: res.message,
               duration: 12000,
             });
             manifest(res.message, persona, {
+              lang: res.reply_lang ?? null,
               onEnd: () => {
                 // devolve o turno: toque curto e microfone de volta.
                 actuators.chime("soft");
@@ -955,12 +1021,16 @@ export function LivePanel({
               recent.length ? `Últimas falas:\n${recent.join("\n")}` : "Sem transcrição recente.",
             ].join("\n"),
             trigger_name: trigger.name,
+            ...personaExtras(),
+            session_lang: langRef.current,
             ...(triggerPersona ? { force_persona: triggerPersona } : { force_persona: "wi" }),
           },
         })
-          .then((res: { message: string; persona?: string }) => {
+          .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
-            manifest(res.message, normalizePersona(res.persona));
+            manifest(res.message, normalizePersona(res.persona), {
+              lang: res.reply_lang ?? null,
+            });
           })
           .catch(() => {
             manifest("O que você está executando agora?", "wi");
@@ -1338,7 +1408,13 @@ export function LivePanel({
               {l.label}
             </button>
           ))}
+          {langNote ? (
+            <span className="text-[10px] text-ember" role="status">
+              {langNote}
+            </span>
+          ) : null}
         </div>
+
 
         {/* LIVE DINÂMICO — análise contínua + endereçamento + handover. */}
         <button

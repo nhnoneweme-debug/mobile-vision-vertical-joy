@@ -46,8 +46,12 @@ em ações primitivas de um app de execução. Responda SEMPRE apenas com JSON v
 }
 Inclua apenas as chaves relevantes. Se nada primitivo servir, use somente "message".`;
 
-/** Extrai {persona,message}; sem JSON válido, o texto vale como fala da Wi. */
-function parsePersonaReply(raw: string): { persona: "wi" | "mi"; message: string } {
+/** Extrai {persona,reply_lang,message}; sem JSON válido, o texto vale como fala da Wi. */
+function parsePersonaReply(raw: string): {
+  persona: "wi" | "mi";
+  reply_lang: string | null;
+  message: string;
+} {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?/i, "")
@@ -59,16 +63,23 @@ function parsePersonaReply(raw: string): { persona: "wi" | "mi"; message: string
     try {
       const obj = JSON.parse(cleaned.slice(start, end + 1)) as {
         persona?: unknown;
+        reply_lang?: unknown;
         message?: unknown;
       };
       const message = typeof obj.message === "string" ? obj.message.trim() : "";
-      if (message) return { persona: obj.persona === "mi" ? "mi" : "wi", message };
+      if (message)
+        return {
+          persona: obj.persona === "mi" ? "mi" : "wi",
+          reply_lang: typeof obj.reply_lang === "string" ? obj.reply_lang : null,
+          message,
+        };
     } catch {
       /* fallback textual */
     }
   }
-  return { persona: "wi", message: cleaned };
+  return { persona: "wi", reply_lang: null, message: cleaned };
 }
+
 
 function parseJson(text: string): string {
   const cleaned = text
@@ -138,17 +149,27 @@ export const interpretCustomAction = createServerFn({ method: "POST" })
     return { parsed_json, audit_id: (audit?.id as string | undefined) ?? null };
   });
 
-const PROMPT_SYSTEM = `Você é a WiMi se manifestando durante uma sessão de execução ao vivo.
+function promptSystem(directive?: string, sessionLang?: string): string {
+  return `Você é a WiMi se manifestando durante uma sessão de execução ao vivo.
 Recebe uma INSTRUÇÃO escrita pelo próprio usuário (elemento "Prompt" de um gatilho) e o
-contexto da sessão. Responda em português, direto, no máximo 3 frases curtas, sem markdown,
+contexto da sessão. Responda direto, no máximo 3 frases curtas, sem markdown,
 como uma fala que será mostrada e lida em voz alta no momento do disparo.
 
-IDENTIDADES DO PAR "WIMI" — a fala é assinada por UMA delas:
+IDIOMA: esta é uma manifestação PROATIVA — use o idioma predominante da sessão recente${
+    sessionLang ? ` (idioma predominante detectado: ${sessionLang})` : ""
+  }. Informe o idioma usado no campo "reply_lang".
+
+${
+  directive && directive.trim()
+    ? directive.trim()
+    : `IDENTIDADES DO PAR "WIMI" — a fala é assinada por UMA delas:
 • "wi" (Wi, TUTORA, acolhedora): acompanhamento, prática, instrução, incentivo, rituais.
-• "mi" (Mi, MENTOR, direto): decisão, estratégia, revisão crítica, avaliação de progresso.
+• "mi" (Mi, MENTOR, direto): decisão, estratégia, revisão crítica, avaliação de progresso.`
+}
 FORMATO OBRIGATÓRIO: responda APENAS com JSON válido, sem markdown:
-{"persona":"wi"|"mi","message":"a fala"}
+{"persona":"wi"|"mi","reply_lang":"pt-BR"|"en-US"|"es-ES","message":"a fala"}
 Na dúvida, use "wi".`;
+}
 
 const runPromptSchema = z.object({
   instruction: z.string().min(3).max(2000),
@@ -156,6 +177,10 @@ const runPromptSchema = z.object({
   trigger_name: z.string().max(120).optional(),
   /** "quem manifesta" definido no gatilho; ausente = o modelo decide. */
   force_persona: z.enum(["wi", "mi"]).optional(),
+  /** modelo de personas ativo do usuário (Studio de Personas) */
+  persona_directive: z.string().max(3000).optional(),
+  /** idioma predominante da sessão recente, para manifestações proativas */
+  session_lang: z.string().max(10).optional(),
 });
 
 /** Adendo D — ELEMENTO PROMPT: executa a instrução em linguagem natural no disparo. */
@@ -173,7 +198,11 @@ export const runTriggerPrompt = createServerFn({ method: "POST" })
     ]
       .filter(Boolean)
       .join("\n\n");
-    const { text } = await generateText({ model, system: PROMPT_SYSTEM, prompt });
+    const { text } = await generateText({
+      model,
+      system: promptSystem(data.persona_directive, data.session_lang),
+      prompt,
+    });
     const parsed = parsePersonaReply(text);
     const persona = data.force_persona ?? parsed.persona;
     const message = parsed.message;
@@ -183,10 +212,16 @@ export const runTriggerPrompt = createServerFn({ method: "POST" })
       table_name: "trigger_definitions",
       action: "trigger.prompt_run",
       status: "applied",
-      payload: { instruction: data.instruction, output: message, persona } as never,
+      payload: {
+        instruction: data.instruction,
+        output: message,
+        persona,
+        reply_lang: parsed.reply_lang,
+      } as never,
     });
-    return { message, persona };
+    return { message, persona, reply_lang: parsed.reply_lang };
   });
+
 
 const resolveSchema = z.object({
   audit_id: z.string().uuid(),
