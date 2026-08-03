@@ -32,7 +32,7 @@ import { loadEffort, saveEffort, type Effort } from "@/lib/ai-effort";
 import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import { cachedVoices, ensureVoices, NO_VOICE_HINT } from "@/lib/tts-voices";
+import { cachedVoices, NO_VOICE_HINT } from "@/lib/tts-voices";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 // Nota: o voltar sai do header (item 2). No desktop a sidebar já leva de
