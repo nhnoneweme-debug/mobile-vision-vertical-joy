@@ -47,6 +47,17 @@ import {
 } from "@/providers/ActuatorsProvider";
 
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
+import {
+  ensureVoices,
+  listVoices,
+  pickVoice,
+  setVoicePref,
+  langBase,
+  speakWithVoice,
+  defaultLocale,
+  SAMPLE_PHRASES,
+  NO_VOICE_HINT,
+} from "@/lib/tts-voices";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
 import { NextActionsOverlay } from "./NextActionsOverlay";
@@ -1691,7 +1702,7 @@ function VoiceRow({
             {!supported
               ? "Síntese de voz indisponível neste navegador."
               : on
-                ? "a WiMi fala o que se manifeste, com o contexto da sessão"
+                ? "a WiMi fala o que se manifesta, com o contexto da sessão"
                 : "desligada · manifestações só em texto"}
           </span>
         </span>
