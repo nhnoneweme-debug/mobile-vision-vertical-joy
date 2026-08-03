@@ -76,6 +76,7 @@ import { NextActionsOverlay } from "./NextActionsOverlay";
 import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
+import { useTodayEntries } from "./TodayTimeline";
 import { ExecutionLogCard } from "./ExecutionLogCard";
 import { DualInput } from "./DualInput";
 import {
@@ -397,25 +398,87 @@ export function LivePanel({
   speechRef.current = speech;
 
   // -------------------------------------------------- CONTEÚDO DA SESSÃO
+  //
+  // O chat do ouvido enxerga TUDO que foi coletado: transcrição da sessão,
+  // o que foi digitado/respondido no fluxo e os registros reais do dia.
+  const todayEntries = useTodayEntries();
+  const todayRef = useRef<string>("");
+  todayRef.current = todayEntries
+    .map((e) => `${e.time} · ${e.kindLabel}: ${e.title}${e.detail ? ` — ${e.detail}` : ""}`)
+    .join("\n");
+  const feedRef = useRef<FeedEntry[]>([]);
+  feedRef.current = feed;
+
   const sessionContent = useCallback(
     () =>
-      [...blocksRef.current, turnRef.current.join(" "), speechRef.current.interim]
+      [
+        blocksRef.current.length
+          ? `Transcrição da sessão:\n${blocksRef.current.join("\n")}`
+          : "",
+        turnRef.current.join(" "),
+        speechRef.current.interim,
+        feedRef.current.length
+          ? `Fluxo da conversa:\n${feedRef.current
+              .map(
+                (f) =>
+                  `${clock(f.at)} ${
+                    f.kind === "assistant" ? PERSONA_LABEL[f.persona ?? DEFAULT_PERSONA] : "Você"
+                  }: ${f.text}`,
+              )
+              .join("\n")}`
+          : "",
+        todayRef.current ? `Registros e jornada de hoje:\n${todayRef.current}` : "",
+      ]
         .filter(Boolean)
-        .join("\n")
+        .join("\n\n")
         .slice(-12000),
     [],
   );
 
-  const openSessionTalk = useCallback(
-    (initialQuestion?: string) => {
-      setSessionTalk({
-        sessionId,
-        missionId: missionId ?? null,
-        content: sessionContent(),
-        initialQuestion: initialQuestion ?? null,
-      });
+  /**
+   * Pergunta ao par WiMi dentro do próprio fluxo (sem tela separada).
+   * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
+   */
+  const askSession = useCallback(
+    async (question: string) => {
+      const q = question.trim();
+      if (!q || chatBusy) return;
+      const forced = detectDirectPersona(q);
+      pushFeed({ kind: "typed", text: q });
+      chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
+      setChatBusy(true);
+      try {
+        const res = await liveSessionChat({
+          data: {
+            session_context: sessionContent(),
+            history: chatHistoryRef.current.slice(-10),
+            question: q.slice(0, 2000),
+            ...(forced ? { force_persona: forced } : {}),
+          },
+        });
+        const persona = normalizePersona(res.persona);
+        manifest(res.message, persona);
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "manual",
+          note: q.slice(0, 4000),
+          meta: { session_id: sessionId, role: "user", source: "live_chat" },
+        });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "foreground",
+          note: res.message.slice(0, 4000),
+          meta: { session_id: sessionId, role: "assistant", source: "live_chat", persona },
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao responder.");
+      } finally {
+        setChatBusy(false);
+      }
     },
-    [missionId, sessionContent, sessionId],
+    [chatBusy, manifest, missionId, persist, pushFeed, sessionContent, sessionId],
   );
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
@@ -454,19 +517,20 @@ export function LivePanel({
       if (mode && mode !== addressModeRef.current) {
         changeAddressMode(mode);
         actuators.chime("soft");
-        speakLive(
+        manifest(
           mode === "free" ? "Modo livre: respondo a tudo." : "Ok, só quando você me chamar.",
+          "wi",
         );
         turnRef.current = [];
         return;
       }
-      if (detectSessionTalk(tail) && !sessionTalkRef.current) {
+      if (detectSessionTalk(tail)) {
         turnRef.current = [];
-        openSessionTalk("Do que a gente falou até agora? Faça um resumo do que foi dito.");
+        void askSession("Do que a gente falou até agora? Faça um resumo do que foi dito.");
       }
     },
     // changeAddressMode é estável (definido abaixo com useCallback sem deps)
-    [actuators, changeAddressMode, openSessionTalk, speakLive],
+    [actuators, askSession, changeAddressMode, manifest],
   );
 
   // -------------------------------------- (3) HANDOVER (~2s de silêncio)
