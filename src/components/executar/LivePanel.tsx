@@ -1285,9 +1285,10 @@ function BeaconConfig({
             })}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Enquanto ligado, o beacon manda no intervalo da emissão de áudio — não existe um segundo
-            som em paralelo.
+            O beacon é a única fonte de som periódico automático. Desligado, o bloco de áudio fica em
+            silêncio total.
           </p>
+
         </>
       ) : null}
     </div>
