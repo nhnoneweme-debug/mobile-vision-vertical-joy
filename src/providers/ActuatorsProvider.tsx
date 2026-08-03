@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { speakWithVoice, langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
 // Atuadores persistentes da WiMi (vibração + emissão de áudio + voz).
 //
 // Vivem acima das rotas (montados no MobileShell) pra que o padrão continue
@@ -82,7 +84,7 @@ type ActuatorsCtx = {
   toggleSpeech: () => void;
   speaking: boolean;
   /** fala um texto se a voz estiver ligada; no-op caso contrário */
-  speak: (text: string, opts?: { onEnd?: () => void }) => void;
+  speak: (text: string, opts?: { onEnd?: () => void; lang?: string }) => void;
   /** toque curto de turno (turn-taking) — independe dos loops de atuador */
   chime: (sound?: ActuatorSound) => void;
   stopAll: () => void;
@@ -179,6 +181,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const [speechSupported, setSpeechSupported] = useState(false);
   const [speechOn, setSpeechOn] = useState(true);
   const [speaking, setSpeaking] = useState(false);
+  const noVoiceWarnedRef = useRef<Set<string>>(new Set());
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   // Timer único do áudio + trava anti-sobreposição (ver agendador abaixo).
@@ -199,6 +202,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
         ),
     );
     setSpeechSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    void ensureVoices();
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
@@ -257,33 +261,28 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   }, [audioConfig, persist, vibrationConfig]);
 
   const speak = useCallback(
-    (text: string, opts?: { onEnd?: () => void }) => {
-      const clean = text.replace(/\s+/g, " ").trim().slice(0, 600);
-      if (!clean || !speechOn || !speechSupported) {
+    (text: string, opts?: { onEnd?: () => void; lang?: string }) => {
+      if (!speechOn || !speechSupported) {
         opts?.onEnd?.();
         return;
       }
-      try {
-        const synth = window.speechSynthesis;
-        synth.cancel();
-        const u = new SpeechSynthesisUtterance(clean);
-        u.lang = "pt-BR";
-        u.rate = 1.02;
-        u.pitch = 1;
-        u.onstart = () => setSpeaking(true);
-        u.onend = () => {
+      void speakWithVoice(text, {
+        lang: opts?.lang ?? "pt-BR",
+        onStart: () => setSpeaking(true),
+        onEnd: () => {
           setSpeaking(false);
           opts?.onEnd?.();
-        };
-        u.onerror = () => {
+        },
+      }).then((result) => {
+        if (result === "no-voice") {
           setSpeaking(false);
-          opts?.onEnd?.();
-        };
-        synth.speak(u);
-      } catch {
-        setSpeaking(false);
-        opts?.onEnd?.();
-      }
+          const base = langBase(opts?.lang ?? "pt-BR");
+          if (!noVoiceWarnedRef.current.has(base)) {
+            noVoiceWarnedRef.current.add(base);
+            toast.warning(NO_VOICE_HINT[base]);
+          }
+        }
+      });
     },
     [speechOn, speechSupported],
   );
@@ -457,7 +456,6 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
       setPulsing((p) => ({ ...p, audio: false }));
     };
   }, [audioOn, audioSupported, beaconOn, beaconSec, audioMode, audioSound]);
-
 
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;

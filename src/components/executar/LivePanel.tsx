@@ -13,7 +13,6 @@ import {
   Mic,
   MessagesSquare,
   MicOff,
-
   Pencil,
   Radio,
   SwitchCamera,
@@ -47,6 +46,17 @@ import {
 } from "@/providers/ActuatorsProvider";
 
 import { useWakeLockContext } from "@/providers/WakeLockProvider";
+import {
+  ensureVoices,
+  listVoices,
+  pickVoice,
+  setVoicePref,
+  langBase,
+  speakWithVoice,
+  defaultLocale,
+  SAMPLE_PHRASES,
+  NO_VOICE_HINT,
+} from "@/lib/tts-voices";
 import { logExecutionEvent, type LogExecutionEventInput } from "@/lib/execution.functions";
 import { StationMode } from "./StationMode";
 import { NextActionsOverlay } from "./NextActionsOverlay";
@@ -73,7 +83,6 @@ const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
 /** fim de turno: silêncio curto que passa a palavra à WiMi */
 const HANDOVER_MS = 2_000;
-
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
@@ -157,7 +166,6 @@ export function LivePanel({
     setCallCodes(clean);
     saveCallCodes(clean);
   }, []);
-
 
   const [liveEvent, setLiveEvent] = useState<{
     name: LiveEventName;
@@ -291,6 +299,12 @@ export function LivePanel({
     [flushTranscript],
   );
 
+  /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
+  const speakLive = useCallback(
+    (text: string, opts?: { onEnd?: () => void }) => actuators.speak(text, { ...opts, lang }),
+    [actuators, lang],
+  );
+
   const speech = useSpeechToText(onFinalText, { lang });
   const speechRef = useRef(speech);
   speechRef.current = speech;
@@ -298,11 +312,7 @@ export function LivePanel({
   // -------------------------------------------------- CONTEÚDO DA SESSÃO
   const sessionContent = useCallback(
     () =>
-      [
-        ...blocksRef.current,
-        turnRef.current.join(" "),
-        speechRef.current.interim,
-      ]
+      [...blocksRef.current, turnRef.current.join(" "), speechRef.current.interim]
         .filter(Boolean)
         .join("\n")
         .slice(-12000),
@@ -357,7 +367,7 @@ export function LivePanel({
       if (mode && mode !== addressModeRef.current) {
         changeAddressMode(mode);
         actuators.chime("soft");
-        actuators.speak(
+        speakLive(
           mode === "free" ? "Modo livre: respondo a tudo." : "Ok, só quando você me chamar.",
         );
         turnRef.current = [];
@@ -369,8 +379,7 @@ export function LivePanel({
       }
     },
     // changeAddressMode é estável (definido abaixo com useCallback sem deps)
-    [actuators, changeAddressMode, openSessionTalk],
-
+    [actuators, changeAddressMode, openSessionTalk, speakLive],
   );
 
   // -------------------------------------- (3) HANDOVER (~2s de silêncio)
@@ -445,7 +454,7 @@ export function LivePanel({
           meta: { session_id: sessionId, role: "assistant", source: "live_handover" },
         });
         toast("WiMi", { description: res.message, duration: 12000 });
-        actuators.speak(res.message, {
+        speakLive(res.message, {
           onEnd: () => {
             actuators.chime("soft");
             if (wasListening) speechRef.current.start();
@@ -458,7 +467,7 @@ export function LivePanel({
         release();
       }
     },
-    [actuators, missionId, persist, sessionId],
+    [actuators, missionId, persist, sessionId, speakLive],
   );
 
   // Detector de fim de turno: ~2s sem fala nova e com a WiMi calada.
@@ -482,7 +491,6 @@ export function LivePanel({
     return () => window.clearInterval(id);
   }, [actuators.speaking, dynamic, emitEvent, handleHandover, speech.listening]);
 
-
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
     [liveLine, speech.interim],
@@ -494,9 +502,6 @@ export function LivePanel({
     lastSpeechAtRef.current = Date.now();
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
-
-
-
 
   // Rolagem automática enquanto a fala acontece.
   useEffect(() => {
@@ -658,7 +663,7 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            actuators.speak(res.message);
+            speakLive(res.message);
             // O disparo já foi gravado; o RETORNO da IA chega depois, então vira
             // uma linha própria (append-only) para aparecer no relatório.
             void recordFiring({
@@ -726,7 +731,7 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             toast(`WiMi · ${trigger.name}`, { description: res.message, duration: 12000 });
-            actuators.speak(res.message, {
+            speakLive(res.message, {
               onEnd: () => {
                 // devolve o turno: toque curto e microfone de volta.
                 actuators.chime("soft");
@@ -800,17 +805,17 @@ export function LivePanel({
         })
           .then((res: { message: string }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
-            actuators.speak(res.message);
+            speakLive(res.message);
           })
           .catch(() => {
-            actuators.speak("O que você está executando agora?");
+            speakLive("O que você está executando agora?");
           });
       }
       toast(`gatilho: ${trigger.name}`, {
         description: action.message ?? info?.matched_text ?? undefined,
       });
       if (action.message) {
-        actuators.speak(action.message);
+        speakLive(action.message);
         ok("mensagem falada", action.message);
       }
 
@@ -830,7 +835,17 @@ export function LivePanel({
 
       return results;
     },
-    [actuators, camera, flushTranscript, missionId, persist, sessionId, sessionStartedAt, speech],
+    [
+      actuators,
+      camera,
+      flushTranscript,
+      missionId,
+      persist,
+      sessionId,
+      sessionStartedAt,
+      speakLive,
+      speech,
+    ],
   );
 
   // Época da escuta: muda a cada bloco fechado, reiniciando as âncoras de
@@ -934,10 +949,9 @@ export function LivePanel({
         {sessionTalk ? (
           <SessionTalkSheet
             context={sessionTalk}
-            onSpeak={(t) => actuators.speak(t)}
+            onSpeak={(t) => speakLive(t)}
             onClose={() => setSessionTalk(null)}
           />
-
         ) : null}
         <StationMode
           listening={speech.listening}
@@ -997,10 +1011,9 @@ export function LivePanel({
       {sessionTalk ? (
         <SessionTalkSheet
           context={sessionTalk}
-          onSpeak={(t) => actuators.speak(t)}
+          onSpeak={(t) => speakLive(t)}
           onClose={() => setSessionTalk(null)}
         />
-
       ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
@@ -1160,9 +1173,7 @@ export function LivePanel({
                 ? `entendimento atual: ${understanding}`
                 : "diga “WiMi, modo livre” para liberar, ou “WiMi, só quando eu chamar” para voltar."}
             </p>
-            {handoverState ? (
-              <p className="text-[11px] text-ember">{handoverState}</p>
-            ) : null}
+            {handoverState ? <p className="text-[11px] text-ember">{handoverState}</p> : null}
           </div>
         ) : null}
 
@@ -1173,7 +1184,6 @@ export function LivePanel({
         >
           <MessagesSquare className="h-4 w-4" /> Conversar sobre a sessão
         </button>
-
 
         {transcriptView}
 
@@ -1285,6 +1295,7 @@ export function LivePanel({
           speaking={actuators.speaking}
           supported={actuators.speechSupported}
           onToggle={actuators.toggleSpeech}
+          lang={lang}
         />
         <p className="mt-3 text-[11px] text-muted-foreground">
           Os padrões continuam rodando enquanto você navega no app, até desligar aqui.
@@ -1383,7 +1394,6 @@ function ActuatorRow({
                       : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
-
         </span>
         <span
           className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
@@ -1403,7 +1413,6 @@ function ActuatorRow({
             </p>
           ) : null}
           <div className="mt-3 flex gap-2">
-
             <button
               type="button"
               onClick={() => onConfig({ ...config, mode: "timed" })}
@@ -1619,10 +1628,9 @@ function BeaconConfig({
             })}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            O beacon é a única fonte de som periódico automático. Desligado, o bloco de áudio fica em
-            silêncio total.
+            O beacon é a única fonte de som periódico automático. Desligado, o bloco de áudio fica
+            em silêncio total.
           </p>
-
         </>
       ) : null}
     </div>
@@ -1634,12 +1642,36 @@ function VoiceRow({
   speaking,
   supported,
   onToggle,
+  lang,
 }: {
   on: boolean;
   speaking: boolean;
   supported: boolean;
   onToggle: () => void;
+  lang: string;
 }) {
+  const base = langBase(lang);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selected, setSelected] = useState<string>("");
+
+  useEffect(() => {
+    let alive = true;
+    void ensureVoices().then(() => {
+      if (!alive) return;
+      const list = listVoices(base);
+      setVoices(list);
+      setSelected(pickVoice(base)?.voiceURI ?? "");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [base]);
+
+  const onPick = (uri: string) => {
+    setSelected(uri);
+    setVoicePref(base, voices.find((v) => v.voiceURI === uri) ?? null);
+  };
+
   return (
     <div
       className={`mt-3 rounded-xl border p-3 ${
@@ -1678,6 +1710,41 @@ function VoiceRow({
           {on ? "on" : "off"}
         </span>
       </button>
+
+      {supported && on ? (
+        voices.length ? (
+          <div className="mt-3 space-y-2">
+            <label className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+              Voz ({base === "pt" ? "português" : base === "en" ? "inglês" : "espanhol"})
+            </label>
+            <select
+              value={selected}
+              onChange={(e) => onPick(e.target.value)}
+              className="w-full min-w-0 rounded-lg border border-border bg-charcoal-950/60 px-2 py-2 text-[12px] text-foreground"
+            >
+              {voices.map((v) => (
+                <option key={v.voiceURI} value={v.voiceURI}>
+                  {v.name} · {v.lang}
+                  {v.localService ? "" : " · online"}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                void speakWithVoice(SAMPLE_PHRASES[base], { lang: defaultLocale(base) })
+              }
+              className="flex items-center gap-2 rounded-lg border border-ember/40 bg-ember/10 px-3 py-2 text-[12px] text-ember active:scale-95"
+            >
+              <Radio className="h-3.5 w-3.5" /> Ouvir amostra
+            </button>
+          </div>
+        ) : (
+          <p className="mt-3 rounded-lg border border-border bg-charcoal-950/50 p-2 text-[11px] text-muted-foreground">
+            {NO_VOICE_HINT[base]}
+          </p>
+        )
+      ) : null}
     </div>
   );
 }
