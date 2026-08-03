@@ -1130,7 +1130,6 @@ function ActuatorRow({
                 ? "Padrão contínuo: quando disparado, o timbre se repete uma vez em rajada curta."
                 : "Sem duração definida: o padrão se repete até você desligar."}
             </p>
-
           ) : (
             <>
               <div className="mt-3 flex items-center gap-3">

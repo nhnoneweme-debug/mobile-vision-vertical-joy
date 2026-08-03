@@ -210,7 +210,7 @@ function AudioBig({ on }: { on: boolean }) {
       label="Áudio"
       on={on}
       icon={<Volume2 className="h-9 w-9" />}
-      detail={on ? (beacon ? `beacon a cada ${beacon.value} ${beacon.unit}` : "ativo") : "desligado"}
+      detail={on ? (beacon ? `beacon a cada ${beacon.value} ${beacon.unit}` : "armado (silencioso)") : "desligado"}
     />
   );
 }
