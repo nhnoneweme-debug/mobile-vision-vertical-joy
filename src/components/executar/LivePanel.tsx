@@ -15,6 +15,7 @@ import {
   MicOff,
   Pencil,
   Radio,
+  Send,
   SwitchCamera,
   Vibrate,
   Volume2,
@@ -76,8 +77,26 @@ import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
 import { ExecutionLogCard } from "./ExecutionLogCard";
-import { SessionTalkSheet, type SessionTalkContext } from "./SessionTalkSheet";
-import { liveHandoverReply, liveUnderstanding } from "@/lib/live-dialog.functions";
+import { DualInput } from "./DualInput";
+import {
+  liveHandoverReply,
+  liveSessionChat,
+  liveUnderstanding,
+} from "@/lib/live-dialog.functions";
+import {
+  DEFAULT_PERSONA,
+  PERSONA_LABEL,
+  PERSONA_ROLE,
+  PERSONA_DEFAULT_SERVER_VOICE,
+  detectDirectPersona,
+  getPersonaDeviceVoice,
+  getPersonaServerVoice,
+  normalizePersona,
+  resolvePersonaChoice,
+  setPersonaDeviceVoice,
+  setPersonaServerVoice,
+  type Persona,
+} from "@/lib/personas";
 import {
   detectModeCommand,
   detectSessionTalk,
@@ -108,7 +127,32 @@ type TranscriptBlock = {
   saved: boolean;
   revision: number;
   at: number;
+  /** duração da fala captada (quando fizer sentido mostrar) */
+  durationMs?: number;
 };
+
+/**
+ * FLUXO ÚNICO DO OUVIDO — transcrição, digitação, manifestações da WiMi e
+ * eventos de sistema convivem na MESMA superfície cronológica.
+ */
+type FeedKind = "typed" | "assistant" | "system";
+
+type FeedEntry = {
+  id: string;
+  kind: FeedKind;
+  text: string;
+  at: number;
+  persona?: Persona;
+  label?: string;
+};
+
+type ChatItem =
+  | { key: string; at: number; type: "mic"; block: TranscriptBlock }
+  | { key: string; at: number; type: "feed"; entry: FeedEntry };
+
+function clock(at: number): string {
+  return new Date(at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
 
 function newId(prefix: string) {
   try {
