@@ -32,6 +32,7 @@ import { loadEffort, saveEffort, type Effort } from "@/lib/ai-effort";
 import { useGoBack } from "@/hooks/useGoBack";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { cachedVoices, ensureVoices, NO_VOICE_HINT } from "@/lib/tts-voices";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/shell/MobileShell";
 // Nota: o voltar sai do header (item 2). No desktop a sidebar já leva de
@@ -586,7 +587,8 @@ function AssistantPage() {
 
   function pickPtBrVoice(gender: "feminina" | "masculina"): SpeechSynthesisVoice | null {
     if (!("speechSynthesis" in window)) return null;
-    const voices = window.speechSynthesis.getVoices();
+    // cachedVoices() já lida com a lista vazia da primeira chamada do Chrome.
+    const voices = cachedVoices();
     const ptbr = voices.filter((v) => /pt(-|_)?BR/i.test(v.lang) || /pt(-|_)?PT/i.test(v.lang));
     if (!ptbr.length) return null;
     const femHints = /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
@@ -605,12 +607,18 @@ function AssistantPage() {
       setTtsMsgId(null);
       return;
     }
+    const ptVoice = pickPtBrVoice(settings.voice_gender);
+    if (!ptVoice) {
+      // Sem voz pt instalada: falar com voz inglesa soa pior que não falar.
+      setTtsMsgId(null);
+      toast.warning(NO_VOICE_HINT.pt);
+      return;
+    }
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(sanitizeForTts(text));
     utter.lang = "pt-BR";
     utter.rate = 1;
-    const v = pickPtBrVoice(settings.voice_gender);
-    if (v) utter.voice = v;
+    utter.voice = ptVoice;
     utter.onstart = () => {
       setSpeaking(true);
       if (msgId != null) {
