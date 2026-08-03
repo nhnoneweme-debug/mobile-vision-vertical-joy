@@ -491,8 +491,10 @@ export function LivePanel({
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
     if (!dynamic || !currentLine) return;
+    lastSpeechAtRef.current = Date.now();
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
+
 
 
 
