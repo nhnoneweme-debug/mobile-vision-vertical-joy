@@ -54,12 +54,26 @@ import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
 import { ExecutionLogCard } from "./ExecutionLogCard";
+import { SessionTalkSheet, type SessionTalkContext } from "./SessionTalkSheet";
+import { liveHandoverReply, liveUnderstanding } from "@/lib/live-dialog.functions";
+import {
+  detectModeCommand,
+  detectSessionTalk,
+  hasCallCode,
+  loadAddressMode,
+  loadCallCodes,
+  saveAddressMode,
+  saveCallCodes,
+  stripCallCode,
+  type AddressMode,
+} from "@/lib/live-dialog";
 
 const FLUSH_MS = 15_000;
 const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
-/** silêncio que dá o turno à WiMi no Live Dinâmico */
-const DYNAMIC_SILENCE_MS = 8_000;
+/** fim de turno: silêncio curto que passa a palavra à WiMi */
+const HANDOVER_MS = 2_000;
+
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
