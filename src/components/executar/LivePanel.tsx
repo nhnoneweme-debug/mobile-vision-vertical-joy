@@ -79,11 +79,7 @@ import { LiveClock } from "./LiveClock";
 import { useTodayEntries } from "./TodayTimeline";
 import { ExecutionLogCard } from "./ExecutionLogCard";
 import { DualInput } from "./DualInput";
-import {
-  liveHandoverReply,
-  liveSessionChat,
-  liveUnderstanding,
-} from "@/lib/live-dialog.functions";
+import { liveHandoverReply, liveSessionChat, liveUnderstanding } from "@/lib/live-dialog.functions";
 import {
   DEFAULT_PERSONA,
   PERSONA_LABEL,
@@ -412,9 +408,7 @@ export function LivePanel({
   const sessionContent = useCallback(
     () =>
       [
-        blocksRef.current.length
-          ? `Transcrição da sessão:\n${blocksRef.current.join("\n")}`
-          : "",
+        blocksRef.current.length ? `Transcrição da sessão:\n${blocksRef.current.join("\n")}` : "",
         turnRef.current.join(" "),
         speechRef.current.interim,
         feedRef.current.length

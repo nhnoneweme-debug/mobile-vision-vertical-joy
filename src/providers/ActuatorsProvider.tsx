@@ -1,11 +1,7 @@
 import { toast } from "sonner";
 import { langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
 import { speakUnified, stopSpeaking } from "@/lib/tts-engine";
-import {
-  getPersonaDeviceVoice,
-  getPersonaServerVoice,
-  type Persona,
-} from "@/lib/personas";
+import { getPersonaDeviceVoice, getPersonaServerVoice, type Persona } from "@/lib/personas";
 // Atuadores persistentes da WiMi (vibração + emissão de áudio + voz).
 //
 // Vivem acima das rotas (montados no MobileShell) pra que o padrão continue
@@ -90,10 +86,7 @@ type ActuatorsCtx = {
   toggleSpeech: () => void;
   speaking: boolean;
   /** fala um texto se a voz estiver ligada; no-op caso contrário */
-  speak: (
-    text: string,
-    opts?: { onEnd?: () => void; lang?: string; persona?: Persona },
-  ) => void;
+  speak: (text: string, opts?: { onEnd?: () => void; lang?: string; persona?: Persona }) => void;
   /** toque curto de turno (turn-taking) — independe dos loops de atuador */
   chime: (sound?: ActuatorSound) => void;
   stopAll: () => void;

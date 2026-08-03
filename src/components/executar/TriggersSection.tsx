@@ -388,7 +388,6 @@ export function TriggersSection() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
   const dupM = useMutation({
     mutationFn: (t: TriggerDefinition) => duplicateTrigger(t, triggers.length),
     onSuccess: () => {
