@@ -986,6 +986,14 @@ export function LivePanel({
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
       ) : null}
+      {sessionTalk ? (
+        <SessionTalkSheet
+          context={sessionTalk}
+          onSpeak={(t) => actuators.speak(t)}
+          onClose={() => setSessionTalk(null)}
+        />
+
+      ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
           <WifiOff className="h-4 w-4 shrink-0" /> Você está offline. A captura fica pausada — nada
