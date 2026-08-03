@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as ApiSleepChatRouteImport } from './routes/api/sleep-chat'
 import { Route as ApiIaCaptureRouteImport } from './routes/api/ia-capture'
 import { Route as ApiGoogleCalendarCallbackRouteImport } from './routes/api/google-calendar-callback'
@@ -94,6 +95,11 @@ const IndexRoute = IndexRouteImport.update({
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSleepChatRoute = ApiSleepChatRouteImport.update({
@@ -412,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/api/google-calendar-callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
+  '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -470,6 +477,7 @@ export interface FileRoutesByTo {
   '/api/google-calendar-callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
+  '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -530,6 +538,7 @@ export interface FileRoutesById {
   '/api/google-calendar-callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/ia-capture': typeof ApiIaCaptureRoute
   '/api/sleep-chat': typeof ApiSleepChatRoute
+  '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -590,6 +599,7 @@ export interface FileRouteTypes {
     | '/api/google-calendar-callback'
     | '/api/ia-capture'
     | '/api/sleep-chat'
+    | '/api/tts'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -648,6 +658,7 @@ export interface FileRouteTypes {
     | '/api/google-calendar-callback'
     | '/api/ia-capture'
     | '/api/sleep-chat'
+    | '/api/tts'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -707,6 +718,7 @@ export interface FileRouteTypes {
     | '/api/google-calendar-callback'
     | '/api/ia-capture'
     | '/api/sleep-chat'
+    | '/api/tts'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -736,6 +748,7 @@ export interface RootRouteChildren {
   ApiGoogleCalendarCallbackRoute: typeof ApiGoogleCalendarCallbackRoute
   ApiIaCaptureRoute: typeof ApiIaCaptureRoute
   ApiSleepChatRoute: typeof ApiSleepChatRoute
+  ApiTtsRoute: typeof ApiTtsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -786,6 +799,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sleep-chat': {
@@ -1260,6 +1280,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleCalendarCallbackRoute: ApiGoogleCalendarCallbackRoute,
   ApiIaCaptureRoute: ApiIaCaptureRoute,
   ApiSleepChatRoute: ApiSleepChatRoute,
+  ApiTtsRoute: ApiTtsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

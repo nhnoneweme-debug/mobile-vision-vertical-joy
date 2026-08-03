@@ -1,5 +1,6 @@
 import { toast } from "sonner";
-import { speakWithVoice, langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
+import { langBase, NO_VOICE_HINT, ensureVoices } from "@/lib/tts-voices";
+import { speakUnified, stopSpeaking } from "@/lib/tts-engine";
 // Atuadores persistentes da WiMi (vibração + emissão de áudio + voz).
 //
 // Vivem acima das rotas (montados no MobileShell) pra que o padrão continue
@@ -249,42 +250,43 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     setSpeechOn((prev) => {
       const next = !prev;
       persist(vibrationConfig, audioConfig, next);
-      if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch {
-          /* noop */
-        }
+      if (!next) {
+        stopSpeaking();
+        setSpeaking(false);
       }
       return next;
     });
   }, [audioConfig, persist, vibrationConfig]);
 
+  // Ponto de entrada ÚNICO de fala: servidor → voz do aparelho → texto.
   const speak = useCallback(
     (text: string, opts?: { onEnd?: () => void; lang?: string }) => {
-      if (!speechOn || !speechSupported) {
+      if (!speechOn) {
         opts?.onEnd?.();
         return;
       }
-      void speakWithVoice(text, {
+      void speakUnified(text, {
         lang: opts?.lang ?? "pt-BR",
         onStart: () => setSpeaking(true),
         onEnd: () => {
           setSpeaking(false);
           opts?.onEnd?.();
         },
-      }).then((result) => {
-        if (result === "no-voice") {
+      }).then((outcome) => {
+        if (outcome === "no-voice") {
           setSpeaking(false);
+          opts?.onEnd?.();
           const base = langBase(opts?.lang ?? "pt-BR");
           if (!noVoiceWarnedRef.current.has(base)) {
             noVoiceWarnedRef.current.add(base);
             toast.warning(NO_VOICE_HINT[base]);
           }
+        } else if (outcome === "text-only" || outcome === "empty") {
+          setSpeaking(false);
         }
       });
     },
-    [speechOn, speechSupported],
+    [speechOn],
   );
 
   /**
@@ -486,13 +488,7 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
   const stopAll = useCallback(() => {
     setVibrationOn(false);
     setAudioOn(false);
-    try {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    } catch {
-      /* noop */
-    }
+    stopSpeaking();
     setSpeaking(false);
   }, []);
 
