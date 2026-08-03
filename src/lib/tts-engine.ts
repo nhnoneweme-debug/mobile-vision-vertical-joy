@@ -237,6 +237,10 @@ export type SpeakOptions = {
   engine?: TtsEngine;
   /** ignora o cache local (amostras de voz) */
   noCache?: boolean;
+  /** timbre do servidor (identidades Wi/Mi) */
+  voice?: string;
+  /** voz do aparelho forçada (identidades Wi/Mi) */
+  deviceVoiceURI?: string;
 };
 
 export type SpeakOutcome =
@@ -291,7 +295,7 @@ export async function speakUnified(text: string, opts: SpeakOptions = {}): Promi
   }
 
   if (engine === "server") {
-    const voice = getServerVoice();
+    const voice = opts.voice ?? getServerVoice();
     const key = await cacheKey(clean, voice, base);
     if (gen !== generation) return "empty";
 
@@ -319,6 +323,7 @@ export async function speakUnified(text: string, opts: SpeakOptions = {}): Promi
 
   const result = await speakWithVoice(clean, {
     lang: defaultLocale(base),
+    voiceURI: opts.deviceVoiceURI,
     onStart: opts.onStart,
     onEnd: opts.onEnd,
   });
