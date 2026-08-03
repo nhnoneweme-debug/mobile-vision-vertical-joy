@@ -62,7 +62,9 @@ const MENU: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/perfil", label: "Perfil", icon: User },
       { to: "/loja", label: "Forja de Brasas", icon: ShoppingBag },
+      { to: "/personas", label: "Studio de Personas", icon: Sparkles },
       { to: "/studio", label: "Studio (admin)", icon: Wand2 },
+
     ],
   },
 ];
