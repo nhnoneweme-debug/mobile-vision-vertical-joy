@@ -13,7 +13,6 @@ import {
   Mic,
   MessagesSquare,
   MicOff,
-
   Pencil,
   Radio,
   SwitchCamera,
@@ -84,7 +83,6 @@ const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
 /** fim de turno: silêncio curto que passa a palavra à WiMi */
 const HANDOVER_MS = 2_000;
-
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
@@ -168,7 +166,6 @@ export function LivePanel({
     setCallCodes(clean);
     saveCallCodes(clean);
   }, []);
-
 
   const [liveEvent, setLiveEvent] = useState<{
     name: LiveEventName;
@@ -315,11 +312,7 @@ export function LivePanel({
   // -------------------------------------------------- CONTEÚDO DA SESSÃO
   const sessionContent = useCallback(
     () =>
-      [
-        ...blocksRef.current,
-        turnRef.current.join(" "),
-        speechRef.current.interim,
-      ]
+      [...blocksRef.current, turnRef.current.join(" "), speechRef.current.interim]
         .filter(Boolean)
         .join("\n")
         .slice(-12000),
@@ -387,7 +380,6 @@ export function LivePanel({
     },
     // changeAddressMode é estável (definido abaixo com useCallback sem deps)
     [actuators, changeAddressMode, openSessionTalk],
-
   );
 
   // -------------------------------------- (3) HANDOVER (~2s de silêncio)
@@ -499,7 +491,6 @@ export function LivePanel({
     return () => window.clearInterval(id);
   }, [actuators.speaking, dynamic, emitEvent, handleHandover, speech.listening]);
 
-
   const currentLine = useMemo(
     () => `${liveLine} ${speech.interim}`.trim(),
     [liveLine, speech.interim],
@@ -511,9 +502,6 @@ export function LivePanel({
     lastSpeechAtRef.current = Date.now();
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
-
-
-
 
   // Rolagem automática enquanto a fala acontece.
   useEffect(() => {
@@ -954,7 +942,6 @@ export function LivePanel({
             onSpeak={(t) => speakLive(t)}
             onClose={() => setSessionTalk(null)}
           />
-
         ) : null}
         <StationMode
           listening={speech.listening}
@@ -1017,7 +1004,6 @@ export function LivePanel({
           onSpeak={(t) => speakLive(t)}
           onClose={() => setSessionTalk(null)}
         />
-
       ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
@@ -1177,9 +1163,7 @@ export function LivePanel({
                 ? `entendimento atual: ${understanding}`
                 : "diga “WiMi, modo livre” para liberar, ou “WiMi, só quando eu chamar” para voltar."}
             </p>
-            {handoverState ? (
-              <p className="text-[11px] text-ember">{handoverState}</p>
-            ) : null}
+            {handoverState ? <p className="text-[11px] text-ember">{handoverState}</p> : null}
           </div>
         ) : null}
 
@@ -1190,7 +1174,6 @@ export function LivePanel({
         >
           <MessagesSquare className="h-4 w-4" /> Conversar sobre a sessão
         </button>
-
 
         {transcriptView}
 
@@ -1401,7 +1384,6 @@ function ActuatorRow({
                       : `ativo · ${config.onSec}s a cada ${config.everySec}s`
                 : "desligado"}
           </span>
-
         </span>
         <span
           className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
@@ -1421,7 +1403,6 @@ function ActuatorRow({
             </p>
           ) : null}
           <div className="mt-3 flex gap-2">
-
             <button
               type="button"
               onClick={() => onConfig({ ...config, mode: "timed" })}
@@ -1637,10 +1618,9 @@ function BeaconConfig({
             })}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            O beacon é a única fonte de som periódico automático. Desligado, o bloco de áudio fica em
-            silêncio total.
+            O beacon é a única fonte de som periódico automático. Desligado, o bloco de áudio fica
+            em silêncio total.
           </p>
-
         </>
       ) : null}
     </div>

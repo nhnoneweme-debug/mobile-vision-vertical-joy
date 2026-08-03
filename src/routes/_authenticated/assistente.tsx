@@ -85,7 +85,6 @@ import { syncJourneyPushSchedule } from "@/lib/journey-schedule.functions";
 import { suggestActions } from "@/lib/journey-suggestions";
 import type { JourneySuggestion } from "@/lib/journey-suggestions";
 
-
 // Saudação inicial antes das settings chegarem; troca pelo nome escolhido assim
 // que carregam (o fallback é "WiMi").
 const GREETING = assistantGreeting(ASSISTANT_NAME_FALLBACK);
@@ -292,10 +291,7 @@ function AssistantPage() {
           : phase === "preEnd"
             ? "Estou aqui — como fecho esse bloco?"
             : "Terminou. Bora fechar como feito?";
-      setMsgs((prev) => [
-        ...prev,
-        { id: nid(), role: "assistant", text: label },
-      ]);
+      setMsgs((prev) => [...prev, { id: nid(), role: "assistant", text: label }]);
     } else {
       const prompt = SEED_PROMPTS[seed];
       if (prompt) setInput((prev) => (prev ? prev : prompt));
@@ -338,7 +334,6 @@ function AssistantPage() {
       /* silencioso — o push é um extra, o foreground continua funcionando */
     });
   }, [userId, journey.blocks, journey.loading, agreements, fnSyncJourney]);
-
 
   const {
     listening,
@@ -384,8 +379,6 @@ function AssistantPage() {
     const id = window.setInterval(() => setMoment(getClientMoment()), 30_000);
     return () => window.clearInterval(id);
   }, []);
-
-
 
   // Sincroniza refs com state — closure fresca em qualquer async.
   useEffect(() => {
@@ -591,14 +584,13 @@ function AssistantPage() {
     const voices = cachedVoices();
     const ptbr = voices.filter((v) => /pt(-|_)?BR/i.test(v.lang) || /pt(-|_)?PT/i.test(v.lang));
     if (!ptbr.length) return null;
-    const femHints = /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
+    const femHints =
+      /(female|mulher|luciana|joana|helena|maria|monica|paulina|catarina|fernanda|camila|vitoria)/i;
     const maleHints = /(male|homem|felipe|ricardo|daniel|paulo|joão|joao|diego|thiago|antonio)/i;
     const wanted = gender === "feminina" ? femHints : maleHints;
     const other = gender === "feminina" ? maleHints : femHints;
     return (
-      ptbr.find((v) => wanted.test(v.name)) ??
-      ptbr.find((v) => !other.test(v.name)) ??
-      ptbr[0]
+      ptbr.find((v) => wanted.test(v.name)) ?? ptbr.find((v) => !other.test(v.name)) ?? ptbr[0]
     );
   }
 
@@ -685,9 +677,7 @@ function AssistantPage() {
           const hist = await fnGetConversation({ data: { conversation_id: last.id } });
           if (hist.length) {
             setConversationId(last.id);
-            setMsgs(
-              hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg),
-            );
+            setMsgs(hist.map((h) => ({ id: nid(), role: h.role, text: h.content }) as Msg));
             return;
           }
         } catch {
@@ -869,7 +859,8 @@ function AssistantPage() {
       if (sawError && assistantId == null) {
         appendDelta("Tive um problema pra responder agora. Tenta de novo?");
       }
-      const shouldSpeak = (voiceWasActive || autoplayRef.current) && full.trim() && assistantId != null;
+      const shouldSpeak =
+        (voiceWasActive || autoplayRef.current) && full.trim() && assistantId != null;
       if (shouldSpeak) void playMessageTts(assistantId!, full.trim());
       if (isNewConversation) void refreshConversations();
     } catch {
@@ -1015,8 +1006,10 @@ function AssistantPage() {
           recordChoice(kind, phase, s.id);
           if (s.id === "done" || s.id === "rest_done") await doMarkDone();
           else if (s.id === "skip") await doMarkSkip();
-          else if (s.id === "log_note") setInput((prev) => (prev ? prev : "Registrar sobre isto: "));
-          else if (s.id === "check_in") setInput((prev) => (prev ? prev : "Preciso de ajuda com isso agora: "));
+          else if (s.id === "log_note")
+            setInput((prev) => (prev ? prev : "Registrar sobre isto: "));
+          else if (s.id === "check_in")
+            setInput((prev) => (prev ? prev : "Preciso de ajuda com isso agora: "));
           else if (s.id === "extend" || s.id === "rest_more") {
             setInput((prev) => (prev ? prev : "Estender esse bloco em 5 minutos."));
           } else if (s.id === "reschedule") {
@@ -1050,13 +1043,10 @@ function AssistantPage() {
           }
         }, 500);
       }
-
-
     },
     // playMessageTts é estável dentro do componente pra este uso; deps mínimas
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [userId, journey, agreements, listening, startListening],
-
   );
 
   return (
@@ -1107,7 +1097,6 @@ function AssistantPage() {
       />
 
       <div className="space-y-3 px-4 pt-4">
-
         {msgs.map((m) => {
           if (m.role === "user") {
             return (
@@ -1198,9 +1187,7 @@ function AssistantPage() {
                           : "border-border text-muted-foreground hover:text-foreground")
                       }
                     >
-                      <Icon
-                        className={"h-3.5 w-3.5 " + (st === "loading" ? "animate-spin" : "")}
-                      />
+                      <Icon className={"h-3.5 w-3.5 " + (st === "loading" ? "animate-spin" : "")} />
                     </button>
                   );
                 })()}
@@ -1465,7 +1452,11 @@ function AssistantPage() {
                 if (expandMode === "auto") setComposerExpanded(true);
               }}
               rows={composerExpanded ? 5 : 1}
-              placeholder={listening ? "Estou ouvindo…" : (settings.composer_placeholder?.trim() || "Fala comigo…")}
+              placeholder={
+                listening
+                  ? "Estou ouvindo…"
+                  : settings.composer_placeholder?.trim() || "Fala comigo…"
+              }
               className={
                 composerExpanded
                   ? "absolute bottom-0 left-0 right-0 z-10 max-h-[40vh] w-full resize-none rounded-xl border border-ember/60 bg-charcoal-800 px-3 py-2.5 pl-10 text-foreground shadow-2xl outline-none placeholder:text-muted-foreground focus:border-ember/60"
@@ -1756,7 +1747,10 @@ function AssistantPage() {
                     { key: "preStart", label: "Antes do próximo" },
                   ] as Array<{ key: "preEnd" | "atEnd" | "preStart"; label: string }>
                 ).map(({ key, label }) => (
-                  <label key={key} className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                  <label
+                    key={key}
+                    className="flex flex-col gap-1 text-[10px] text-muted-foreground"
+                  >
                     <span className="font-display tracking-[0.15em]">{label.toUpperCase()}</span>
                     <input
                       type="number"

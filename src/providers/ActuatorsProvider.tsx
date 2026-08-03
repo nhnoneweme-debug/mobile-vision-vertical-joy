@@ -457,7 +457,6 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     };
   }, [audioOn, audioSupported, beaconOn, beaconSec, audioMode, audioSound]);
 
-
   const toggleVibration = useCallback(() => {
     if (!vibrationSupported) return;
     setVibrationOn((v) => !v);
