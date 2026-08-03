@@ -488,6 +488,14 @@ export function LivePanel({
     [liveLine, speech.interim],
   );
 
+  // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
+  useEffect(() => {
+    if (!dynamic || !currentLine) return;
+    handleCodes(currentLine);
+  }, [currentLine, dynamic, handleCodes]);
+
+
+
   // Rolagem automática enquanto a fala acontece.
   useEffect(() => {
     const el = scrollRef.current;
