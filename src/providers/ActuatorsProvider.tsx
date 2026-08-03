@@ -250,12 +250,9 @@ export function ActuatorsProvider({ children }: { children: ReactNode }) {
     setSpeechOn((prev) => {
       const next = !prev;
       persist(vibrationConfig, audioConfig, next);
-      if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch {
-          /* noop */
-        }
+      if (!next) {
+        stopSpeaking();
+        setSpeaking(false);
       }
       return next;
     });
