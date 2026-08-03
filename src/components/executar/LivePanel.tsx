@@ -23,7 +23,9 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import {
   armedCommands,
