@@ -426,17 +426,23 @@ export function LivePanel({
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
-    (text: string, opts?: { onEnd?: () => void; persona?: Persona }) =>
-      actuators.speak(text, { ...opts, lang, persona: opts?.persona ?? DEFAULT_PERSONA }),
+    (text: string, opts?: { onEnd?: () => void; persona?: Persona; lang?: string }) =>
+      actuators.speak(text, {
+        ...opts,
+        // A fala sai no idioma que o modelo respondeu (reply_lang); sem ele,
+        // no idioma corrente da sessão.
+        lang: opts?.lang ?? lang,
+        persona: opts?.persona ?? DEFAULT_PERSONA,
+      }),
     [actuators, lang],
   );
 
   /** Manifestação assinada: entra no fluxo e é lida com a voz da identidade. */
   const manifest = useCallback(
-    (text: string, persona: Persona, opts?: { onEnd?: () => void }) => {
+    (text: string, persona: Persona, opts?: { onEnd?: () => void; lang?: string | null }) => {
       pushFeed({ kind: "assistant", text, persona });
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
-      speakLive(text, { persona, onEnd: opts?.onEnd });
+      speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
     },
     [pushFeed, speakLive],
   );
@@ -504,7 +510,7 @@ export function LivePanel({
           },
         });
         const persona = normalizePersona(res.persona);
-        manifest(res.message, persona);
+        manifest(res.message, persona, { lang: res.reply_lang });
         void persist({
           mission_id: missionId ?? null,
           kind: "dialog_turn",
@@ -862,7 +868,7 @@ export function LivePanel({
             ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string; persona?: string }) => {
+          .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             const persona = normalizePersona(res.persona);
             toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
               description: res.message,
@@ -937,7 +943,7 @@ export function LivePanel({
             ...(triggerPersona ? { force_persona: triggerPersona } : {}),
           },
         })
-          .then((res: { message: string; persona?: string }) => {
+          .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             const persona = normalizePersona(res.persona);
             toast(`${PERSONA_LABEL[persona]} · ${trigger.name}`, {
               description: res.message,
@@ -1018,7 +1024,7 @@ export function LivePanel({
             ...(triggerPersona ? { force_persona: triggerPersona } : { force_persona: "wi" }),
           },
         })
-          .then((res: { message: string; persona?: string }) => {
+          .then((res: { message: string; persona?: string; reply_lang?: string | null }) => {
             setJourneyLog((prev) => (prev ? { ...prev, question: res.message } : prev));
             manifest(res.message, normalizePersona(res.persona));
           })
