@@ -1759,7 +1759,8 @@ export function LivePanel({
           })
         }
       />
-      {/* 3.9.4 — área de texto de LARGURA TOTAL, botões numa linha própria. */}
+      {/* 3.9.5 — área de texto de LARGURA TOTAL; TODOS os controles (inclusive
+          expandir e contexto compartilhado) numa única linha de ícones. */}
       <div ref={composerBoxRef}>
         <textarea
           value={composer}
@@ -1771,54 +1772,9 @@ export function LivePanel({
           placeholder="Escreva pra WiMi…"
           className="w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none transition-[height] duration-200 focus:border-ember/50"
         />
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setComposerOpen((v) => !v)}
-            aria-expanded={composerOpen}
-            aria-label={composerOpen ? "Recolher campo" : "Expandir campo"}
-            className="flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground active:scale-95"
-          >
-            {composerOpen ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
-            {composerOpen ? "recolher" : "expandir"}
-          </button>
-          {composer ? (
-            <button
-              type="button"
-              onClick={() => setComposer("")}
-              className="text-[10px] text-muted-foreground underline underline-offset-2 active:scale-95"
-            >
-              limpar
-            </button>
-          ) : null}
-        </div>
-        {composerOpen ? (
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-            <span>modo:</span>
-            {(["manual", "dynamic"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => changeExpandMode(mode)}
-                aria-pressed={expandMode === mode}
-                className={`rounded-full border px-2 py-0.5 active:scale-95 ${
-                  expandMode === mode
-                    ? "border-ember/50 bg-ember/10 text-ember"
-                    : "border-border/60"
-                }`}
-              >
-                {mode === "manual" ? "manual" : "dinâmico"}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
 
-      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={toggleListening}
@@ -1837,9 +1793,93 @@ export function LivePanel({
           disabled={uploading || chatBusy}
           onPick={(files) => setPending((prev) => [...prev, ...files])}
         />
-        <span className="min-w-0 truncate text-[10px] text-muted-foreground">
-          compartilhado: {describeSharedContext()}
-        </span>
+
+        {/* EXPANDIR — ícone auto-explicativo; o modo mora no popup. */}
+        <HintIcon
+          id="composer-expand"
+          ariaLabel={composerOpen ? "Recolher campo" : "Expandir campo"}
+          title="Expandir a escrita"
+          description="Aumenta a caixa de texto para ~5 linhas, pra escrever mensagens longas sem perder o botão de enviar."
+          active={composerOpen}
+          action={{
+            label: composerOpen ? "Recolher agora" : "Expandir agora",
+            onClick: () => setComposerOpen((v) => !v),
+          }}
+          extra={
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span>modo:</span>
+              {(["manual", "dynamic"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => changeExpandMode(mode)}
+                  aria-pressed={expandMode === mode}
+                  className={`rounded-full border px-2 py-0.5 active:scale-95 ${
+                    expandMode === mode
+                      ? "border-ember/50 bg-ember/10 text-ember"
+                      : "border-border/60"
+                  }`}
+                >
+                  {mode === "manual" ? "manual" : "dinâmico"}
+                </button>
+              ))}
+              <span className="w-full opacity-80">
+                manual: só pela setinha · dinâmico: abre ao tocar no campo e recolhe ao sair.
+              </span>
+            </div>
+          }
+        >
+          {composerOpen ? (
+            <ChevronUp className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5" />
+          )}
+        </HintIcon>
+
+        {/* HORA + LOCAL — um ícone só, com explicação e autorizar/revogar. */}
+        <HintIcon
+          id="ambient-context"
+          ariaLabel="Contexto de hora e localização"
+          title="Hora, fuso e local"
+          description={
+            <>
+              A WiMi usa a hora e o fuso do seu aparelho pra raciocinar sobre tempo (“daqui a duas
+              horas”, “quanto falta”). Compartilhado agora: {describeSharedContext()}.{" "}
+              {geo.status === "granted"
+                ? "Localização aproximada autorizada."
+                : "Localização não autorizada — ela usa só o fuso como aproximação."}
+            </>
+          }
+          active={geo.status === "granted"}
+          action={{
+            label:
+              geo.status === "granted" ? "Parar de compartilhar local" : "Autorizar localização",
+            onClick: () => {
+              if (geo.status === "granted") {
+                clearClientLocation();
+                setGeo({ status: "denied" });
+              } else {
+                void requestClientLocation().then(setGeo);
+              }
+            },
+          }}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          <MapPin className="h-3.5 w-3.5" />
+        </HintIcon>
+
+        <span className="min-w-0 flex-1" />
+
+        {composer ? (
+          <button
+            type="button"
+            onClick={() => setComposer("")}
+            aria-label="Limpar texto"
+            className="shrink-0 text-[10px] text-muted-foreground underline underline-offset-2 active:scale-95"
+          >
+            limpar
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
@@ -1854,23 +1894,6 @@ export function LivePanel({
           )}
         </button>
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          if (geo.status === "granted") {
-            clearClientLocation();
-            setGeo({ status: "denied" });
-          } else {
-            void requestClientLocation().then(setGeo);
-          }
-        }}
-        className="flex items-center gap-1 text-[10px] text-muted-foreground underline underline-offset-2 active:scale-95"
-      >
-        <MapPin className="h-3 w-3" />
-        {geo.status === "granted"
-          ? "parar de compartilhar localização"
-          : "compartilhar localização aproximada (contexto de planejamento)"}
-      </button>
     </div>
   );
 
