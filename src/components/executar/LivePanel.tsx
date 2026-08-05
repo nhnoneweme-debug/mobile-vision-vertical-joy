@@ -716,6 +716,72 @@ export function LivePanel({
   );
 
   /**
+   * 4.0 — CRIAR AÇÃO PELA CONVERSA: o pedido vira RASCUNHO estruturado e só
+   * existe de verdade depois da confirmação da pessoa.
+   */
+  const proposeAction = useCallback(
+    async (text: string, spoken: boolean) => {
+      setChatBusy(true);
+      try {
+        const res = await interpretTriggerSpeech({ data: { text: text.slice(0, 2000) } });
+        const parsed = JSON.parse(res.draft_json) as Record<string, unknown>;
+        const d: ActionDraft = {
+          name: String(parsed.name ?? "nova ação"),
+          enabled: true,
+          trigger_type: parsed.trigger_type === "chronos" ? "chronos" : "event",
+          condition: parsed.condition as ActionDraft["condition"],
+          action: (parsed.action ?? {}) as ActionDraft["action"],
+          active_window: (parsed.active_window ?? {}) as ActionDraft["active_window"],
+          cooldown_seconds: Number(parsed.cooldown_seconds ?? 30),
+          summary: typeof parsed.summary === "string" ? parsed.summary : undefined,
+        };
+        setActionAuditId(res.audit_id);
+        setActionSpoken(spoken);
+        setActionDraft(d);
+        manifest(
+          `Montei uma ação: ${d.summary ?? d.name}. Confirma que eu salvo?`,
+          DEFAULT_PERSONA,
+          { speak: spoken },
+        );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não consegui montar a ação.");
+      } finally {
+        setChatBusy(false);
+      }
+    },
+    [manifest],
+  );
+
+  /** Confirmação: a ação passa a existir e entra na lista e no overlay. */
+  const saveActionDraft = useCallback(async () => {
+    if (!actionDraft) return;
+    setActionSaving(true);
+    try {
+      const existing = (triggersRef.current ?? []) as TriggerDefinition[];
+      await createTrigger(actionDraft, existing.length);
+      if (actionAuditId)
+        void resolveTriggerProposal({ data: { audit_id: actionAuditId, status: "applied" } });
+      await qc.invalidateQueries({ queryKey: ["triggers"] });
+      void refreshActionSchedule().catch(() => {});
+      toast.success("Ação criada.");
+      manifest(`Ação "${actionDraft.name}" armada.`, DEFAULT_PERSONA, { speak: actionSpoken });
+      setActionDraft(null);
+      setActionAuditId(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao salvar a ação.");
+    } finally {
+      setActionSaving(false);
+    }
+  }, [actionAuditId, actionDraft, actionSpoken, manifest, qc]);
+
+  const cancelActionDraft = useCallback(() => {
+    if (actionAuditId)
+      void resolveTriggerProposal({ data: { audit_id: actionAuditId, status: "rejected" } });
+    setActionDraft(null);
+    setActionAuditId(null);
+  }, [actionAuditId]);
+
+  /**
    * Pergunta ao par WiMi dentro do próprio fluxo (sem tela separada).
    * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
    */
@@ -725,6 +791,15 @@ export function LivePanel({
       if ((!q && !attachments?.length) || chatBusy) return;
       const forced = detectDirectPersona(q);
       pushFeed({ kind: "typed", text: q, attachments });
+
+      // 4.0 — pedido de automação não vira conversa: vira rascunho de ação.
+      if (!attachments?.length && looksLikeActionRequest(q)) {
+        chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
+        void proposeAction(q, opts?.spoken !== false);
+        return;
+      }
+
+
 
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
       setChatBusy(true);
