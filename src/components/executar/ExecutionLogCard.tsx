@@ -39,6 +39,7 @@ function fmtTime(iso: string): string {
 
 export function ExecutionLogCard() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const fn = useServerFn(getTodayExecutionLog);
   const { data } = useQuery<ExecutionEventRow[]>({
     queryKey: ["execution-log", "today"],
@@ -53,47 +54,61 @@ export function ExecutionLogCard() {
     ),
   );
 
+  const list =
+    rows.length === 0 ? (
+      <p className="py-2 text-center text-[12px] text-muted-foreground">
+        Nada registrado ainda hoje.
+      </p>
+    ) : (
+      <ul className="space-y-1.5">
+        {rows.map((r) => (
+          <li key={r.id} className="flex gap-3 text-[12px]">
+            <span className="w-10 shrink-0 font-display tabular-nums text-muted-foreground">
+              {fmtTime(r.occurred_at)}
+            </span>
+            <span className="min-w-0 flex-1 text-foreground">{labelFor(r)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+
   return (
     <section className="rounded-2xl border border-border bg-charcoal-800/40">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-4 py-3 text-left"
-      >
-        <ScrollText className="h-4 w-4 text-muted-foreground" />
-        <span className="font-display text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Registro
-        </span>
-
-        <span className="ml-auto rounded-full bg-charcoal-900/60 px-2 py-0.5 text-[10px] text-muted-foreground">
-          {rows.length}
-        </span>
-        {open ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
-      </button>
+      <div className="flex w-full items-center gap-2 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <ScrollText className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="font-display text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Registro
+          </span>
+          <span className="ml-auto rounded-full bg-charcoal-900/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+            {rows.length}
+          </span>
+          {open ? (
+            <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+        </button>
+        <ExpandButton onClick={() => setExpanded(true)} />
+      </div>
       {open ? (
         <div className="border-t border-border/50 px-4 py-3">
-          {rows.length === 0 ? (
-            <p className="py-2 text-center text-[12px] text-muted-foreground">
-              Nada registrado ainda hoje.
-            </p>
-          ) : (
-            <ul className="space-y-1.5">
-              {rows.map((r) => (
-                <li key={r.id} className="flex gap-3 text-[12px]">
-                  <span className="w-10 shrink-0 font-display tabular-nums text-muted-foreground">
-                    {fmtTime(r.occurred_at)}
-                  </span>
-                  <span className="min-w-0 flex-1 text-foreground">{labelFor(r)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* Contido: ~5 linhas com rolagem interna — nunca empurra a página. */}
+          <ScrollBox heightClass="max-h-32" stickKey={rows.length} className="pr-1">
+            {list}
+          </ScrollBox>
         </div>
+      ) : null}
+      {expanded ? (
+        <ExpandedSheet title="Registro de hoje" onClose={() => setExpanded(false)}>
+          {list}
+        </ExpandedSheet>
       ) : null}
     </section>
   );
 }
+
