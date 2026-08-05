@@ -1541,6 +1541,9 @@ export function LivePanel({
               <span className="block text-[10px] uppercase tracking-wide opacity-80">
                 você · {clock(item.at)}
               </span>
+              {refLabel(item.entry.refIds) ? (
+                <span className="block text-[10px] opacity-80">{refLabel(item.entry.refIds)}</span>
+              ) : null}
               {item.entry.text ? (
                 <span className="block whitespace-pre-wrap">{item.entry.text}</span>
               ) : null}
@@ -1556,10 +1559,16 @@ export function LivePanel({
               {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
               {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
             </span>
+            {refLabel(item.entry.refIds) ? (
+              <span className="block text-[10px] text-muted-foreground">
+                {refLabel(item.entry.refIds)}
+              </span>
+            ) : null}
             <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
           </div>
         ),
       )}
+
 
       {currentLine && dynamic ? (
         <p className="text-foreground">
