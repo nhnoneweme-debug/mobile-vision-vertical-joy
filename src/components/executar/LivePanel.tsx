@@ -601,6 +601,15 @@ export function LivePanel({
       setUploading(false);
     }
     setComposer("");
+    dictBaseRef.current = null;
+    dictLiveRef.current = "";
+    dictSuppressRef.current = false;
+    // SEM DUPLICATA: o que já subiu ao contexto como bloco discreto e está
+    // contido na versão enviada some da tela (segue persistido no histórico).
+    if (text) {
+      const normSent = normalizeForMatch(text);
+      setBlocks((prev) => prev.filter((b) => !normSent.includes(normalizeForMatch(b.text))));
+    }
     await askSession(text, refs.length ? refs : undefined);
   }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
 
