@@ -978,18 +978,9 @@ export function LivePanel({
     [liveLine, speech.interim],
   );
 
-  // DITADO AO VIVO NO COMPOSER — regime manual: cada palavra reconhecida
-  // aparece na caixa de edição (nada no fluxo consolidado ainda).
-  useEffect(() => {
-    if (dynamic) return;
-    const live = currentLine.trim();
-    if (!live || dictSuppressRef.current) return;
-    setComposer((prev) => {
-      if (dictBaseRef.current === null) dictBaseRef.current = prev;
-      dictLiveRef.current = live;
-      return `${dictBaseRef.current} ${live}`.trim().replace(/\s+/g, " ");
-    });
-  }, [currentLine, dynamic]);
+  // 3.9.3 — sem espelhamento no composer: o texto ao vivo aparece no fluxo
+  // (linha "ouvindo") e vira bloco na pausa.
+
 
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
