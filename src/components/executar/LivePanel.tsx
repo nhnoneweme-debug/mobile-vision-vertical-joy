@@ -2029,19 +2029,30 @@ export function LivePanel({
             </button>
           ))}
 
-          {/* LIVE DINÂMICO — toggle compacto na mesma linha. */}
-          <button
-            type="button"
-            onClick={() => setDynamic((v) => !v)}
-            aria-pressed={dynamic}
-            className={`ml-auto inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] active:scale-95 ${
-              dynamic
-                ? "border-ember bg-ember/20 text-ember"
-                : "border-border bg-charcoal-950/40 text-muted-foreground"
-            }`}
+          {/* LIVE DINÂMICO — pílula compacta alinhada na linha dos idiomas.
+              A explicação do regime mora no popup do ícone (3.9.5). */}
+          <HintIcon
+            id="live-dynamic"
+            className="ml-auto"
+            ariaLabel={dynamic ? "Desligar Live dinâmico" : "Ligar Live dinâmico"}
+            title="Live dinâmico"
+            active={dynamic}
+            description={
+              <>
+                ON: ela acompanha a conversa e responde sozinha
+                {addressMode === "free"
+                  ? " no fim do seu turno (modo livre)."
+                  : " quando você usa o código de chamada."}{" "}
+                OFF (manual): cada bloco falado vira um bloco pronto pra editar e só responde quando
+                você enviar.
+              </>
+            }
+            action={{
+              label: dynamic ? "Desligar" : "Ligar",
+              onClick: () => setDynamic((v) => !v),
+            }}
           >
             <Radio className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">Dinâmico</span>
             <span
               className={`shrink-0 rounded-full px-1.5 text-[9px] uppercase tracking-wide ${
                 dynamic ? "bg-ember text-charcoal-900" : "bg-charcoal-800"
@@ -2049,7 +2060,7 @@ export function LivePanel({
             >
               {dynamic ? "on" : "off"}
             </span>
-          </button>
+          </HintIcon>
         </div>
 
         {langNote ? (
@@ -2058,14 +2069,6 @@ export function LivePanel({
           </p>
         ) : null}
 
-        {/* O que cada regime faz, em uma linha. */}
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          {dynamic
-            ? addressMode === "free"
-              ? "Dinâmico ON · modo livre: ela acompanha e responde sozinha no fim do seu turno."
-              : "Dinâmico ON: ela acompanha tudo e se manifesta sozinha quando você usa o código de chamada."
-            : "Dinâmico OFF (manual): cada bloco falado cai no campo acima pronto pra editar — só responde quando você enviar."}
-        </p>
 
         {dynamic ? (
           <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
