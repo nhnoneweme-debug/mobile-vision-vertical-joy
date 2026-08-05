@@ -2364,21 +2364,38 @@ export function LivePanel({
             <div>
               <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
                 <span>Respiro do bloco</span>
-                <span className="text-ember">{(silenceMs / 1000).toFixed(1)}s</span>
+                <span className="text-ember">
+                  {silenceMs === BLOCK_UNLIMITED ? "ilimitado" : `${(silenceMs / 1000).toFixed(1)}s`}
+                </span>
               </label>
               <input
                 type="range"
                 min={TIMING_MIN_MS}
-                max={TIMING_MAX_MS}
+                max={BLOCK_MAX_MS}
                 step={500}
-                value={silenceMs}
+                value={silenceMs === BLOCK_UNLIMITED ? BLOCK_MAX_MS : silenceMs}
+                disabled={silenceMs === BLOCK_UNLIMITED}
                 onChange={(e) => changeTiming("block", Number(e.target.value))}
-                className="mt-1 w-full accent-ember"
+                className="mt-1 w-full accent-ember disabled:opacity-50"
               />
+              <label className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={silenceMs === BLOCK_UNLIMITED}
+                  onChange={(e) =>
+                    changeTiming("block", e.target.checked ? BLOCK_UNLIMITED : DEFAULT_SILENCE_MS)
+                  }
+                  className="h-3.5 w-3.5 accent-ember"
+                />
+                <span className="min-w-0 truncate">
+                  Ilimitado — só fecha no botão Registrar/Interagir
+                </span>
+              </label>
               <p className="text-[10px] leading-tight text-muted-foreground">
-                Quanto tempo de silêncio fecha um bloco de fala.
+                Quanto tempo de silêncio fecha um bloco de fala (até 60s).
               </p>
             </div>
+
             <div>
               <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
                 <span>Silêncio do modo dinâmico</span>
