@@ -707,9 +707,11 @@ export function LivePanel({
         if (readAbortRef.current || i >= ordered.length) {
           setReadingId(null);
           readAbortRef.current = false;
-          if (wasListening) speechRef.current.start();
+          // margem: só reabre o mic depois que o áudio realmente terminou.
+          if (wasListening) window.setTimeout(() => speechRef.current.start(), 300);
           return;
         }
+
         const b = ordered[i]!;
         setReadingId(b.id);
         speakLive(b.text, {
