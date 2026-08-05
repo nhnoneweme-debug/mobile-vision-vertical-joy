@@ -128,10 +128,28 @@ import {
 } from "@/lib/live-dialog";
 
 const FLUSH_MS = 15_000;
-const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
-/** fim de turno: silêncio curto que passa a palavra à WiMi */
-const HANDOVER_MS = 2_000;
+
+// TEMPOS CONFIGURÁVEIS (camada 3.9.3) — persistidos e aplicados a quente.
+/** respiro do bloco: silêncio que fecha um bloco de transcrição */
+const DEFAULT_SILENCE_MS = 2_500;
+/** fim de turno: silêncio curto que passa a palavra à WiMi (modo dinâmico) */
+const DEFAULT_HANDOVER_MS = 2_000;
+const SILENCE_KEY = "wimi.live.blockSilenceMs.v1";
+const HANDOVER_KEY = "wimi.live.handoverMs.v1";
+const TIMING_MIN_MS = 1_000;
+const TIMING_MAX_MS = 15_000;
+
+function loadTiming(key: string, fallback: number) {
+  try {
+    const raw = Number(localStorage.getItem(key));
+    if (Number.isFinite(raw) && raw >= TIMING_MIN_MS && raw <= TIMING_MAX_MS) return raw;
+  } catch {
+    /* storage opcional */
+  }
+  return fallback;
+}
+
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
