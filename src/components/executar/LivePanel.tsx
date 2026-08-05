@@ -502,11 +502,12 @@ export function LivePanel({
    * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
    */
   const askSession = useCallback(
-    async (question: string) => {
+    async (question: string, attachments?: AttachmentRef[]) => {
       const q = question.trim();
-      if (!q || chatBusy) return;
+      if ((!q && !attachments?.length) || chatBusy) return;
       const forced = detectDirectPersona(q);
-      pushFeed({ kind: "typed", text: q });
+      pushFeed({ kind: "typed", text: q, attachments });
+
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
       setChatBusy(true);
       try {
