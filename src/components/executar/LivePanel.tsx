@@ -643,6 +643,141 @@ export function LivePanel({
     await askSession(text, refs.length ? refs : undefined);
   }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
 
+  // ------------------------------- BLOCOS ACIONÁVEIS (interagir / ler / agrupar)
+  //
+  // Cada bloco capturado é insumo: pode ser SELECIONADO e LIDO, ou SELECIONADO
+  // e ACIONADO — individualmente ou em grupo (um único envio).
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [actedIds, setActedIds] = useState<string[]>([]);
+  const [readingId, setReadingId] = useState<string | null>(null);
+  const readAbortRef = useRef(false);
+  const longPressRef = useRef<number | null>(null);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds([]);
+    setSelectMode(false);
+  }, []);
+
+  /** Leitura sequencial com proteção anti-eco: a escuta pausa enquanto lê. */
+  const stopReading = useCallback(() => {
+    readAbortRef.current = true;
+    stopSpeaking();
+    setReadingId(null);
+  }, []);
+
+  const readBlocks = useCallback(
+    (list: TranscriptBlock[]) => {
+      const ordered = [...list].sort((a, b) => a.at - b.at);
+      if (ordered.length === 0) return;
+      readAbortRef.current = false;
+      const wasListening = speechRef.current.listening;
+      if (wasListening) speechRef.current.stop();
+      const step = (i: number) => {
+        if (readAbortRef.current || i >= ordered.length) {
+          setReadingId(null);
+          readAbortRef.current = false;
+          if (wasListening) speechRef.current.start();
+          return;
+        }
+        const b = ordered[i]!;
+        setReadingId(b.id);
+        speakLive(b.text, {
+          lang: detectLang(b.text) ?? langRef.current,
+          onEnd: () => step(i + 1),
+        });
+      };
+      step(0);
+    },
+    [speakLive],
+  );
+
+  /** UM único envio com os blocos concatenados em ordem cronológica. */
+  const interactWithBlocks = useCallback(
+    async (list: TranscriptBlock[]) => {
+      const ordered = [...list].sort((a, b) => a.at - b.at);
+      if (ordered.length === 0 || chatBusy) return;
+      const refIds = ordered.map((b) => b.id);
+      const body = ordered.map((b) => `[${clock(b.at)}] ${b.text}`).join("\n");
+      const question =
+        ordered.length > 1
+          ? `Reaja a estes ${ordered.length} trechos que capturei na sessão (ordem cronológica). Analise em conjunto, oriente e sugira UMA próxima ação:\n${body}`
+          : `Reaja a este trecho que capturei na sessão. Analise, oriente e sugira UMA próxima ação:\n${body}`;
+      setActedIds((prev) => Array.from(new Set([...prev, ...refIds])));
+      clearSelection();
+      pushFeed({
+        kind: "typed",
+        text:
+          ordered.length > 1
+            ? `interagir com ${ordered.length} blocos (${clock(ordered[0]!.at)} → ${clock(ordered[ordered.length - 1]!.at)})`
+            : `interagir com o bloco de ${clock(ordered[0]!.at)}`,
+        refIds,
+      });
+      chatHistoryRef.current = [
+        ...chatHistoryRef.current.slice(-12),
+        { role: "user", text: question },
+      ];
+      setChatBusy(true);
+      try {
+        const res = await liveSessionChat({
+          data: {
+            session_context: sessionContent(),
+            history: chatHistoryRef.current.slice(-10),
+            question: question.slice(0, 4000),
+            ...personaExtras(),
+          },
+        });
+        const persona = normalizePersona(res.persona);
+        manifest(res.message, persona, { lang: res.reply_lang, refIds });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "manual",
+          note: question.slice(0, 4000),
+          meta: {
+            session_id: sessionId,
+            role: "user",
+            source: "live_block_action",
+            block_ids: refIds,
+          },
+        });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "foreground",
+          note: res.message.slice(0, 4000),
+          meta: {
+            session_id: sessionId,
+            role: "assistant",
+            source: "live_block_action",
+            persona,
+            block_ids: refIds,
+          },
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao responder.");
+      } finally {
+        setChatBusy(false);
+      }
+    },
+    [
+      chatBusy,
+      clearSelection,
+      manifest,
+      missionId,
+      persist,
+      personaExtras,
+      pushFeed,
+      sessionContent,
+      sessionId,
+    ],
+  );
+
+
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
   // A cada 2 blocos fechados, uma chamada leve atualiza o "entendimento da
