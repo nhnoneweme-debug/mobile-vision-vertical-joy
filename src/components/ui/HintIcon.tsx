@@ -6,8 +6,14 @@
 //   (c) não mostrar mais → persiste em localStorage (wimi.hint.<id>.dismissed)
 // Quando dispensado, o ícone continua visível (indicando estado) e o toque
 // executa direto a ação principal, sem abrir a explicação.
+//
+// 3.9.6 — POSICIONAMENTO INTELIGENTE: o popup é ancorado à posição REAL do
+// gatilho na viewport (getBoundingClientRect no momento da abertura), com
+// colisão vertical (abre pra baixo em cima da tela, pra cima embaixo) e
+// horizontal (clamp nas margens, só a setinha se move). Recalcula ao rolar e
+// ao redimensionar/rotacionar; fecha se o ícone sair de vista.
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +26,25 @@ export function isHintDismissed(id: string): boolean {
     return false;
   }
 }
+
+/** 3.9.6 — "Restaurar instruções": apaga TODAS as chaves wimi.hint.*. */
+export function resetHints(): number {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("wimi.hint.")) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+    return keys.length;
+  } catch {
+    return 0;
+  }
+}
+
+const MARGIN = 8;
+
+type Placement = { top: number; left: number; arrow: number; up: boolean };
 
 export type HintIconProps = {
   /** id estável — define a chave de "não mostrar mais". */
@@ -53,12 +78,62 @@ export function HintIcon({
   className,
 }: HintIconProps) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<Placement | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
+
+  const place = useCallback(() => {
+    const trigger = triggerRef.current;
+    const pop = popRef.current;
+    if (!trigger || !pop) return;
+    const r = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // ícone saiu de vista → fecha (nada de popup órfão flutuando).
+    if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) {
+      setOpen(false);
+      return;
+    }
+    const w = Math.min(pop.offsetWidth || 272, vw - MARGIN * 2);
+    const h = pop.offsetHeight || 160;
+    const below = vh - r.bottom;
+    const above = r.top;
+    // COLISÃO VERTICAL: abre pro lado onde cabe inteiro; empatando, pro maior.
+    const up = below < h + MARGIN && above > below;
+    const top = up
+      ? Math.max(MARGIN, r.top - h - MARGIN)
+      : Math.min(Math.max(MARGIN, r.bottom + MARGIN), Math.max(MARGIN, vh - h - MARGIN));
+    // COLISÃO HORIZONTAL: clamp nas margens; só a setinha acompanha o ícone.
+    const center = r.left + r.width / 2;
+    const left = Math.min(Math.max(MARGIN, center - w / 2), Math.max(MARGIN, vw - w - MARGIN));
+    const arrow = Math.min(Math.max(center - left, 14), Math.max(14, w - 14));
+    setPos({ top, left, arrow, up });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    place();
+    const onMove = () => place();
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
+    window.addEventListener("orientationchange", onMove);
+    return () => {
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
+      window.removeEventListener("orientationchange", onMove);
+    };
+  }, [open, place]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (boxRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
@@ -75,6 +150,7 @@ export function HintIcon({
   return (
     <div ref={boxRef} className={cn("relative shrink-0", className)}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={onTrigger}
         aria-label={ariaLabel}
@@ -92,11 +168,24 @@ export function HintIcon({
 
       {open ? (
         <div
+          ref={popRef}
           role="dialog"
           aria-label={title}
-          className="absolute right-0 z-40 mt-2 w-[min(17rem,calc(100vw-2.5rem))] rounded-2xl border border-border bg-charcoal-900 p-3 shadow-xl"
+          style={{
+            top: pos ? pos.top : -9999,
+            left: pos ? pos.left : 0,
+            visibility: pos ? "visible" : "hidden",
+          }}
+          className="fixed z-50 w-[min(17rem,calc(100vw-1rem))] rounded-2xl border border-border bg-charcoal-900 p-3 shadow-xl"
         >
-          <div className="flex items-start gap-2">
+          {pos ? (
+            <span
+              aria-hidden
+              style={{ left: pos.arrow, [pos.up ? "bottom" : "top"]: -4 }}
+              className="absolute h-2 w-2 -translate-x-1/2 rotate-45 border border-border bg-charcoal-900"
+            />
+          ) : null}
+          <div className="relative flex items-start gap-2">
             <p className="min-w-0 flex-1 font-display text-[11px] uppercase tracking-[0.14em] text-ember">
               {title}
             </p>

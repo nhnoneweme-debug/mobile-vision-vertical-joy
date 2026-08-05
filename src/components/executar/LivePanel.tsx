@@ -26,14 +26,16 @@ import {
   SwitchCamera,
   Vibrate,
   Volume2,
-
   WifiOff,
   X,
+  BellOff,
+  RotateCcw,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
-import { HintIcon } from "@/components/ui/HintIcon";
+import { HintIcon, resetHints } from "@/components/ui/HintIcon";
+import { isTextOnly, setTextOnly, onTextOnlyChange } from "@/lib/voice-lock";
 import { buildPersonaDirective, getActivePersonaModel } from "@/lib/persona-studio";
 
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -82,7 +84,6 @@ import {
   setServerVoice,
   speakUnified,
   stopSpeaking,
-
   type DegradeReason,
   type TtsEngine,
 } from "@/lib/tts-engine";
@@ -164,7 +165,6 @@ function loadTiming(key: string, fallback: number) {
   return fallback;
 }
 
-
 const LANGS = [
   { code: "pt-BR", label: "PT" },
   { code: "en-US", label: "EN" },
@@ -208,7 +208,6 @@ type FeedEntry = {
   attachments?: AttachmentRef[];
   /** blocos do fluxo que originaram esta entrada (âncora visual) */
   refIds?: string[];
-
 };
 
 type ChatItem =
@@ -267,6 +266,10 @@ export function LivePanel({
 
   // Chat fluido: tudo que não vem do microfone entra aqui e é mesclado por hora.
   const [feed, setFeed] = useState<FeedEntry[]>([]);
+  /** manifestação da Wi/Mi sendo lida agora (botão de ler de cada resposta). */
+  const [readingFeedId, setReadingFeedId] = useState<string | null>(null);
+  const [textOnly, setTextOnlyState] = useState<boolean>(() => isTextOnly());
+  useEffect(() => onTextOnlyChange(setTextOnlyState), []);
   const [composer, setComposer] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const [stick, setStick] = useState(true);
@@ -352,7 +355,6 @@ export function LivePanel({
     }
   }, []);
 
-
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
     setAddressMode(loadAddressMode());
@@ -371,10 +373,9 @@ export function LivePanel({
   }, []);
 
   const pushFeed = useCallback((entry: Omit<FeedEntry, "id" | "at"> & { at?: number }) => {
-    setFeed((prev) => [
-      ...prev.slice(-60),
-      { id: newId("fd"), at: entry.at ?? Date.now(), ...entry },
-    ]);
+    const id = newId("fd");
+    setFeed((prev) => [...prev.slice(-60), { id, at: entry.at ?? Date.now(), ...entry }]);
+    return id;
   }, []);
 
   const [liveEvent, setLiveEvent] = useState<{
@@ -530,7 +531,6 @@ export function LivePanel({
     // transcrição; ele volta a ser apenas o campo de digitação livre.
   }, [emitEvent, lang, missionId, persist, sessionId]);
 
-
   const onFinalText = useCallback(
     (text: string) => {
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
@@ -581,20 +581,33 @@ export function LivePanel({
     (
       text: string,
       persona: Persona,
-      opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[] },
+      opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[]; speak?: boolean },
     ) => {
-      pushFeed({
+      const entryId = pushFeed({
         kind: "assistant",
         text,
         persona,
         ...(opts?.refIds?.length ? { refIds: opts.refIds } : {}),
       });
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
-      speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
+      // 3.9.6 — ESPELHAMENTO DE MODALIDADE: quem escreveu recebe resposta
+      // escrita (sem voz automática); quem falou recebe resposta falada.
+      if (opts?.speak !== false) {
+        setReadingFeedId(entryId);
+        speakLive(text, {
+          persona,
+          onEnd: () => {
+            setReadingFeedId((cur) => (cur === entryId ? null : cur));
+            opts?.onEnd?.();
+          },
+          ...(opts?.lang ? { lang: opts.lang } : {}),
+        });
+      } else {
+        opts?.onEnd?.();
+      }
     },
     [pushFeed, speakLive],
   );
-
 
   const speech = useSpeechToText(onFinalText, { lang });
   const speechRef = useRef(speech);
@@ -641,7 +654,7 @@ export function LivePanel({
    * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
    */
   const askSession = useCallback(
-    async (question: string, attachments?: AttachmentRef[]) => {
+    async (question: string, attachments?: AttachmentRef[], opts?: { spoken?: boolean }) => {
       const q = question.trim();
       if ((!q && !attachments?.length) || chatBusy) return;
       const forced = detectDirectPersona(q);
@@ -660,7 +673,10 @@ export function LivePanel({
           },
         });
         const persona = normalizePersona(res.persona);
-        manifest(res.message, persona, { lang: res.reply_lang });
+        manifest(res.message, persona, {
+          lang: res.reply_lang,
+          speak: opts?.spoken !== false,
+        });
         void persist({
           mission_id: missionId ?? null,
           kind: "dialog_turn",
@@ -719,7 +735,8 @@ export function LivePanel({
       const normSent = normalizeForMatch(text);
       setBlocks((prev) => prev.filter((b) => !normSent.includes(normalizeForMatch(b.text))));
     }
-    await askSession(text, refs.length ? refs : undefined);
+    // digitado = resposta ESCRITA (a pessoa pode não poder ouvir agora).
+    await askSession(text, refs.length ? refs : undefined, { spoken: false });
   }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
 
   // ------------------------------- BLOCOS ACIONÁVEIS (interagir / ler / agrupar)
@@ -748,6 +765,28 @@ export function LivePanel({
     stopSpeaking();
     setReadingId(null);
   }, []);
+
+  /** 3.9.6 — LER / PARAR a resposta da Wi/Mi, item a item. */
+  const stopFeedReading = useCallback(() => {
+    stopSpeaking();
+    setReadingFeedId(null);
+  }, []);
+
+  const readFeedEntry = useCallback(
+    (entry: FeedEntry) => {
+      if (isTextOnly()) {
+        toast("Modo somente texto ativo — a WiMi não fala agora.");
+        return;
+      }
+      setReadingFeedId(entry.id);
+      speakLive(entry.text, {
+        persona: entry.persona ?? DEFAULT_PERSONA,
+        lang: detectLang(entry.text) ?? langRef.current,
+        onEnd: () => setReadingFeedId((cur) => (cur === entry.id ? null : cur)),
+      });
+    },
+    [speakLive],
+  );
 
   const readBlocks = useCallback(
     (list: TranscriptBlock[]) => {
@@ -857,7 +896,6 @@ export function LivePanel({
       sessionId,
     ],
   );
-
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
@@ -1037,7 +1075,7 @@ export function LivePanel({
   // ANTI-ECO GLOBAL: enquanto a WiMi fala (TTS do servidor, voz nativa,
   // manifestações, rituais, leitura de bloco), o reconhecedor é FECHADO —
   // não apenas ignorado. Reabre ~300ms depois do fim do áudio.
-  const micPaused = actuators.speaking || readingId !== null;
+  const micPaused = actuators.speaking || readingId !== null || readingFeedId !== null;
   const micResumeRef = useRef(false);
   useEffect(() => {
     if (actuators.speaking) {
@@ -1054,8 +1092,6 @@ export function LivePanel({
     }, 300);
     return () => window.clearTimeout(t);
   }, [actuators.speaking]);
-
-
 
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
@@ -1497,7 +1533,6 @@ export function LivePanel({
   };
   const selectedBlocks = blocks.filter((b) => selectedIds.includes(b.id));
 
-
   const flowItems = (
     <>
       {chatItems.length === 0 && !currentLine ? (
@@ -1550,9 +1585,7 @@ export function LivePanel({
                 {actedIds.includes(item.block.id) ? (
                   <span className="text-ember">· acionado</span>
                 ) : null}
-                {readingId === item.block.id ? (
-                  <span className="text-ember">· lendo…</span>
-                ) : null}
+                {readingId === item.block.id ? <span className="text-ember">· lendo…</span> : null}
               </span>
               <button
                 type="button"
@@ -1622,7 +1655,6 @@ export function LivePanel({
               </div>
             </div>
           )
-
         ) : item.entry.kind === "system" ? (
           <p
             key={item.key}
@@ -1660,10 +1692,44 @@ export function LivePanel({
               </span>
             ) : null}
             <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
+            {/* 3.9.6 — toda resposta nasce com botão de ler: parar ou reler. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (textOnly) {
+                  toast("Modo somente texto ativo — a WiMi não fala agora.");
+                  return;
+                }
+                if (readingFeedId === item.entry.id) stopFeedReading();
+                else readFeedEntry(item.entry as FeedEntry);
+              }}
+              aria-label={
+                readingFeedId === item.entry.id ? "Parar leitura" : "Ler resposta em voz alta"
+              }
+              className={`mt-1 inline-flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] active:scale-95 ${
+                textOnly
+                  ? "border-border/60 text-muted-foreground opacity-60"
+                  : readingFeedId === item.entry.id
+                    ? "border-ember/50 bg-ember/10 text-ember"
+                    : "border-border text-muted-foreground"
+              }`}
+            >
+              {readingFeedId === item.entry.id ? (
+                <Square className="h-3 w-3 shrink-0" />
+              ) : (
+                <Volume2 className="h-3 w-3 shrink-0" />
+              )}
+              <span className="truncate">
+                {textOnly
+                  ? "somente texto"
+                  : readingFeedId === item.entry.id
+                    ? "lendo… (tocar para parar)"
+                    : "ler novamente"}
+              </span>
+            </button>
           </div>
         ),
       )}
-
 
       {currentLine && dynamic ? (
         <p className="text-foreground">
@@ -1727,8 +1793,6 @@ export function LivePanel({
           </button>
         </div>
       ) : null}
-
-
 
       {unread && !stick ? (
         <button
@@ -2069,7 +2133,6 @@ export function LivePanel({
           </p>
         ) : null}
 
-
         {dynamic ? (
           <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -2205,9 +2268,30 @@ export function LivePanel({
                 Quanto ela espera calada antes de tomar a palavra.
               </p>
             </div>
+            {/* 3.9.6 — volta atrás em todos os "não mostrar mais". */}
+            <div className="border-t border-border/60 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!window.confirm("Restaurar todas as explicações dos ícones?")) return;
+                  const n = resetHints();
+                  toast.success(
+                    n > 0
+                      ? `${n} explicação(ões) restaurada(s).`
+                      : "Nenhuma explicação estava oculta.",
+                  );
+                }}
+                className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground active:scale-95"
+              >
+                <RotateCcw className="h-3 w-3 shrink-0" />
+                <span className="truncate">Restaurar instruções</span>
+              </button>
+              <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+                Faz os popups explicativos dos ícones voltarem a aparecer.
+              </p>
+            </div>
           </div>
         ) : null}
-
       </section>
 
       {expandFlow ? (
@@ -2312,6 +2396,41 @@ export function LivePanel({
             onConfig={actuators.setAudioConfig}
             showSound
           />
+        </div>
+        {/* 3.9.6 — TRAVA SOMENTE TEXTO, colada no bloco de emissão de áudio. */}
+        <div className="mt-3 flex items-center gap-2">
+          <HintIcon
+            id="text-only-lock"
+            ariaLabel="Modo somente texto (sem fala)"
+            title="Somente texto, sem fala"
+            description={
+              <>
+                Com a trava ligada, a WiMi <strong>nunca fala</strong>: nenhuma manifestação,
+                resposta ou leitura automática emite som. Ela continua ouvindo, transcrevendo e
+                registrando normalmente, e o diálogo segue por texto. Os botões de “ler” ficam
+                visíveis, mas inativos.
+              </>
+            }
+            active={textOnly}
+            action={{
+              label: textOnly ? "Desligar a trava (voltar a falar)" : "Ligar trava (silêncio)",
+              onClick: () => {
+                const next = !isTextOnly();
+                setTextOnly(next);
+                if (next) {
+                  stopSpeaking();
+                  setReadingFeedId(null);
+                  setReadingId(null);
+                }
+              },
+            }}
+          >
+            <BellOff className="h-3.5 w-3.5" />
+            <span className="truncate">{textOnly ? "SEM FALA" : "fala ON"}</span>
+          </HintIcon>
+          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+            {textOnly ? "silêncio absoluto — só texto" : "a WiMi pode responder falando"}
+          </span>
         </div>
         <VoiceRow
           on={actuators.speechOn}

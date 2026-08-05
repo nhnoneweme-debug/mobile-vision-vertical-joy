@@ -14,6 +14,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { speakWithVoice, langBase, defaultLocale, type TtsLangCode } from "@/lib/tts-voices";
+import { isTextOnly } from "@/lib/voice-lock";
 
 export type TtsEngine = "server" | "device" | "text";
 
@@ -281,6 +282,11 @@ export async function speakUnified(text: string, opts: SpeakOptions = {}): Promi
   if (!clean) {
     opts.onEnd?.();
     return "empty";
+  }
+  // 3.9.6 — TRAVA "SOMENTE TEXTO": silêncio absoluto, em qualquer caminho.
+  if (isTextOnly()) {
+    opts.onEnd?.();
+    return "text-only";
   }
   stopSpeaking();
   const gen = ++generation;
