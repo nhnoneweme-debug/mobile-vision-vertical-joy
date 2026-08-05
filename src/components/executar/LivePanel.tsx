@@ -434,6 +434,11 @@ export function LivePanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSpeechAtRef = useRef<number>(Date.now());
   const [liveLine, setLiveLine] = useState("");
+  /** 3.9.7 — ponte para "Interagir" no envio manual (definido mais abaixo). */
+  const interactRef = useRef<((list: TranscriptBlock[]) => Promise<void>) | null>(null);
+  /** tique de 1s só enquanto há buffer aberto (indicador "buffer aberto — 2min18s") */
+  const [bufferTick, setBufferTick] = useState(0);
+
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
 
