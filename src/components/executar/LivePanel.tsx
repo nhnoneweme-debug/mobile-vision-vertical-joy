@@ -473,19 +473,10 @@ export function LivePanel({
     });
     emitEvent("transcript_block", { block_id: blockId, chars: text.length });
 
-    // REGIME MANUAL (Dinâmico OFF): o texto já nasceu no composer (ditado ao
-    // vivo). Na pausa o trecho SOBE para o fluxo consolidado (acima) e o
-    // rascunho permanece editável na caixa, acumulando a fala contínua.
-    if (!dynamicRef.current) {
-      if (!dictSuppressRef.current) {
-        const base = dictBaseRef.current ?? "";
-        setComposer(`${base} ${text}`.trim().replace(/\s+/g, " "));
-      }
-      dictBaseRef.current = null;
-      dictLiveRef.current = "";
-      dictSuppressRef.current = false;
-    }
+    // 3.9.3 — REVERSÃO: a escrita nasce NO BLOCO. O composer não recebe mais a
+    // transcrição; ele volta a ser apenas o campo de digitação livre.
   }, [emitEvent, lang, missionId, persist, sessionId]);
+
 
   const onFinalText = useCallback(
     (text: string) => {
