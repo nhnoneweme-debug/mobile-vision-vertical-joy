@@ -155,7 +155,9 @@ type FeedEntry = {
   at: number;
   persona?: Persona;
   label?: string;
+  attachments?: AttachmentRef[];
 };
+
 
 type ChatItem =
   | { key: string; at: number; type: "mic"; block: TranscriptBlock }
