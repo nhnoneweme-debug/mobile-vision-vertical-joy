@@ -1419,11 +1419,13 @@ export function LivePanel({
               className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
             />
           ) : (
-            <button
+            <div
               key={item.key}
-              type="button"
-              onClick={() => startEdit(item.block)}
-              className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
+              className={`rounded-lg border px-2.5 py-1.5 ${
+                selectedIds.includes(item.block.id)
+                  ? "border-ember/60 bg-ember/10"
+                  : "border-border/40 bg-charcoal-900/50"
+              }`}
             >
               <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                 <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
@@ -1436,10 +1438,82 @@ export function LivePanel({
                 ) : (
                   <span className="opacity-70">· registrado · não enviado</span>
                 )}
+                {actedIds.includes(item.block.id) ? (
+                  <span className="text-ember">· acionado</span>
+                ) : null}
+                {readingId === item.block.id ? (
+                  <span className="text-ember">· lendo…</span>
+                ) : null}
               </span>
-              <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectMode) toggleSelected(item.block.id);
+                  else startEdit(item.block);
+                }}
+                onPointerDown={() => {
+                  longPressRef.current = window.setTimeout(() => {
+                    setSelectMode(true);
+                    toggleSelected(item.block.id);
+                  }, 500);
+                }}
+                onPointerUp={() => {
+                  if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                }}
+                onPointerLeave={() => {
+                  if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                }}
+                className="mt-0.5 block w-full text-left text-muted-foreground active:opacity-70"
+              >
+                {item.block.text}
+              </button>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void interactWithBlocks([item.block])}
+                  disabled={chatBusy}
+                  aria-label="Interagir com este bloco"
+                  className="inline-flex min-w-0 items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-2 py-0.5 text-[10px] text-ember active:scale-95 disabled:opacity-50"
+                >
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">interagir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    readingId === item.block.id ? stopReading() : readBlocks([item.block])
+                  }
+                  aria-label={readingId === item.block.id ? "Parar leitura" : "Ler em voz alta"}
+                  className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground active:scale-95"
+                >
+                  {readingId === item.block.id ? (
+                    <Square className="h-3 w-3 shrink-0" />
+                  ) : (
+                    <Volume2 className="h-3 w-3 shrink-0" />
+                  )}
+                  <span className="truncate">{readingId === item.block.id ? "parar" : "ler"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectMode(true);
+                    toggleSelected(item.block.id);
+                  }}
+                  aria-pressed={selectedIds.includes(item.block.id)}
+                  className={`inline-flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] active:scale-95 ${
+                    selectedIds.includes(item.block.id)
+                      ? "border-ember/50 text-ember"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  <span className="truncate">
+                    {selectedIds.includes(item.block.id) ? "selecionado" : "selecionar"}
+                  </span>
+                </button>
+              </div>
+            </div>
           )
+
         ) : item.entry.kind === "system" ? (
           <p
             key={item.key}
