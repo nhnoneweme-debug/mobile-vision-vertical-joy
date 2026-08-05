@@ -7,12 +7,24 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Send, Sparkles, X } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { clientMomentHeaders } from "@/lib/client-moment";
 import { loadEffort } from "@/lib/ai-effort";
 import { playAssistantTts, stopAssistantTts } from "@/lib/tts-play";
+import { logExecutionEvent } from "@/lib/execution.functions";
+import {
+  AttachButton,
+  AttachChips,
+  AttachmentCards,
+  releasePending,
+  uploadAttachments,
+  type AttachmentRef,
+  type PendingAttachment,
+} from "./Attachments";
 
-type Msg = { role: "user" | "assistant"; text: string };
+type Msg = { role: "user" | "assistant"; text: string; attachments?: AttachmentRef[] };
+
 
 export function ExecutarChatDrawer({
   open,
