@@ -44,6 +44,8 @@ export function ExecutarChatDrawer({
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const seededRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -55,13 +57,22 @@ export function ExecutarChatDrawer({
   }, [messages, busy]);
 
   const send = useCallback(
-    async (userText: string) => {
+    async (userText: string, attachRefs?: AttachmentRef[]) => {
       const text = userText.trim();
-      if (!text || busy) return;
-      const next: Msg[] = [...messages, { role: "user", text }, { role: "assistant", text: "" }];
+      const attachments = attachRefs ?? [];
+      if ((!text && attachments.length === 0) || busy) return;
+      const label = attachments.length
+        ? `${text}${text ? "\n" : ""}[anexos: ${attachments.map((a) => a.name).join(", ")}]`
+        : text;
+      const next: Msg[] = [
+        ...messages,
+        { role: "user", text, ...(attachments.length ? { attachments } : {}) },
+        { role: "assistant", text: "" },
+      ];
       setMessages(next);
       setInput("");
       setBusy(true);
+
 
       let token: string | null = null;
       try {
