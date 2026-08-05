@@ -174,6 +174,9 @@ type FeedEntry = {
   persona?: Persona;
   label?: string;
   attachments?: AttachmentRef[];
+  /** blocos do fluxo que originaram esta entrada (âncora visual) */
+  refIds?: string[];
+
 };
 
 type ChatItem =
