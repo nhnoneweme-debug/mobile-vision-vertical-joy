@@ -1203,7 +1203,11 @@ export function LivePanel({
                 <span className="block text-[10px] uppercase tracking-wide opacity-80">
                   você · {clock(item.at)}
                 </span>
-                <span className="block whitespace-pre-wrap">{item.entry.text}</span>
+                {item.entry.text ? (
+                  <span className="block whitespace-pre-wrap">{item.entry.text}</span>
+                ) : null}
+                <AttachmentCards items={item.entry.attachments} />
+
               </div>
             </div>
           ) : (
