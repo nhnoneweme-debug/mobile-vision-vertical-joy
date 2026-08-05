@@ -133,6 +133,17 @@ const LANGS = [
   { code: "es-ES", label: "ES" },
 ] as const;
 
+/** Normaliza texto para comparar bloco falado × versão enviada (sem duplicar). */
+function normalizeForMatch(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 type TranscriptBlock = {
   id: string;
   text: string;
