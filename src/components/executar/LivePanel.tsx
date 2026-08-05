@@ -743,6 +743,10 @@ export function LivePanel({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actedIds, setActedIds] = useState<string[]>([]);
   const [readingId, setReadingId] = useState<string | null>(null);
+  /** manifestação da Wi/Mi sendo lida agora (botão de ler de cada resposta). */
+  const [readingFeedId, setReadingFeedId] = useState<string | null>(null);
+  const [textOnly, setTextOnlyState] = useState<boolean>(() => isTextOnly());
+  useEffect(() => onTextOnlyChange(setTextOnlyState), []);
   const readAbortRef = useRef(false);
   const longPressRef = useRef<number | null>(null);
 
@@ -761,6 +765,28 @@ export function LivePanel({
     stopSpeaking();
     setReadingId(null);
   }, []);
+
+  /** 3.9.6 — LER / PARAR a resposta da Wi/Mi, item a item. */
+  const stopFeedReading = useCallback(() => {
+    stopSpeaking();
+    setReadingFeedId(null);
+  }, []);
+
+  const readFeedEntry = useCallback(
+    (entry: FeedEntry) => {
+      if (isTextOnly()) {
+        toast("Modo somente texto ativo — a WiMi não fala agora.");
+        return;
+      }
+      setReadingFeedId(entry.id);
+      speakLive(entry.text, {
+        persona: entry.persona ?? DEFAULT_PERSONA,
+        lang: detectLang(entry.text) ?? langRef.current,
+        onEnd: () => setReadingFeedId((cur) => (cur === entry.id ? null : cur)),
+      });
+    },
+    [speakLive],
+  );
 
   const readBlocks = useCallback(
     (list: TranscriptBlock[]) => {
@@ -1050,7 +1076,7 @@ export function LivePanel({
   // ANTI-ECO GLOBAL: enquanto a WiMi fala (TTS do servidor, voz nativa,
   // manifestações, rituais, leitura de bloco), o reconhecedor é FECHADO —
   // não apenas ignorado. Reabre ~300ms depois do fim do áudio.
-  const micPaused = actuators.speaking || readingId !== null;
+  const micPaused = actuators.speaking || readingId !== null || readingFeedId !== null;
   const micResumeRef = useRef(false);
   useEffect(() => {
     if (actuators.speaking) {
