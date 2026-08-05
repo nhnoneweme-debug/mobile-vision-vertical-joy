@@ -238,6 +238,12 @@ export function LivePanel({
   /** Regime corrente lido de dentro de callbacks estáveis (manual vs dinâmico). */
   const dynamicRef = useRef(false);
   dynamicRef.current = dynamic;
+  // DITADO NO COMPOSER (regime manual): o texto nasce dentro da caixa de
+  // edição enquanto a pessoa fala. base = rascunho antes do bloco atual;
+  // live = último trecho espelhado; suppress = usuário reescreveu à mão.
+  const dictBaseRef = useRef<string | null>(null);
+  const dictLiveRef = useRef("");
+  const dictSuppressRef = useRef(false);
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -409,11 +415,17 @@ export function LivePanel({
     });
     emitEvent("transcript_block", { block_id: blockId, chars: text.length });
 
-    // REGIME MANUAL (Dinâmico OFF): o bloco fechado cai DENTRO do composer,
-    // acumulando e editável. Nada é enviado sozinho — mas o bloco já foi
-    // persistido acima, então nada se perde se o usuário não enviar.
+    // REGIME MANUAL (Dinâmico OFF): o texto já nasceu no composer (ditado ao
+    // vivo). Na pausa o trecho SOBE para o fluxo consolidado (acima) e o
+    // rascunho permanece editável na caixa, acumulando a fala contínua.
     if (!dynamicRef.current) {
-      setComposer((prev) => `${prev} ${text}`.trim().replace(/\s+/g, " "));
+      if (!dictSuppressRef.current) {
+        const base = dictBaseRef.current ?? "";
+        setComposer(`${base} ${text}`.trim().replace(/\s+/g, " "));
+      }
+      dictBaseRef.current = null;
+      dictLiveRef.current = "";
+      dictSuppressRef.current = false;
     }
   }, [emitEvent, lang, missionId, persist, sessionId]);
 
@@ -762,6 +774,19 @@ export function LivePanel({
     () => `${liveLine} ${speech.interim}`.trim(),
     [liveLine, speech.interim],
   );
+
+  // DITADO AO VIVO NO COMPOSER — regime manual: cada palavra reconhecida
+  // aparece na caixa de edição (nada no fluxo consolidado ainda).
+  useEffect(() => {
+    if (dynamic) return;
+    const live = currentLine.trim();
+    if (!live || dictSuppressRef.current) return;
+    setComposer((prev) => {
+      if (dictBaseRef.current === null) dictBaseRef.current = prev;
+      dictLiveRef.current = live;
+      return `${dictBaseRef.current} ${live}`.trim().replace(/\s+/g, " ");
+    });
+  }, [currentLine, dynamic]);
 
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
@@ -1270,7 +1295,7 @@ export function LivePanel({
         ),
       )}
 
-      {currentLine ? (
+      {currentLine && dynamic ? (
         <p className="text-foreground">
           <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
           {currentLine}
