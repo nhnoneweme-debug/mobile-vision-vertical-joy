@@ -1527,19 +1527,33 @@ export function LivePanel({
           </div>
         ) : null}
 
-        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <MessagesSquare className="h-3.5 w-3.5 shrink-0" /> Fluxo único: o que você fala, o que
-          você escreve e o que a Wi ou o Mi respondem — tudo aqui, em ordem.
-        </p>
+        {/* (a) COMPOSER ÚNICO no topo · (b) FLUXO CONSOLIDADO abaixo. */}
+        {composerView}
+
+        <div className="mt-3 flex items-center gap-2">
+          <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 truncate">
+              Fluxo consolidado: fala, texto e respostas da Wi/Mi em ordem.
+            </span>
+          </p>
+          <ExpandButton onClick={() => setExpandFlow(true)} />
+        </div>
 
         {chatView}
-        {composerView}
 
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
         </p>
       </section>
+
+      {expandFlow ? (
+        <ExpandedSheet title="Fluxo do ouvido" onClose={() => setExpandFlow(false)}>
+          <div className="space-y-2 text-[13px] leading-relaxed">{flowItems}</div>
+        </ExpandedSheet>
+      ) : null}
+
 
       {/* CÂMERA */}
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
