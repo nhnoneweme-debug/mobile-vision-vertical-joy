@@ -53,6 +53,7 @@ import {
 import { looksLikeActionRequest } from "@/lib/action-intent";
 import { ActionDraftSheet, type ActionDraft } from "@/components/executar/ActionDraftSheet";
 import { hasActivePushSubscription } from "@/lib/push";
+import { refreshActionSchedule } from "@/lib/action-schedule";
 
 import {
   interpretTriggerSpeech,
@@ -303,6 +304,8 @@ export function LivePanel({
   const [actionSaving, setActionSaving] = useState(false);
   const [actionSpoken, setActionSpoken] = useState(false);
   const [pushOn, setPushOn] = useState(false);
+  /** espelho das ações carregadas (usado antes da query ser declarada). */
+  const triggersRef = useRef<TriggerDefinition[]>([]);
   useEffect(() => {
     void hasActivePushSubscription().then(setPushOn);
   }, []);
@@ -1318,6 +1321,7 @@ export function LivePanel({
 
   // -------------------------------------------------- MOTOR DE GATILHOS
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+  triggersRef.current = (triggersQ.data ?? []) as TriggerDefinition[];
   // Comandos de voz armados — contador discreto no overlay, nunca na fila.
   const commandsArmed = useMemo(
     () => armedCommands((triggersQ.data ?? []) as TriggerDefinition[]).length,
