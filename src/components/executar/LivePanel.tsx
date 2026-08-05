@@ -82,7 +82,17 @@ import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
 import { useTodayEntries } from "./TodayTimeline";
 import { ExecutionLogCard } from "./ExecutionLogCard";
-import { DualInput } from "./DualInput";
+import {
+  AttachButton,
+  AttachChips,
+  AttachmentCards,
+  releasePending,
+  uploadAttachments,
+  type AttachmentRef,
+  type PendingAttachment,
+} from "./Attachments";
+import { ExpandButton, ExpandedSheet } from "./ScrollBox";
+
 import { liveHandoverReply, liveSessionChat, liveUnderstanding } from "@/lib/live-dialog.functions";
 import {
   DEFAULT_PERSONA,
