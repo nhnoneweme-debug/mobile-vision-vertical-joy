@@ -1,7 +1,7 @@
 // D1 — AÇÃO PERSONALIZADA.
 // O usuário descreve em linguagem natural (voz ou texto) o que deve acontecer
 // no disparo; a IA converte em primitivas + uma mensagem composta. O plano
-// aparece para revisão antes de virar parte do gatilho.
+// aparece para revisão antes de virar parte da ação.
 
 import { useState } from "react";
 import { Wand2 } from "lucide-react";

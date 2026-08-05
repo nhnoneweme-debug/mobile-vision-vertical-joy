@@ -62,6 +62,50 @@ export type Database = {
         }
         Relationships: []
       }
+      action_push_schedule: {
+        Row: {
+          body: string | null
+          created_at: string
+          fire_at: string
+          id: string
+          sent_at: string | null
+          title: string | null
+          trigger_id: string
+          tz: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          fire_at: string
+          id?: string
+          sent_at?: string | null
+          title?: string | null
+          trigger_id: string
+          tz?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          fire_at?: string
+          id?: string
+          sent_at?: string | null
+          title?: string | null
+          trigger_id?: string
+          tz?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_push_schedule_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "trigger_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_audit_log: {
         Row: {
           action: string

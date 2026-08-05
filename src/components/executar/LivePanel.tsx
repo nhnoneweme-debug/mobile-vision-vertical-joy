@@ -31,7 +31,7 @@ import {
   BellOff,
   RotateCcw,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
 import { HintIcon, resetHints } from "@/components/ui/HintIcon";
@@ -43,14 +43,23 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import {
   armedCommands,
+  createTrigger,
   listTriggers,
   recordFiring,
   type LiveEventName,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
+import { looksLikeActionRequest } from "@/lib/action-intent";
+import { ActionDraftSheet, type ActionDraft } from "@/components/executar/ActionDraftSheet";
+import { hasActivePushSubscription } from "@/lib/push";
+import { refreshActionSchedule } from "@/lib/action-schedule";
 
-import { runTriggerPrompt } from "@/lib/triggers.functions";
+import {
+  interpretTriggerSpeech,
+  resolveTriggerProposal,
+  runTriggerPrompt,
+} from "@/lib/triggers.functions";
 
 import { useCamera } from "@/hooks/useCamera";
 import {
@@ -244,7 +253,7 @@ export function LivePanel({
   header,
 }: {
   missionId?: string | null;
-  /** Abre a área de Comandos (aba Gatilhos) a partir do contador do overlay. */
+  /** Abre a área de Comandos (aba Ações) a partir do contador do overlay. */
   onOpenCommands?: () => void;
   /** Conteúdo da jornada renderizado logo abaixo do relógio. */
   header?: React.ReactNode;
@@ -286,6 +295,19 @@ export function LivePanel({
   const [chatBusy, setChatBusy] = useState(false);
   const [stick, setStick] = useState(true);
   const [unread, setUnread] = useState(false);
+
+  // 4.0 — CRIAR AÇÕES PELA CONVERSA (texto ou voz, mesma regra dual).
+  const qc = useQueryClient();
+  const [actionDraft, setActionDraft] = useState<ActionDraft | null>(null);
+  const [actionAuditId, setActionAuditId] = useState<string | null>(null);
+  const [actionSaving, setActionSaving] = useState(false);
+  const [actionSpoken, setActionSpoken] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
+  /** espelho das ações carregadas (usado antes da query ser declarada). */
+  const triggersRef = useRef<TriggerDefinition[]>([]);
+  useEffect(() => {
+    void hasActivePushSubscription().then(setPushOn);
+  }, []);
 
   const addressModeRef = useRef<AddressMode>("addressed");
   const callCodesRef = useRef<string[]>([]);
@@ -416,7 +438,7 @@ export function LivePanel({
     return () => setAmbientSessionStart(null);
   }, [sessionStartedAt]);
 
-  // O início da sessão é um evento de primeira classe (gatilhos podem escutar).
+  // O início da sessão é um evento de primeira classe (ações podem escutar).
   useEffect(() => {
     emitEvent("session_start", { session_started_at: new Date(sessionStartedAt).toISOString() });
   }, [emitEvent, sessionStartedAt]);
@@ -694,6 +716,72 @@ export function LivePanel({
   );
 
   /**
+   * 4.0 — CRIAR AÇÃO PELA CONVERSA: o pedido vira RASCUNHO estruturado e só
+   * existe de verdade depois da confirmação da pessoa.
+   */
+  const proposeAction = useCallback(
+    async (text: string, spoken: boolean) => {
+      setChatBusy(true);
+      try {
+        const res = await interpretTriggerSpeech({ data: { text: text.slice(0, 2000) } });
+        const parsed = JSON.parse(res.draft_json) as Record<string, unknown>;
+        const d: ActionDraft = {
+          name: String(parsed.name ?? "nova ação"),
+          enabled: true,
+          trigger_type: parsed.trigger_type === "chronos" ? "chronos" : "event",
+          condition: parsed.condition as ActionDraft["condition"],
+          action: (parsed.action ?? {}) as ActionDraft["action"],
+          active_window: (parsed.active_window ?? {}) as ActionDraft["active_window"],
+          cooldown_seconds: Number(parsed.cooldown_seconds ?? 30),
+          summary: typeof parsed.summary === "string" ? parsed.summary : undefined,
+        };
+        setActionAuditId(res.audit_id);
+        setActionSpoken(spoken);
+        setActionDraft(d);
+        manifest(
+          `Montei uma ação: ${d.summary ?? d.name}. Confirma que eu salvo?`,
+          DEFAULT_PERSONA,
+          { speak: spoken },
+        );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Não consegui montar a ação.");
+      } finally {
+        setChatBusy(false);
+      }
+    },
+    [manifest],
+  );
+
+  /** Confirmação: a ação passa a existir e entra na lista e no overlay. */
+  const saveActionDraft = useCallback(async () => {
+    if (!actionDraft) return;
+    setActionSaving(true);
+    try {
+      const existing = (triggersRef.current ?? []) as TriggerDefinition[];
+      await createTrigger(actionDraft, existing.length);
+      if (actionAuditId)
+        void resolveTriggerProposal({ data: { audit_id: actionAuditId, status: "applied" } });
+      await qc.invalidateQueries({ queryKey: ["triggers"] });
+      void refreshActionSchedule().catch(() => {});
+      toast.success("Ação criada.");
+      manifest(`Ação "${actionDraft.name}" armada.`, DEFAULT_PERSONA, { speak: actionSpoken });
+      setActionDraft(null);
+      setActionAuditId(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao salvar a ação.");
+    } finally {
+      setActionSaving(false);
+    }
+  }, [actionAuditId, actionDraft, actionSpoken, manifest, qc]);
+
+  const cancelActionDraft = useCallback(() => {
+    if (actionAuditId)
+      void resolveTriggerProposal({ data: { audit_id: actionAuditId, status: "rejected" } });
+    setActionDraft(null);
+    setActionAuditId(null);
+  }, [actionAuditId]);
+
+  /**
    * Pergunta ao par WiMi dentro do próprio fluxo (sem tela separada).
    * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
    */
@@ -703,6 +791,13 @@ export function LivePanel({
       if ((!q && !attachments?.length) || chatBusy) return;
       const forced = detectDirectPersona(q);
       pushFeed({ kind: "typed", text: q, attachments });
+
+      // 4.0 — pedido de automação não vira conversa: vira rascunho de ação.
+      if (!attachments?.length && looksLikeActionRequest(q)) {
+        chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
+        void proposeAction(q, opts?.spoken !== false);
+        return;
+      }
 
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
       setChatBusy(true);
@@ -741,7 +836,7 @@ export function LivePanel({
         setChatBusy(false);
       }
     },
-    [chatBusy, manifest, missionId, persist, pushFeed, sessionContent, sessionId],
+    [chatBusy, manifest, missionId, persist, proposeAction, pushFeed, sessionContent, sessionId],
   );
 
   /**
@@ -1101,7 +1196,7 @@ export function LivePanel({
       lastSpeechAtRef.current = Date.now();
       if (!turn) return;
       turnRef.current = [];
-      // o evento continua existindo para gatilhos de evento "silêncio".
+      // o evento continua existindo para ações de evento "silêncio".
       emitEvent("silence", { silence_ms: handoverMsRef.current });
 
       void handleHandover(turn);
@@ -1219,8 +1314,9 @@ export function LivePanel({
     });
   }, [blocks, draft, editingId, lang, missionId, persist, sessionId]);
 
-  // -------------------------------------------------- MOTOR DE GATILHOS
+  // -------------------------------------------------- MOTOR DE AÇÕES
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+  triggersRef.current = (triggersQ.data ?? []) as TriggerDefinition[];
   // Comandos de voz armados — contador discreto no overlay, nunca na fila.
   const commandsArmed = useMemo(
     () => armedCommands((triggersQ.data ?? []) as TriggerDefinition[]).length,
@@ -1283,7 +1379,7 @@ export function LivePanel({
         }
 
         if (action.custom?.plan || action.custom?.instruction) {
-          toast(`gatilho: ${trigger.name}`, {
+          toast(`ação: ${trigger.name}`, {
             description: action.custom.plan ?? action.custom.instruction,
             duration: 8000,
           });
@@ -1483,7 +1579,7 @@ export function LivePanel({
             manifest("O que você está executando agora?", "wi");
           });
       }
-      toast(`gatilho: ${trigger.name}`, {
+      toast(`ação: ${trigger.name}`, {
         description: action.message ?? info?.matched_text ?? undefined,
       });
       if (action.message) {
@@ -1495,7 +1591,7 @@ export function LivePanel({
         mission_id: missionId ?? null,
         kind: "sensor_reading",
         channel: "foreground",
-        note: `gatilho disparado: ${trigger.name}`,
+        note: `ação disparada: ${trigger.name}`,
         meta: {
           session_id: sessionId,
           type: "trigger_fired",
@@ -2102,6 +2198,19 @@ export function LivePanel({
       {journeyLog ? (
         <JourneyLogSheet context={journeyLog} onClose={() => setJourneyLog(null)} />
       ) : null}
+      {actionDraft ? (
+        <ActionDraftSheet
+          draft={actionDraft}
+          saving={actionSaving}
+          pushOn={pushOn}
+          onSave={() => void saveActionDraft()}
+          onAdjust={() => {
+            cancelActionDraft();
+            onOpenCommands?.();
+          }}
+          onCancel={cancelActionDraft}
+        />
+      ) : null}
       {offline ? (
         <p className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
           <WifiOff className="h-4 w-4 shrink-0" /> Você está offline. A captura fica pausada — nada
@@ -2686,7 +2795,7 @@ function ActuatorRow({
           {showSound ? (
             <p className="mt-3 text-[11px] text-muted-foreground">
               Configuração do padrão sonoro. Ligado sozinho, o áudio fica armado e silencioso — só
-              toca quando um gatilho, uma manifestação ou o beacon abaixo disparar.
+              toca quando um ação, uma manifestação ou o beacon abaixo disparar.
             </p>
           ) : null}
           <div className="mt-3 flex gap-2">

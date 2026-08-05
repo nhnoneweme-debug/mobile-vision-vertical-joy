@@ -1,8 +1,8 @@
-// Gatilho Studio — construtor guiado, biblioteca de modelos, teste simulado,
-// versões (append-only) e estatísticas por gatilho.
+// Studio de Ações — construtor guiado, biblioteca de modelos, teste simulado,
+// versões (append-only) e estatísticas por ação.
 // A avaliação em tempo real continua acontecendo no painel Live.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -54,6 +54,8 @@ import {
   type ActionResult,
   type LiveEventName,
 } from "@/lib/triggers";
+import { guaranteeLabel, refreshActionSchedule } from "@/lib/action-schedule";
+import { enablePush, hasActivePushSubscription, isPushSupported } from "@/lib/push";
 import { GeneralReportSheet, TriggerReportSheet } from "./TriggerReport";
 import { useActuators } from "@/providers/ActuatorsProvider";
 import { useLiveSessionStart, useSecondsTick } from "@/hooks/useLiveSession";
@@ -313,6 +315,13 @@ export function TriggersSection() {
   const tick = useSecondsTick();
 
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+
+  // 4.0 — SEGUNDO PLANO: opt-in de notificação + agenda no servidor.
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    void hasActivePushSubscription().then(setPushOn);
+  }, []);
   const firingsQ = useQuery({ queryKey: ["trigger-firings"], queryFn: () => listFirings(200) });
 
   const triggers = useMemo(
@@ -321,6 +330,12 @@ export function TriggersSection() {
   );
 
   const stats = useMemo(() => computeStats(firingsQ.data ?? []), [firingsQ.data]);
+
+  // A agenda do servidor acompanha a lista de ações (criar, ligar, desligar).
+  useEffect(() => {
+    if (!pushOn || !triggersQ.data) return;
+    void refreshActionSchedule(triggersQ.data).catch(() => {});
+  }, [pushOn, triggersQ.data]);
 
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ["triggers"] });
@@ -333,7 +348,7 @@ export function TriggersSection() {
       const draft = buildDraft(f);
       if (f.id) {
         const current = triggers.find((t) => t.id === f.id);
-        if (!current) throw new Error("Gatilho não encontrado.");
+        if (!current) throw new Error("Ação não encontrada.");
         await updateTriggerVersioned(current, { ...draft, enabled: current.enabled });
       } else {
         await createTrigger(draft, triggers.length);
@@ -343,7 +358,7 @@ export function TriggersSection() {
       setForm(EMPTY_FORM);
       setOpen(false);
       invalidate();
-      toast.success("Gatilho salvo.");
+      toast.success("Ação salva.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -383,7 +398,7 @@ export function TriggersSection() {
       setSpeakOpen(false);
       setSpeakQuick(false);
       invalidate();
-      toast.success("Gatilho criado e ligado.");
+      toast.success("Ação criada e ligada.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -392,7 +407,7 @@ export function TriggersSection() {
     mutationFn: (t: TriggerDefinition) => duplicateTrigger(t, triggers.length),
     onSuccess: () => {
       invalidate();
-      toast.success("Gatilho duplicado (desligado).");
+      toast.success("Ação duplicada (desligada).");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -496,11 +511,32 @@ export function TriggersSection() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Zap className="h-3.5 w-3.5 shrink-0" /> Gatilho Studio
+              <Zap className="h-3.5 w-3.5 shrink-0" /> Studio de Ações
             </h3>
             <p className="mt-1 text-[12px] text-muted-foreground">
               Avaliados na ordem, de cima pra baixo, enquanto o painel Live está aberto.
             </p>
+            {isPushSupported() && !pushOn ? (
+              <button
+                type="button"
+                disabled={pushBusy}
+                onClick={async () => {
+                  setPushBusy(true);
+                  const r = await enablePush();
+                  setPushBusy(false);
+                  if (!r.ok) {
+                    toast.error(r.error ?? "Não consegui ativar as notificações.");
+                    return;
+                  }
+                  setPushOn(true);
+                  void refreshActionSchedule().catch(() => {});
+                  toast.success("Ações com hora marcada agora avisam com o app fechado.");
+                }}
+                className="mt-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-[11px] text-ember disabled:opacity-40 active:scale-95"
+              >
+                {pushBusy ? "ativando…" : "Ativar notificações (app fechado)"}
+              </button>
+            ) : null}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <button
@@ -583,7 +619,7 @@ export function TriggersSection() {
           <p className="mt-3 text-[12px] text-muted-foreground">carregando…</p>
         ) : triggers.length === 0 ? (
           <p className="mt-3 rounded-xl border border-border/60 bg-charcoal-950/40 p-3 text-[12px] text-muted-foreground">
-            Nenhum gatilho ainda. Comece pela biblioteca de <strong>Modelos</strong> ou crie um no
+            Nenhuma ação ainda. Comece pela biblioteca de <strong>Modelos</strong> ou crie uma no
             construtor.
           </p>
         ) : (
@@ -644,6 +680,16 @@ export function TriggersSection() {
                                   armado — esperando a frase
                                 </p>
                               ) : null}
+                              {(() => {
+                                const g = guaranteeLabel(t, pushOn);
+                                return (
+                                  <p
+                                    className={`mt-0.5 text-[10px] ${g.strong ? "text-emerald-400" : "text-muted-foreground"}`}
+                                  >
+                                    {g.text}
+                                  </p>
+                                );
+                              })()}
                               <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                                 cooldown {formatCooldown(t.cooldown_seconds)} · {s?.total ?? 0}{" "}
                                 total · {s?.today ?? 0} hoje
@@ -738,7 +784,7 @@ export function TriggersSection() {
         )}
 
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Live pausado = avaliador pausado. Até os gatilhos de hora do dia só disparam com o painel
+          Live pausado = avaliador pausado. Até as ações de hora do dia só disparam com o painel
           Live aberto — não há execução em segundo plano nesta fatia.
         </p>
       </section>
@@ -746,7 +792,7 @@ export function TriggersSection() {
       {open ? (
         <section className="rounded-2xl border border-ember/30 bg-charcoal-900/60 p-4">
           <h3 className="font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            {form.id ? "Editar gatilho" : "Construtor de gatilho"}
+            {form.id ? "Editar ação" : "Construtor de ação"}
           </h3>
 
           <Step n={1} title="Nome">
@@ -988,8 +1034,8 @@ export function TriggersSection() {
               </Field>
             ) : null}
 
-            {/* ------------------------------------ ENCADEAMENTO ENTRE GATILHOS */}
-            <Field label="acionar outro gatilho (opcional)">
+            {/* ------------------------------------ ENCADEAMENTO ENTRE AÇÕES */}
+            <Field label="acionar outra ação (opcional)">
               <select
                 value={form.chainFireId}
                 onChange={(e) => setForm({ ...form, chainFireId: e.target.value })}
@@ -1005,7 +1051,7 @@ export function TriggersSection() {
                   ))}
               </select>
             </Field>
-            <Field label="armar/desarmar outro gatilho (opcional)">
+            <Field label="armar/desarmar outra ação (opcional)">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <select
                   value={form.chainEnableId}
@@ -1136,7 +1182,7 @@ export function TriggersSection() {
               onClick={() => saveM.mutate(form)}
               className="flex-1 rounded-xl border border-ember/40 bg-ember/10 py-2.5 text-sm text-ember disabled:opacity-40 active:scale-95"
             >
-              {form.id ? "Salvar edição (gera versão)" : "Salvar gatilho"}
+              {form.id ? "Salvar edição (gera versão)" : "Salvar ação"}
             </button>
             <button
               type="button"
@@ -1170,7 +1216,7 @@ export function TriggersSection() {
                   })}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-foreground">
-                  {nameById[f.trigger_id] ?? "gatilho removido"}
+                  {nameById[f.trigger_id] ?? "ação removida"}
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${

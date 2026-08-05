@@ -1,6 +1,6 @@
 // Palco de execução da WiMi — AMBIENTE AGENTE.
 // Fusão Palco + Live: existe uma tela única (Live) com relógio, jornada,
-// registro colapsável e os sensores/atuadores. A aba Gatilhos separa
+// registro colapsável e os sensores/atuadores. A aba Ações separa
 // AGENTES (proativos) de COMANDOS (reativos). O ambiente reagente
 // (planejar/conversar) fica a um atalho de distância.
 
@@ -76,6 +76,14 @@ function ExecutarPage() {
     setManifest(m);
   }, []);
 
+  // Deep-link do push das AÇÕES: ?seed=action:<triggerId> — abre o Studio de
+  // Ações já na aba certa, com o Live montado para executar o que faltava.
+  useEffect(() => {
+    const seed = search.seed;
+    if (!seed || !seed.startsWith("action:")) return;
+    setTab("gatilhos");
+  }, [search.seed]);
+
   // Deep-link do push: ?seed=manifest:<missionId>:<phase>
   useEffect(() => {
     if (seedProcessedRef.current) return;
@@ -136,7 +144,7 @@ function ExecutarPage() {
                   : "text-muted-foreground ring-1 ring-border"
               }`}
             >
-              {t === "live" ? "Live" : "Gatilhos"}
+              {t === "live" ? "Live" : "Ações"}
             </button>
           ))}
         </div>
