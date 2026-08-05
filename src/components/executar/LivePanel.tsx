@@ -1665,61 +1665,83 @@ export function LivePanel({
     </div>
   );
 
-  // COMPOSER ÚNICO — o único microfone e o único ponto de envio da tela.
-  // O mic aqui é o mesmo ouvido da sessão (toggleListening): não existe
-  // segundo reconhecedor nem segunda caixa.
+  // COMPOSER INFERIOR (3.9.3) — caixa de digitação livre + enviar, no rodapé
+  // do ouvido (padrão de app de mensagem). A fala NÃO cai mais aqui: nasce
+  // direto no bloco do fluxo acima.
   const composerView = (
     <div className="mt-3 space-y-2 rounded-2xl border border-border/60 bg-charcoal-950/40 p-2.5">
-      <div className="relative">
-        <textarea
-          value={composer}
-          onChange={(e) => {
-            const v = e.target.value;
-            setComposer(v);
-            // Edição humana durante o ditado: re-ancora a base ou desliga o
-            // espelhamento até o próximo bloco fechar.
-            if (dictBaseRef.current !== null) {
-              const live = dictLiveRef.current;
-              const trimmed = v.trimEnd();
-              if (live && trimmed.endsWith(live)) {
-                dictBaseRef.current = trimmed.slice(0, trimmed.length - live.length).trimEnd();
-              } else {
-                dictSuppressRef.current = true;
-                dictBaseRef.current = null;
-              }
-            }
-          }}
-          rows={2}
-          placeholder={
-            dynamic
-              ? "Escreva pra WiMi — ou fale, que ela responde sozinha."
-              : "Fale e o texto nasce aqui — revise e envie quando quiser retorno."
-          }
-          className="min-h-[56px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 pr-9 text-sm text-foreground outline-none focus:border-ember/50"
-        />
-        {composer ? (
-          <button
-            type="button"
-            onClick={() => {
-              setComposer("");
-              dictBaseRef.current = null;
-              dictLiveRef.current = "";
-              dictSuppressRef.current = true;
-            }}
-            aria-label="Limpar rascunho"
-            className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:text-foreground active:scale-95"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
-      </div>
-      {!dynamic ? (
-        <p className="text-[10px] leading-tight text-muted-foreground">
-          {speech.listening
-            ? "ditando aqui · na pausa o trecho sobe para o contexto e o rascunho continua editável"
-            : "rascunho editável — envie quando quiser retorno da WiMi"}
+      {micPaused ? (
+        <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
+          <MicOff className="h-3 w-3 shrink-0" /> escuta pausada · WiMi falando
         </p>
       ) : null}
+      <AttachChips
+        items={pending}
+        onRemove={(id) =>
+          setPending((prev) => {
+            releasePending(prev.filter((a) => a.id === id));
+            return prev.filter((a) => a.id !== id);
+          })
+        }
+      />
+      <div className="flex items-end gap-2">
+        <button
+          type="button"
+          onClick={toggleListening}
+          disabled={!speech.supported || offline}
+          aria-pressed={speech.listening}
+          aria-label={speech.listening ? "Parar de ouvir" : "Ouvir"}
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
+            speech.listening
+              ? "animate-pulse border-ember bg-ember/20 text-ember"
+              : "border-border text-muted-foreground"
+          }`}
+        >
+          {speech.listening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+        </button>
+        <AttachButton
+          disabled={uploading || chatBusy}
+          onPick={(files) => setPending((prev) => [...prev, ...files])}
+        />
+        <div className="relative min-w-0 flex-1">
+          <textarea
+            value={composer}
+            onChange={(e) => setComposer(e.target.value)}
+            rows={1}
+            placeholder="Escreva pra WiMi…"
+            className="min-h-[40px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 pr-8 text-sm text-foreground outline-none focus:border-ember/50"
+          />
+          {composer ? (
+            <button
+              type="button"
+              onClick={() => setComposer("")}
+              aria-label="Limpar rascunho"
+              className="absolute right-1 top-1.5 grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:text-foreground active:scale-95"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
+          aria-label="Enviar"
+          onClick={() => void submitComposer()}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-ember/40 bg-ember/10 text-ember disabled:opacity-40 active:scale-95"
+        >
+          {chatBusy || uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  const composerLegacyTail = (
+    <div className="hidden">
+
       <AttachChips
         items={pending}
         onRemove={(id) =>
