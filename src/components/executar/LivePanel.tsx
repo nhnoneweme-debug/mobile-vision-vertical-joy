@@ -15,6 +15,7 @@ import {
   MicOff,
   Pencil,
   Radio,
+  Loader2,
   Send,
   SwitchCamera,
   Vibrate,
