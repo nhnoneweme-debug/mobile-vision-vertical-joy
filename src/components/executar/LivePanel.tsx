@@ -29,11 +29,14 @@ import {
 
   WifiOff,
   X,
+  BellOff,
+  RotateCcw,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
-import { HintIcon } from "@/components/ui/HintIcon";
+import { HintIcon, resetHints } from "@/components/ui/HintIcon";
+import { isTextOnly, setTextOnly, onTextOnlyChange } from "@/lib/voice-lock";
 import { buildPersonaDirective, getActivePersonaModel } from "@/lib/persona-studio";
 
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -581,7 +584,7 @@ export function LivePanel({
     (
       text: string,
       persona: Persona,
-      opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[] },
+      opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[]; speak?: boolean },
     ) => {
       pushFeed({
         kind: "assistant",
@@ -590,7 +593,13 @@ export function LivePanel({
         ...(opts?.refIds?.length ? { refIds: opts.refIds } : {}),
       });
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
-      speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
+      // 3.9.6 — ESPELHAMENTO DE MODALIDADE: quem escreveu recebe resposta
+      // escrita (sem voz automática); quem falou recebe resposta falada.
+      if (opts?.speak !== false) {
+        speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
+      } else {
+        opts?.onEnd?.();
+      }
     },
     [pushFeed, speakLive],
   );
@@ -641,7 +650,7 @@ export function LivePanel({
    * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
    */
   const askSession = useCallback(
-    async (question: string, attachments?: AttachmentRef[]) => {
+    async (question: string, attachments?: AttachmentRef[], opts?: { spoken?: boolean }) => {
       const q = question.trim();
       if ((!q && !attachments?.length) || chatBusy) return;
       const forced = detectDirectPersona(q);
@@ -660,7 +669,10 @@ export function LivePanel({
           },
         });
         const persona = normalizePersona(res.persona);
-        manifest(res.message, persona, { lang: res.reply_lang });
+        manifest(res.message, persona, {
+          lang: res.reply_lang,
+          speak: opts?.spoken !== false,
+        });
         void persist({
           mission_id: missionId ?? null,
           kind: "dialog_turn",
@@ -719,7 +731,8 @@ export function LivePanel({
       const normSent = normalizeForMatch(text);
       setBlocks((prev) => prev.filter((b) => !normSent.includes(normalizeForMatch(b.text))));
     }
-    await askSession(text, refs.length ? refs : undefined);
+    // digitado = resposta ESCRITA (a pessoa pode não poder ouvir agora).
+    await askSession(text, refs.length ? refs : undefined, { spoken: false });
   }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
 
   // ------------------------------- BLOCOS ACIONÁVEIS (interagir / ler / agrupar)
