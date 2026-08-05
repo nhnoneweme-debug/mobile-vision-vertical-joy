@@ -128,10 +128,28 @@ import {
 } from "@/lib/live-dialog";
 
 const FLUSH_MS = 15_000;
-const SILENCE_MS = 2_500;
 const LANG_KEY = "wimi.live.lang.v1";
-/** fim de turno: silêncio curto que passa a palavra à WiMi */
-const HANDOVER_MS = 2_000;
+
+// TEMPOS CONFIGURÁVEIS (camada 3.9.3) — persistidos e aplicados a quente.
+/** respiro do bloco: silêncio que fecha um bloco de transcrição */
+const DEFAULT_SILENCE_MS = 2_500;
+/** fim de turno: silêncio curto que passa a palavra à WiMi (modo dinâmico) */
+const DEFAULT_HANDOVER_MS = 2_000;
+const SILENCE_KEY = "wimi.live.blockSilenceMs.v1";
+const HANDOVER_KEY = "wimi.live.handoverMs.v1";
+const TIMING_MIN_MS = 1_000;
+const TIMING_MAX_MS = 15_000;
+
+function loadTiming(key: string, fallback: number) {
+  try {
+    const raw = Number(localStorage.getItem(key));
+    if (Number.isFinite(raw) && raw >= TIMING_MIN_MS && raw <= TIMING_MAX_MS) return raw;
+  } catch {
+    /* storage opcional */
+  }
+  return fallback;
+}
+
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
@@ -258,12 +276,32 @@ export function LivePanel({
   /** Regime corrente lido de dentro de callbacks estáveis (manual vs dinâmico). */
   const dynamicRef = useRef(false);
   dynamicRef.current = dynamic;
-  // DITADO NO COMPOSER (regime manual): o texto nasce dentro da caixa de
-  // edição enquanto a pessoa fala. base = rascunho antes do bloco atual;
-  // live = último trecho espelhado; suppress = usuário reescreveu à mão.
-  const dictBaseRef = useRef<string | null>(null);
-  const dictLiveRef = useRef("");
-  const dictSuppressRef = useRef(false);
+  // TEMPOS DO OUVIDO (3.9.3): respiro do bloco e silêncio do handover, ambos
+  // editáveis, persistidos e lidos por ref (aplicação a quente, sem reiniciar).
+  const [silenceMs, setSilenceMs] = useState(DEFAULT_SILENCE_MS);
+  const [handoverMs, setHandoverMs] = useState(DEFAULT_HANDOVER_MS);
+  const silenceMsRef = useRef(DEFAULT_SILENCE_MS);
+  const handoverMsRef = useRef(DEFAULT_HANDOVER_MS);
+  silenceMsRef.current = silenceMs;
+  handoverMsRef.current = handoverMs;
+  const [showTimings, setShowTimings] = useState(false);
+
+  useEffect(() => {
+    setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS));
+    setHandoverMs(loadTiming(HANDOVER_KEY, DEFAULT_HANDOVER_MS));
+  }, []);
+
+  const changeTiming = useCallback((which: "block" | "handover", ms: number) => {
+    const clamped = Math.min(TIMING_MAX_MS, Math.max(TIMING_MIN_MS, Math.round(ms)));
+    if (which === "block") setSilenceMs(clamped);
+    else setHandoverMs(clamped);
+    try {
+      localStorage.setItem(which === "block" ? SILENCE_KEY : HANDOVER_KEY, String(clamped));
+    } catch {
+      /* storage opcional */
+    }
+  }, []);
+
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -435,19 +473,10 @@ export function LivePanel({
     });
     emitEvent("transcript_block", { block_id: blockId, chars: text.length });
 
-    // REGIME MANUAL (Dinâmico OFF): o texto já nasceu no composer (ditado ao
-    // vivo). Na pausa o trecho SOBE para o fluxo consolidado (acima) e o
-    // rascunho permanece editável na caixa, acumulando a fala contínua.
-    if (!dynamicRef.current) {
-      if (!dictSuppressRef.current) {
-        const base = dictBaseRef.current ?? "";
-        setComposer(`${base} ${text}`.trim().replace(/\s+/g, " "));
-      }
-      dictBaseRef.current = null;
-      dictLiveRef.current = "";
-      dictSuppressRef.current = false;
-    }
+    // 3.9.3 — REVERSÃO: a escrita nasce NO BLOCO. O composer não recebe mais a
+    // transcrição; ele volta a ser apenas o campo de digitação livre.
   }, [emitEvent, lang, missionId, persist, sessionId]);
+
 
   const onFinalText = useCallback(
     (text: string) => {
@@ -476,7 +505,7 @@ export function LivePanel({
         }
       }
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
+      silenceTimerRef.current = window.setTimeout(flushTranscript, silenceMsRef.current);
     },
     [changeLang, flushTranscript],
   );
@@ -631,9 +660,6 @@ export function LivePanel({
       setUploading(false);
     }
     setComposer("");
-    dictBaseRef.current = null;
-    dictLiveRef.current = "";
-    dictSuppressRef.current = false;
     // SEM DUPLICATA: o que já subiu ao contexto como bloco discreto e está
     // contido na versão enviada some da tela (segue persistido no histórico).
     if (text) {
@@ -681,9 +707,11 @@ export function LivePanel({
         if (readAbortRef.current || i >= ordered.length) {
           setReadingId(null);
           readAbortRef.current = false;
-          if (wasListening) speechRef.current.start();
+          // margem: só reabre o mic depois que o áudio realmente terminou.
+          if (wasListening) window.setTimeout(() => speechRef.current.start(), 300);
           return;
         }
+
         const b = ordered[i]!;
         setReadingId(b.id);
         speakLive(b.text, {
@@ -932,13 +960,14 @@ export function LivePanel({
         lastSpeechAtRef.current = Date.now();
         return;
       }
-      if (Date.now() - lastSpeechAtRef.current < HANDOVER_MS) return;
+      if (Date.now() - lastSpeechAtRef.current < handoverMsRef.current) return;
       const turn = turnRef.current.join(" ").trim();
       lastSpeechAtRef.current = Date.now();
       if (!turn) return;
       turnRef.current = [];
       // o evento continua existindo para gatilhos de evento "silêncio".
-      emitEvent("silence", { silence_ms: HANDOVER_MS });
+      emitEvent("silence", { silence_ms: handoverMsRef.current });
+
       void handleHandover(turn);
     }, 400);
     return () => window.clearInterval(id);
@@ -949,18 +978,31 @@ export function LivePanel({
     [liveLine, speech.interim],
   );
 
-  // DITADO AO VIVO NO COMPOSER — regime manual: cada palavra reconhecida
-  // aparece na caixa de edição (nada no fluxo consolidado ainda).
+  // 3.9.3 — sem espelhamento no composer: o texto ao vivo aparece no fluxo
+  // (linha "ouvindo") e vira bloco na pausa.
+
+  // ANTI-ECO GLOBAL: enquanto a WiMi fala (TTS do servidor, voz nativa,
+  // manifestações, rituais, leitura de bloco), o reconhecedor é FECHADO —
+  // não apenas ignorado. Reabre ~300ms depois do fim do áudio.
+  const micPaused = actuators.speaking || readingId !== null;
+  const micResumeRef = useRef(false);
   useEffect(() => {
-    if (dynamic) return;
-    const live = currentLine.trim();
-    if (!live || dictSuppressRef.current) return;
-    setComposer((prev) => {
-      if (dictBaseRef.current === null) dictBaseRef.current = prev;
-      dictLiveRef.current = live;
-      return `${dictBaseRef.current} ${live}`.trim().replace(/\s+/g, " ");
-    });
-  }, [currentLine, dynamic]);
+    if (actuators.speaking) {
+      if (speechRef.current.listening) {
+        micResumeRef.current = true;
+        speechRef.current.stop();
+      }
+      return;
+    }
+    if (!micResumeRef.current) return;
+    const t = window.setTimeout(() => {
+      micResumeRef.current = false;
+      if (!readAbortRef.current) speechRef.current.start();
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [actuators.speaking]);
+
+
 
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
@@ -1647,59 +1689,14 @@ export function LivePanel({
     </div>
   );
 
-  // COMPOSER ÚNICO — o único microfone e o único ponto de envio da tela.
-  // O mic aqui é o mesmo ouvido da sessão (toggleListening): não existe
-  // segundo reconhecedor nem segunda caixa.
+  // COMPOSER INFERIOR (3.9.3) — caixa de digitação livre + enviar, no rodapé
+  // do ouvido (padrão de app de mensagem). A fala NÃO cai mais aqui: nasce
+  // direto no bloco do fluxo acima.
   const composerView = (
     <div className="mt-3 space-y-2 rounded-2xl border border-border/60 bg-charcoal-950/40 p-2.5">
-      <div className="relative">
-        <textarea
-          value={composer}
-          onChange={(e) => {
-            const v = e.target.value;
-            setComposer(v);
-            // Edição humana durante o ditado: re-ancora a base ou desliga o
-            // espelhamento até o próximo bloco fechar.
-            if (dictBaseRef.current !== null) {
-              const live = dictLiveRef.current;
-              const trimmed = v.trimEnd();
-              if (live && trimmed.endsWith(live)) {
-                dictBaseRef.current = trimmed.slice(0, trimmed.length - live.length).trimEnd();
-              } else {
-                dictSuppressRef.current = true;
-                dictBaseRef.current = null;
-              }
-            }
-          }}
-          rows={2}
-          placeholder={
-            dynamic
-              ? "Escreva pra WiMi — ou fale, que ela responde sozinha."
-              : "Fale e o texto nasce aqui — revise e envie quando quiser retorno."
-          }
-          className="min-h-[56px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 pr-9 text-sm text-foreground outline-none focus:border-ember/50"
-        />
-        {composer ? (
-          <button
-            type="button"
-            onClick={() => {
-              setComposer("");
-              dictBaseRef.current = null;
-              dictLiveRef.current = "";
-              dictSuppressRef.current = true;
-            }}
-            aria-label="Limpar rascunho"
-            className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:text-foreground active:scale-95"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
-      </div>
-      {!dynamic ? (
-        <p className="text-[10px] leading-tight text-muted-foreground">
-          {speech.listening
-            ? "ditando aqui · na pausa o trecho sobe para o contexto e o rascunho continua editável"
-            : "rascunho editável — envie quando quiser retorno da WiMi"}
+      {micPaused ? (
+        <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
+          <MicOff className="h-3 w-3 shrink-0" /> escuta pausada · WiMi falando
         </p>
       ) : null}
       <AttachChips
@@ -1711,7 +1708,7 @@ export function LivePanel({
           })
         }
       />
-      <div className="flex items-center gap-2">
+      <div className="flex items-end gap-2">
         <button
           type="button"
           onClick={toggleListening}
@@ -1730,24 +1727,44 @@ export function LivePanel({
           disabled={uploading || chatBusy}
           onPick={(files) => setPending((prev) => [...prev, ...files])}
         />
+        <div className="relative min-w-0 flex-1">
+          <textarea
+            value={composer}
+            onChange={(e) => setComposer(e.target.value)}
+            rows={1}
+            placeholder="Escreva pra WiMi…"
+            className="min-h-[40px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 pr-8 text-sm text-foreground outline-none focus:border-ember/50"
+          />
+          {composer ? (
+            <button
+              type="button"
+              onClick={() => setComposer("")}
+              aria-label="Limpar rascunho"
+              className="absolute right-1 top-1.5 grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:text-foreground active:scale-95"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
         <button
           type="button"
           disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
+          aria-label="Enviar"
           onClick={() => void submitComposer()}
-          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-ember/40 bg-ember/10 text-ember disabled:opacity-40 active:scale-95"
         >
           {chatBusy || uploading ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Send className="h-4 w-4 shrink-0" />
+            <Send className="h-4 w-4" />
           )}
-          <span className="truncate">
-            {uploading ? "anexando…" : chatBusy ? "respondendo…" : "Enviar"}
-          </span>
         </button>
       </div>
     </div>
   );
+
+
+
 
   const cameraVideo = (
     <video
@@ -1987,9 +2004,7 @@ export function LivePanel({
           </div>
         ) : null}
 
-        {/* (a) COMPOSER ÚNICO no topo · (b) FLUXO CONSOLIDADO abaixo. */}
-        {composerView}
-
+        {/* 3.9.3 — (a) FLUXO CONSOLIDADO acima · (b) COMPOSER embaixo. */}
         <div className="mt-3 flex items-center gap-2">
           <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] text-muted-foreground">
             <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
@@ -2006,6 +2021,57 @@ export function LivePanel({
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
         </p>
+
+        {composerView}
+
+        <button
+          type="button"
+          onClick={() => setShowTimings((v) => !v)}
+          className="mt-2 text-[11px] text-muted-foreground underline underline-offset-2 active:scale-95"
+        >
+          {showTimings ? "ocultar tempos do ouvido" : "ajustar tempos do ouvido"}
+        </button>
+        {showTimings ? (
+          <div className="mt-2 space-y-3 rounded-2xl border border-border/60 bg-charcoal-950/40 p-3">
+            <div>
+              <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
+                <span>Respiro do bloco</span>
+                <span className="text-ember">{(silenceMs / 1000).toFixed(1)}s</span>
+              </label>
+              <input
+                type="range"
+                min={TIMING_MIN_MS}
+                max={TIMING_MAX_MS}
+                step={500}
+                value={silenceMs}
+                onChange={(e) => changeTiming("block", Number(e.target.value))}
+                className="mt-1 w-full accent-ember"
+              />
+              <p className="text-[10px] leading-tight text-muted-foreground">
+                Quanto tempo de silêncio fecha um bloco de fala.
+              </p>
+            </div>
+            <div>
+              <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
+                <span>Silêncio do modo dinâmico</span>
+                <span className="text-ember">{(handoverMs / 1000).toFixed(1)}s</span>
+              </label>
+              <input
+                type="range"
+                min={TIMING_MIN_MS}
+                max={TIMING_MAX_MS}
+                step={500}
+                value={handoverMs}
+                onChange={(e) => changeTiming("handover", Number(e.target.value))}
+                className="mt-1 w-full accent-ember"
+              />
+              <p className="text-[10px] leading-tight text-muted-foreground">
+                Quanto ela espera calada antes de tomar a palavra.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
       </section>
 
       {expandFlow ? (
