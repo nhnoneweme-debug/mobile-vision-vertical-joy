@@ -333,7 +333,7 @@ export function TriggersSection() {
       const draft = buildDraft(f);
       if (f.id) {
         const current = triggers.find((t) => t.id === f.id);
-        if (!current) throw new Error("Ação não encontrado.");
+        if (!current) throw new Error("Ação não encontrada.");
         await updateTriggerVersioned(current, { ...draft, enabled: current.enabled });
       } else {
         await createTrigger(draft, triggers.length);
@@ -343,7 +343,7 @@ export function TriggersSection() {
       setForm(EMPTY_FORM);
       setOpen(false);
       invalidate();
-      toast.success("Ação salvo.");
+      toast.success("Ação salva.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -383,7 +383,7 @@ export function TriggersSection() {
       setSpeakOpen(false);
       setSpeakQuick(false);
       invalidate();
-      toast.success("Ação criado e ligado.");
+      toast.success("Ação criada e ligada.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -392,7 +392,7 @@ export function TriggersSection() {
     mutationFn: (t: TriggerDefinition) => duplicateTrigger(t, triggers.length),
     onSuccess: () => {
       invalidate();
-      toast.success("Ação duplicado (desligado).");
+      toast.success("Ação duplicada (desligada).");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -583,7 +583,7 @@ export function TriggersSection() {
           <p className="mt-3 text-[12px] text-muted-foreground">carregando…</p>
         ) : triggers.length === 0 ? (
           <p className="mt-3 rounded-xl border border-border/60 bg-charcoal-950/40 p-3 text-[12px] text-muted-foreground">
-            Nenhum ação ainda. Comece pela biblioteca de <strong>Modelos</strong> ou crie um no
+            Nenhuma ação ainda. Comece pela biblioteca de <strong>Modelos</strong> ou crie uma no
             construtor.
           </p>
         ) : (
@@ -738,7 +738,7 @@ export function TriggersSection() {
         )}
 
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Live pausado = avaliador pausado. Até os ações de hora do dia só disparam com o painel
+          Live pausado = avaliador pausado. Até as ações de hora do dia só disparam com o painel
           Live aberto — não há execução em segundo plano nesta fatia.
         </p>
       </section>
@@ -989,7 +989,7 @@ export function TriggersSection() {
             ) : null}
 
             {/* ------------------------------------ ENCADEAMENTO ENTRE AÇÕES */}
-            <Field label="acionar outro ação (opcional)">
+            <Field label="acionar outra ação (opcional)">
               <select
                 value={form.chainFireId}
                 onChange={(e) => setForm({ ...form, chainFireId: e.target.value })}
@@ -1005,7 +1005,7 @@ export function TriggersSection() {
                   ))}
               </select>
             </Field>
-            <Field label="armar/desarmar outro ação (opcional)">
+            <Field label="armar/desarmar outra ação (opcional)">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <select
                   value={form.chainEnableId}
@@ -1170,7 +1170,7 @@ export function TriggersSection() {
                   })}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-foreground">
-                  {nameById[f.trigger_id] ?? "ação removido"}
+                  {nameById[f.trigger_id] ?? "ação removida"}
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
