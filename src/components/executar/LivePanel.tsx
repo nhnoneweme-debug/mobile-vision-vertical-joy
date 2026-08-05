@@ -1278,7 +1278,11 @@ export function LivePanel({
                   <span>· {Math.round(item.block.durationMs / 1000)}s</span>
                 ) : null}
                 {item.block.revision > 0 ? <span className="text-ember">· corrigido</span> : null}
-                {!item.block.saved ? <span className="text-amber-400">· não salvo</span> : null}
+                {!item.block.saved ? (
+                  <span className="text-amber-400">· não salvo</span>
+                ) : (
+                  <span className="opacity-70">· registrado · não enviado</span>
+                )}
               </span>
               <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
             </button>
