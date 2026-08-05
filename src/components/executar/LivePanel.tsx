@@ -2274,6 +2274,69 @@ export function LivePanel({
 
         {chatView}
 
+        {/* 3.9.7 — BUFFER DE TRANSCRIÇÃO AO VIVO: sempre visível enquanto o
+            ouvido está aberto, nos DOIS regimes (dinâmico e manual). Editável
+            em tempo real — a correção humana prevalece — e fechável na hora. */}
+        {speech.listening || currentLine ? (
+          <div className="mt-2 rounded-2xl border border-ember/40 bg-ember/5 p-2.5">
+            <div className="flex items-center gap-1.5">
+              <Radio className="h-3 w-3 shrink-0 animate-pulse text-ember" />
+              <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-wide text-ember">
+                {silenceMs === BLOCK_UNLIMITED
+                  ? `buffer aberto — ${humanElapsed(Date.now() - (blockStartRef.current ?? Date.now()))}`
+                  : "transcrição ao vivo"}
+              </span>
+              <span className="shrink-0 text-[10px] text-muted-foreground">
+                {silenceMs === BLOCK_UNLIMITED
+                  ? "só fecha no envio"
+                  : `respiro ${(silenceMs / 1000).toFixed(1)}s`}
+              </span>
+            </div>
+            <textarea
+              value={liveLine}
+              onChange={(e) => {
+                const v = e.target.value;
+                bufferRef.current = [v];
+                if (blockStartRef.current == null) blockStartRef.current = Date.now();
+                setLiveLine(v);
+              }}
+              rows={2}
+              placeholder="as palavras aparecem aqui enquanto você fala — toque para corrigir"
+              className="mt-1.5 w-full resize-none bg-transparent text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/70"
+            />
+            {speech.interim ? (
+              <p className="text-[12px] italic leading-tight text-muted-foreground">
+                {speech.interim}
+              </p>
+            ) : null}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                disabled={!currentLine}
+                onClick={() => sendBuffer("register")}
+                className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-charcoal-950/60 px-2.5 py-1 text-[11px] text-muted-foreground active:scale-95 disabled:opacity-50"
+              >
+                <Send className="h-3 w-3 shrink-0" />
+                <span className="truncate">Registrar</span>
+              </button>
+              <button
+                type="button"
+                disabled={!currentLine || chatBusy}
+                onClick={() => sendBuffer("interact")}
+                className="inline-flex min-w-0 items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-2.5 py-1 text-[11px] text-ember active:scale-95 disabled:opacity-50"
+              >
+                <Sparkles className="h-3 w-3 shrink-0" />
+                <span className="truncate">Interagir</span>
+              </button>
+              <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
+                registrar = só contexto · interagir = a WiMi responde
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+
+
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
