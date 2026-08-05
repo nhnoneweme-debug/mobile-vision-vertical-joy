@@ -78,3 +78,17 @@ export function guaranteeLabel(
     return { text: "anuncia com o app aberto · ative as notificações para o app fechado", strong: false };
   return { text: "anuncia só com o app aberto (depende dos sinais do Live)", strong: false };
 }
+
+/**
+ * Regrava a agenda de segundo plano a partir do estado atual das ações.
+ * Chamado após criar/editar/ligar/desligar uma ação e ao ativar as notificações.
+ */
+export async function refreshActionSchedule(triggers?: TriggerDefinition[]) {
+  const { listTriggers } = await import("@/lib/triggers");
+  const { syncActionPushSchedule } = await import("@/lib/action-schedule.functions");
+  const list = triggers ?? (await listTriggers());
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  return syncActionPushSchedule({
+    data: { tz, occurrences: buildActionOccurrences(list).slice(0, 200) },
+  });
+}
