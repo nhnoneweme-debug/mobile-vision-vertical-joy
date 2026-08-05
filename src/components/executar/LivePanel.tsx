@@ -31,7 +31,7 @@ import {
   BellOff,
   RotateCcw,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
 import { HintIcon, resetHints } from "@/components/ui/HintIcon";
@@ -43,14 +43,23 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useTriggerEngine } from "@/hooks/useTriggerEngine";
 import {
   armedCommands,
+  createTrigger,
   listTriggers,
   recordFiring,
   type LiveEventName,
   type TriggerAction,
   type TriggerDefinition,
 } from "@/lib/triggers";
+import { looksLikeActionRequest } from "@/lib/action-intent";
+import { ActionDraftSheet, type ActionDraft } from "@/components/executar/ActionDraftSheet";
+import { hasActivePushSubscription } from "@/lib/push";
 
-import { runTriggerPrompt } from "@/lib/triggers.functions";
+import {
+  interpretTriggerSpeech,
+  resolveTriggerProposal,
+  runTriggerPrompt,
+} from "@/lib/triggers.functions";
+
 
 import { useCamera } from "@/hooks/useCamera";
 import {
