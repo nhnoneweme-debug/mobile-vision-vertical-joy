@@ -505,7 +505,7 @@ export function LivePanel({
         }
       }
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = window.setTimeout(flushTranscript, SILENCE_MS);
+      silenceTimerRef.current = window.setTimeout(flushTranscript, silenceMsRef.current);
     },
     [changeLang, flushTranscript],
   );
