@@ -159,7 +159,6 @@ type FeedEntry = {
   attachments?: AttachmentRef[];
 };
 
-
 type ChatItem =
   | { key: string; at: number; type: "mic"; block: TranscriptBlock }
   | { key: string; at: number; type: "feed"; entry: FeedEntry };
@@ -239,7 +238,6 @@ export function LivePanel({
   /** Regime corrente lido de dentro de callbacks estáveis (manual vs dinâmico). */
   const dynamicRef = useRef(false);
   dynamicRef.current = dynamic;
-
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -337,7 +335,6 @@ export function LivePanel({
     [],
   );
 
-
   const changeLang = useCallback((code: string) => {
     setLang(code);
     try {
@@ -420,7 +417,6 @@ export function LivePanel({
     }
   }, [emitEvent, lang, missionId, persist, sessionId]);
 
-
   const onFinalText = useCallback(
     (text: string) => {
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
@@ -452,7 +448,6 @@ export function LivePanel({
     },
     [changeLang, flushTranscript],
   );
-
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
@@ -596,7 +591,6 @@ export function LivePanel({
     setComposer("");
     await askSession(text, refs.length ? refs : undefined);
   }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
-
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
@@ -1198,85 +1192,83 @@ export function LivePanel({
 
   const flowItems = (
     <>
+      {chatItems.length === 0 && !currentLine ? (
+        <p className="text-muted-foreground">
+          {speech.listening
+            ? "ouvindo…"
+            : "nada ainda — fale, escreva ou ligue o microfone. Tudo entra aqui."}
+        </p>
+      ) : null}
 
-        {chatItems.length === 0 && !currentLine ? (
-          <p className="text-muted-foreground">
-            {speech.listening
-              ? "ouvindo…"
-              : "nada ainda — fale, escreva ou ligue o microfone. Tudo entra aqui."}
-          </p>
-        ) : null}
-
-        {chatItems.map((item) =>
-          item.type === "mic" ? (
-            editingId === item.block.id ? (
-              <textarea
-                key={item.key}
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={commitEdit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    commitEdit();
-                  }
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-                rows={2}
-                className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
-              />
-            ) : (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => startEdit(item.block)}
-                className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
-              >
-                <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
-                  {item.block.durationMs != null && item.block.durationMs > 1500 ? (
-                    <span>· {Math.round(item.block.durationMs / 1000)}s</span>
-                  ) : null}
-                  {item.block.revision > 0 ? <span className="text-ember">· corrigido</span> : null}
-                  {!item.block.saved ? <span className="text-amber-400">· não salvo</span> : null}
-                </span>
-                <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
-              </button>
-            )
-          ) : item.entry.kind === "system" ? (
-            <p
+      {chatItems.map((item) =>
+        item.type === "mic" ? (
+          editingId === item.block.id ? (
+            <textarea
               key={item.key}
-              className="text-center text-[10px] uppercase tracking-wide text-muted-foreground"
-            >
-              {clock(item.at)} · {item.entry.text}
-            </p>
-          ) : item.entry.kind === "typed" ? (
-            <div key={item.key} className="flex justify-end">
-              <div className="max-w-[85%] rounded-xl rounded-br-sm bg-ember px-3 py-1.5 text-ember-foreground">
-                <span className="block text-[10px] uppercase tracking-wide opacity-80">
-                  você · {clock(item.at)}
-                </span>
-                {item.entry.text ? (
-                  <span className="block whitespace-pre-wrap">{item.entry.text}</span>
-                ) : null}
-                <AttachmentCards items={item.entry.attachments} />
-
-              </div>
-            </div>
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  commitEdit();
+                }
+                if (e.key === "Escape") setEditingId(null);
+              }}
+              rows={2}
+              className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
+            />
           ) : (
-            <div key={item.key} className="max-w-[92%]">
-              <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-ember/20 text-[8px] font-bold">
-                  {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]}
-                </span>
-                {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
-                {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => startEdit(item.block)}
+              className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
+            >
+              <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
+                {item.block.durationMs != null && item.block.durationMs > 1500 ? (
+                  <span>· {Math.round(item.block.durationMs / 1000)}s</span>
+                ) : null}
+                {item.block.revision > 0 ? <span className="text-ember">· corrigido</span> : null}
+                {!item.block.saved ? <span className="text-amber-400">· não salvo</span> : null}
               </span>
-              <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
+              <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
+            </button>
+          )
+        ) : item.entry.kind === "system" ? (
+          <p
+            key={item.key}
+            className="text-center text-[10px] uppercase tracking-wide text-muted-foreground"
+          >
+            {clock(item.at)} · {item.entry.text}
+          </p>
+        ) : item.entry.kind === "typed" ? (
+          <div key={item.key} className="flex justify-end">
+            <div className="max-w-[85%] rounded-xl rounded-br-sm bg-ember px-3 py-1.5 text-ember-foreground">
+              <span className="block text-[10px] uppercase tracking-wide opacity-80">
+                você · {clock(item.at)}
+              </span>
+              {item.entry.text ? (
+                <span className="block whitespace-pre-wrap">{item.entry.text}</span>
+              ) : null}
+              <AttachmentCards items={item.entry.attachments} />
             </div>
-          ),
-        )}
+          </div>
+        ) : (
+          <div key={item.key} className="max-w-[92%]">
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-ember/20 text-[8px] font-bold">
+                {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]}
+              </span>
+              {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
+              {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
+            </span>
+            <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
+          </div>
+        ),
+      )}
 
       {currentLine ? (
         <p className="text-foreground">
@@ -1303,7 +1295,6 @@ export function LivePanel({
       >
         {flowItems}
       </div>
-
 
       {unread && !stick ? (
         <button
@@ -1379,7 +1370,6 @@ export function LivePanel({
       </div>
     </div>
   );
-
 
   const cameraVideo = (
     <video
@@ -1549,7 +1539,6 @@ export function LivePanel({
             : "Dinâmico OFF (manual): cada bloco falado cai no campo acima pronto pra editar — só responde quando você enviar."}
         </p>
 
-
         {dynamic ? (
           <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1646,7 +1635,6 @@ export function LivePanel({
           <div className="space-y-2 text-[13px] leading-relaxed">{flowItems}</div>
         </ExpandedSheet>
       ) : null}
-
 
       {/* CÂMERA */}
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">

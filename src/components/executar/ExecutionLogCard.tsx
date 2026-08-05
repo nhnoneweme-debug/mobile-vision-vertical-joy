@@ -8,7 +8,6 @@ import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 import { getTodayExecutionLog, type ExecutionEventRow } from "@/lib/execution.functions";
 import { ExpandButton, ExpandedSheet, ScrollBox } from "./ScrollBox";
 
-
 function labelFor(row: ExecutionEventRow): string {
   const meta = (
     row.meta && typeof row.meta === "object" && !Array.isArray(row.meta) ? row.meta : {}
@@ -113,4 +112,3 @@ export function ExecutionLogCard() {
     </section>
   );
 }
-

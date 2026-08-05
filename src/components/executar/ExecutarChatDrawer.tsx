@@ -25,7 +25,6 @@ import {
 
 type Msg = { role: "user" | "assistant"; text: string; attachments?: AttachmentRef[] };
 
-
 export function ExecutarChatDrawer({
   open,
   onClose,
@@ -72,7 +71,6 @@ export function ExecutarChatDrawer({
       setMessages(next);
       setInput("");
       setBusy(true);
-
 
       let token: string | null = null;
       try {
@@ -304,7 +302,6 @@ export function ExecutarChatDrawer({
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );
