@@ -1596,7 +1596,7 @@ export function LivePanel({
         mission_id: missionId ?? null,
         kind: "sensor_reading",
         channel: "foreground",
-        note: `ação disparado: ${trigger.name}`,
+        note: `ação disparada: ${trigger.name}`,
         meta: {
           session_id: sessionId,
           type: "trigger_fired",

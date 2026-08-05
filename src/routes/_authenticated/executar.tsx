@@ -1,6 +1,6 @@
 // Palco de execução da WiMi — AMBIENTE AGENTE.
 // Fusão Palco + Live: existe uma tela única (Live) com relógio, jornada,
-// registro colapsável e os sensores/atuadores. A aba Gatilhos separa
+// registro colapsável e os sensores/atuadores. A aba Ações separa
 // AGENTES (proativos) de COMANDOS (reativos). O ambiente reagente
 // (planejar/conversar) fica a um atalho de distância.
 
@@ -136,7 +136,7 @@ function ExecutarPage() {
                   : "text-muted-foreground ring-1 ring-border"
               }`}
             >
-              {t === "live" ? "Live" : "Gatilhos"}
+              {t === "live" ? "Live" : "Ações"}
             </button>
           ))}
         </div>
