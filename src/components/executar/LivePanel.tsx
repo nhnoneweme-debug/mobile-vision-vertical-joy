@@ -506,49 +506,68 @@ export function LivePanel({
     }
   }, []);
 
-  const flushTranscript = useCallback(() => {
-    const text = bufferRef.current.join(" ").trim();
-    const startedAt = blockStartRef.current;
-    bufferRef.current = [];
-    blockStartRef.current = null;
-    setLiveLine("");
-    if (!text) return;
-    const endedAt = Date.now();
-    const blockId = newId("blk");
-    setBlocks((prev) => [
-      ...prev.slice(-40),
-      {
+  /**
+   * 3.9.7 — fecha o BUFFER AO VIVO e o transforma em bloco do fluxo.
+   * `interact` decide se a WiMi é acionada; sem ele, o bloco é só contexto.
+   */
+  const flushTranscript = useCallback(
+    (opts?: { interact?: boolean }) => {
+      const text = bufferRef.current.join(" ").trim();
+      const startedAt = blockStartRef.current;
+      bufferRef.current = [];
+      blockStartRef.current = null;
+      setLiveLine("");
+      if (!text) return;
+      const endedAt = Date.now();
+      const blockId = newId("blk");
+      const block: TranscriptBlock = {
         id: blockId,
         text,
         saved: false,
         revision: 0,
         at: endedAt,
-        durationMs: startedAt ? endedAt - startedAt : undefined,
-      },
-    ]);
-    setLastBlock({ id: blockId, text });
-    void persist({
-      mission_id: missionId ?? null,
-      kind: "live_transcript",
-      channel: "voice",
-      note: text.slice(0, 4000),
-      meta: {
-        session_id: sessionId,
-        block_id: blockId,
-        revision: 0,
-        lang,
-        block_started_at: new Date(startedAt ?? endedAt).toISOString(),
-        block_ended_at: new Date(endedAt).toISOString(),
-        chars: text.length,
-      },
-    }).then((ok) => {
-      if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
-    });
-    emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+        ...(startedAt ? { durationMs: endedAt - startedAt } : {}),
+      };
+      setBlocks((prev) => [...prev.slice(-40), block]);
+      setLastBlock({ id: blockId, text });
+      void persist({
+        mission_id: missionId ?? null,
+        kind: "live_transcript",
+        channel: "voice",
+        note: text.slice(0, 4000),
+        meta: {
+          session_id: sessionId,
+          block_id: blockId,
+          revision: 0,
+          lang,
+          block_started_at: new Date(startedAt ?? endedAt).toISOString(),
+          block_ended_at: new Date(endedAt).toISOString(),
+          chars: text.length,
+          closed_by: opts?.interact ? "manual_interact" : "auto",
+        },
+      }).then((ok) => {
+        if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
+      });
+      emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+      if (opts?.interact) void interactRef.current?.([block]);
 
-    // 3.9.3 — REVERSÃO: a escrita nasce NO BLOCO. O composer não recebe mais a
-    // transcrição; ele volta a ser apenas o campo de digitação livre.
-  }, [emitEvent, lang, missionId, persist, sessionId]);
+      // 3.9.3 — REVERSÃO: a escrita nasce NO BLOCO. O composer não recebe mais a
+      // transcrição; ele volta a ser apenas o campo de digitação livre.
+    },
+    [emitEvent, lang, missionId, persist, sessionId],
+  );
+
+  /** Envio manual do buffer, sem esperar o respiro. */
+  const sendBuffer = useCallback(
+    (mode: "register" | "interact") => {
+      if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+      turnRef.current = [];
+      flushTranscript({ interact: mode === "interact" });
+    },
+    [flushTranscript],
+  );
+
 
   const onFinalText = useCallback(
     (text: string) => {
