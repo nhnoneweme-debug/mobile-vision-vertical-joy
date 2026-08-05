@@ -7,6 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Camera,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
   CameraOff,
   Ear,
   Maximize2,
@@ -86,6 +89,15 @@ import { StationMode } from "./StationMode";
 import { NextActionsOverlay } from "./NextActionsOverlay";
 import { JourneyLogSheet, type JourneyLogContext } from "./JourneyLogSheet";
 import { setLiveSessionStart } from "@/hooks/useLiveSession";
+import {
+  describeSharedContext,
+  loadGeoPref,
+  requestClientLocation,
+  clearClientLocation,
+  setAmbientLastLog,
+  setAmbientSessionStart,
+  type GeoPref,
+} from "@/lib/client-moment";
 import { LiveClock } from "./LiveClock";
 import { useTodayEntries } from "./TodayTimeline";
 import { ExecutionLogCard } from "./ExecutionLogCard";
@@ -286,6 +298,31 @@ export function LivePanel({
   handoverMsRef.current = handoverMs;
   const [showTimings, setShowTimings] = useState(false);
 
+  // 3.9.4 — COMPOSER: largura total + expansão (manual x dinâmico) persistida.
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [expandMode, setExpandMode] = useState<"manual" | "dynamic">("manual");
+  const [geo, setGeo] = useState<GeoPref>({ status: "unknown" });
+  const composerBoxRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("wimi.live.composerExpand.v1");
+      if (v === "dynamic" || v === "manual") setExpandMode(v);
+    } catch {
+      /* storage opcional */
+    }
+    setGeo(loadGeoPref());
+  }, []);
+
+  const changeExpandMode = useCallback((mode: "manual" | "dynamic") => {
+    setExpandMode(mode);
+    try {
+      localStorage.setItem("wimi.live.composerExpand.v1", mode);
+    } catch {
+      /* storage opcional */
+    }
+  }, []);
+
   useEffect(() => {
     setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS));
     setHandoverMs(loadTiming(HANDOVER_KEY, DEFAULT_HANDOVER_MS));
@@ -344,6 +381,8 @@ export function LivePanel({
   // Um único relógio de sessão para motor, overlay e Studio.
   useEffect(() => {
     setLiveSessionStart(sessionStartedAt);
+    setAmbientSessionStart(sessionStartedAt);
+    return () => setAmbientSessionStart(null);
   }, [sessionStartedAt]);
 
   // O início da sessão é um evento de primeira classe (gatilhos podem escutar).
@@ -423,6 +462,7 @@ export function LivePanel({
     setSaving(true);
     try {
       await logExecutionEvent({ data: payload });
+      setAmbientLastLog(new Date().toISOString());
       setError(null);
       return true;
     } catch (e) {
