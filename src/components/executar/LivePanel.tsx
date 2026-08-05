@@ -76,6 +76,8 @@ import {
   setEngine,
   setServerVoice,
   speakUnified,
+  stopSpeaking,
+
   type DegradeReason,
   type TtsEngine,
 } from "@/lib/tts-engine";
