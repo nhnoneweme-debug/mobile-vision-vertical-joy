@@ -1,6 +1,6 @@
 // OVERLAY DE PRÓXIMAS AÇÕES — camada leve e não bloqueante sobre o Live.
 // Três linhas: AGORA, PRÓXIMA e DEPOIS. Pouca informação por linha; tocar
-// numa linha abre os detalhes completos do gatilho.
+// numa linha abre os detalhes completos do ação.
 
 import { useEffect, useState } from "react";
 import { Zap } from "lucide-react";
@@ -95,7 +95,7 @@ export function NextActionsOverlay({
         <Row tag="agora" title={now.label} when={now.detail ?? ""} />
         <Row
           tag="próxima"
-          title={next ? next.trigger.name : "nenhum gatilho elegível"}
+          title={next ? next.trigger.name : "nenhum ação elegível"}
           when={next ? (next.etaMs != null ? formatCountdown(next.etaMs) : next.when) : "—"}
           trigger={next?.trigger}
         />

@@ -1,5 +1,5 @@
-// D2 — CRIAR GATILHO FALANDO / MODO RÁPIDO.
-// O usuário descreve o gatilho inteiro (voz ou texto), a IA monta o rascunho
+// D2 — CRIAR AÇÃO FALANDO / MODO RÁPIDO.
+// O usuário descreve o ação inteiro (voz ou texto), a IA monta o rascunho
 // estruturado e mostra um resumo legível. No modo rápido dá pra salvar direto
 // (ou abrir no builder para ajustar). Sem `onSave`, só o caminho do builder.
 
@@ -20,7 +20,7 @@ export function SpeakTriggerSheet({
 }: {
   onClose: () => void;
   onUse: (draft: Interpreted) => void;
-  /** Modo rápido: salva o gatilho direto, sem passar pelo builder. */
+  /** Modo rápido: salva o ação direto, sem passar pelo builder. */
   onSave?: (draft: Interpreted) => void;
   saving?: boolean;
 }) {
@@ -36,7 +36,7 @@ export function SpeakTriggerSheet({
       const parsed = JSON.parse(res.draft_json) as Record<string, unknown>;
       setAuditId(res.audit_id);
       setDraft({
-        name: String(parsed.name ?? "novo gatilho"),
+        name: String(parsed.name ?? "novo ação"),
         enabled: true,
         trigger_type: parsed.trigger_type === "chronos" ? "chronos" : "event",
         condition: parsed.condition as Interpreted["condition"],
@@ -65,7 +65,7 @@ export function SpeakTriggerSheet({
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-lg tracking-wide">CRIAR FALANDO</h2>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Descreva o gatilho inteiro. Ex.: "todo dia às 14h me lembra de beber água com um
+              Descreva o ação inteiro. Ex.: "todo dia às 14h me lembra de beber água com um
               sino".
             </p>
           </div>
@@ -80,7 +80,7 @@ export function SpeakTriggerSheet({
         </div>
 
         <div className="mt-4">
-          <DualInput value={text} onChange={setText} placeholder="Fale ou escreva o gatilho…" />
+          <DualInput value={text} onChange={setText} placeholder="Fale ou escreva o ação…" />
         </div>
 
         <button

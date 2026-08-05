@@ -254,7 +254,7 @@ export function LivePanel({
   header,
 }: {
   missionId?: string | null;
-  /** Abre a área de Comandos (aba Gatilhos) a partir do contador do overlay. */
+  /** Abre a área de Comandos (aba Ações) a partir do contador do overlay. */
   onOpenCommands?: () => void;
   /** Conteúdo da jornada renderizado logo abaixo do relógio. */
   header?: React.ReactNode;
@@ -441,7 +441,7 @@ export function LivePanel({
     return () => setAmbientSessionStart(null);
   }, [sessionStartedAt]);
 
-  // O início da sessão é um evento de primeira classe (gatilhos podem escutar).
+  // O início da sessão é um evento de primeira classe (ações podem escutar).
   useEffect(() => {
     emitEvent("session_start", { session_started_at: new Date(sessionStartedAt).toISOString() });
   }, [emitEvent, sessionStartedAt]);
@@ -1201,7 +1201,7 @@ export function LivePanel({
       lastSpeechAtRef.current = Date.now();
       if (!turn) return;
       turnRef.current = [];
-      // o evento continua existindo para gatilhos de evento "silêncio".
+      // o evento continua existindo para ações de evento "silêncio".
       emitEvent("silence", { silence_ms: handoverMsRef.current });
 
       void handleHandover(turn);
@@ -1319,7 +1319,7 @@ export function LivePanel({
     });
   }, [blocks, draft, editingId, lang, missionId, persist, sessionId]);
 
-  // -------------------------------------------------- MOTOR DE GATILHOS
+  // -------------------------------------------------- MOTOR DE AÇÕES
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
   triggersRef.current = (triggersQ.data ?? []) as TriggerDefinition[];
   // Comandos de voz armados — contador discreto no overlay, nunca na fila.
@@ -1384,7 +1384,7 @@ export function LivePanel({
         }
 
         if (action.custom?.plan || action.custom?.instruction) {
-          toast(`gatilho: ${trigger.name}`, {
+          toast(`ação: ${trigger.name}`, {
             description: action.custom.plan ?? action.custom.instruction,
             duration: 8000,
           });
@@ -1584,7 +1584,7 @@ export function LivePanel({
             manifest("O que você está executando agora?", "wi");
           });
       }
-      toast(`gatilho: ${trigger.name}`, {
+      toast(`ação: ${trigger.name}`, {
         description: action.message ?? info?.matched_text ?? undefined,
       });
       if (action.message) {
@@ -1596,7 +1596,7 @@ export function LivePanel({
         mission_id: missionId ?? null,
         kind: "sensor_reading",
         channel: "foreground",
-        note: `gatilho disparado: ${trigger.name}`,
+        note: `ação disparado: ${trigger.name}`,
         meta: {
           session_id: sessionId,
           type: "trigger_fired",
@@ -2800,7 +2800,7 @@ function ActuatorRow({
           {showSound ? (
             <p className="mt-3 text-[11px] text-muted-foreground">
               Configuração do padrão sonoro. Ligado sozinho, o áudio fica armado e silencioso — só
-              toca quando um gatilho, uma manifestação ou o beacon abaixo disparar.
+              toca quando um ação, uma manifestação ou o beacon abaixo disparar.
             </p>
           ) : null}
           <div className="mt-3 flex gap-2">

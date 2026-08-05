@@ -1,4 +1,4 @@
-// RELATÓRIO DE RETORNO POR GATILHO — o que foi ouvido, o que foi executado e
+// RELATÓRIO DE RETORNO POR AÇÃO — o que foi ouvido, o que foi executado e
 // qual o retorno de cada ação. Estados honestos: sem disparo, sem enfeite.
 
 import { useMemo, useState } from "react";
