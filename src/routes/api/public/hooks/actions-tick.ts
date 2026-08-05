@@ -62,6 +62,16 @@ export const Route = createFileRoute("/api/public/hooks/actions-tick")({
             console.error("actions-tick send failed", e);
             failed += 1;
           }
+          // RELATÓRIO HONESTO: o disparo por notificação também vira linha.
+          await supabaseAdmin.from("trigger_firings").insert({
+            user_id: row.user_id,
+            trigger_id: row.trigger_id,
+            source_kind: "push",
+            source_ref: `push:${row.id}`,
+            result: "executed",
+            meta: { channel: "push", scheduled_for: row.fire_at },
+          });
+
           await supabaseAdmin
             .from("action_push_schedule")
             .update({ sent_at: new Date().toISOString() })

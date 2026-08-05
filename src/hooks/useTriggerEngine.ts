@@ -130,6 +130,7 @@ export function useTriggerEngine(
           action_results: actionResults,
           cooldown_seconds: t.cooldown_seconds,
           cooldown_remaining_ms: 0,
+          channel: "foreground",
           fired_client_at: new Date(now).toISOString(),
         },
       }).catch(() => {});
