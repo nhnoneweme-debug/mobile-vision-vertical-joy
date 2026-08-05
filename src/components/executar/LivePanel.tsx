@@ -1373,35 +1373,21 @@ export function LivePanel({
 
       {/* OUVIDOS */}
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Ear className="h-3.5 w-3.5" /> Ouvidos
-            </h3>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              {!speech.supported
-                ? "Transcrição não suportada neste navegador."
-                : speech.listening
-                  ? "Microfone ativo — transcrevendo e salvando em blocos."
-                  : "Microfone desligado."}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={toggleListening}
-            disabled={!speech.supported || offline}
-            aria-pressed={speech.listening}
-            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
-              speech.listening
-                ? "animate-pulse border-ember bg-ember/20 text-ember"
-                : "border-border bg-charcoal-800 text-muted-foreground"
-            }`}
-          >
-            {speech.listening ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
-          </button>
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <Ear className="h-3.5 w-3.5" /> Ouvidos
+          </h3>
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            {!speech.supported
+              ? "Transcrição não suportada neste navegador."
+              : speech.listening
+                ? "Microfone ativo — transcrevendo em blocos."
+                : "Microfone desligado — use o mic do campo abaixo."}
+          </p>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
+        {/* Uma linha só: idioma + regime (economia de área vertical). */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-[11px] text-muted-foreground">idioma</span>
           {LANGS.map((l) => (
             <button
@@ -1418,44 +1404,45 @@ export function LivePanel({
               {l.label}
             </button>
           ))}
-          {langNote ? (
-            <span className="text-[10px] text-ember" role="status">
-              {langNote}
-            </span>
-          ) : null}
-        </div>
 
-
-        {/* LIVE DINÂMICO — análise contínua + endereçamento + handover. */}
-        <button
-          type="button"
-          onClick={() => setDynamic((v) => !v)}
-          aria-pressed={dynamic}
-          className={`mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left active:scale-[0.99] ${
-            dynamic ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
-          }`}
-        >
-          <Radio
-            className={`h-4 w-4 shrink-0 ${dynamic ? "text-ember" : "text-muted-foreground"}`}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm text-foreground">Live dinâmico</span>
-            <span className="block text-[11px] text-muted-foreground">
-              {dynamic
-                ? addressMode === "free"
-                  ? "modo livre: ela acompanha e responde ao fim do seu turno."
-                  : "ela acompanha tudo e só responde quando você usa o código de chamada."
-                : "conversa por turnos: ela analisa enquanto você fala e responde no handover."}
-            </span>
-          </span>
-          <span
-            className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
-              dynamic ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          {/* LIVE DINÂMICO — toggle compacto na mesma linha. */}
+          <button
+            type="button"
+            onClick={() => setDynamic((v) => !v)}
+            aria-pressed={dynamic}
+            className={`ml-auto inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] active:scale-95 ${
+              dynamic
+                ? "border-ember bg-ember/20 text-ember"
+                : "border-border bg-charcoal-950/40 text-muted-foreground"
             }`}
           >
-            {dynamic ? "on" : "off"}
-          </span>
-        </button>
+            <Radio className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Dinâmico</span>
+            <span
+              className={`shrink-0 rounded-full px-1.5 text-[9px] uppercase tracking-wide ${
+                dynamic ? "bg-ember text-charcoal-900" : "bg-charcoal-800"
+              }`}
+            >
+              {dynamic ? "on" : "off"}
+            </span>
+          </button>
+        </div>
+
+        {langNote ? (
+          <p className="mt-1 text-[10px] text-ember" role="status">
+            {langNote}
+          </p>
+        ) : null}
+
+        {/* O que cada regime faz, em uma linha. */}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {dynamic
+            ? addressMode === "free"
+              ? "Dinâmico ON · modo livre: ela acompanha e responde sozinha no fim do seu turno."
+              : "Dinâmico ON: ela acompanha tudo e se manifesta sozinha quando você usa o código de chamada."
+            : "Dinâmico OFF (manual): cada bloco falado cai no campo acima pronto pra editar — só responde quando você enviar."}
+        </p>
+
 
         {dynamic ? (
           <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
