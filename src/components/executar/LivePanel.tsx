@@ -1793,12 +1793,8 @@ export function LivePanel({
         ),
       )}
 
-      {currentLine && dynamic ? (
-        <p className="text-foreground">
-          <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
-          {currentLine}
-        </p>
-      ) : null}
+      {/* 3.9.7 — a transcrição ao vivo mora na faixa própria de buffer, abaixo. */}
+
       {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
     </>
   );
