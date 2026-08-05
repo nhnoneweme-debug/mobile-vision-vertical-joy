@@ -173,6 +173,45 @@ export function ExecutarChatDrawer({
     stopAssistantTts();
   }, [open]);
 
+  /** Sobe os anexos e dispara o envio — texto vazio com anexo também vale. */
+  const submit = useCallback(() => {
+    if (busy || uploading) return;
+    const text = input;
+    if (!text.trim() && pending.length === 0) return;
+    if (pending.length === 0) {
+      void send(text);
+      return;
+    }
+    const list = pending;
+    setUploading(true);
+    void uploadAttachments(list)
+      .then(async (refs) => {
+        setPending([]);
+        await logExecutionEvent({
+          data: {
+            kind: "manual_log",
+            channel: "manual",
+            note: (text || "anexos enviados na conversa").slice(0, 4000),
+            meta: {
+              source: "executar_chat",
+              attachments: refs.map((r) => ({
+                path: r.path,
+                name: r.name,
+                size: r.size,
+                mime: r.mime,
+                kind: r.kind,
+              })),
+            },
+          },
+        }).catch(() => {});
+        void send(text, refs);
+      })
+      .catch((e: unknown) => {
+        toast.error(e instanceof Error ? e.message : "Não consegui anexar.");
+      })
+      .finally(() => setUploading(false));
+  }, [busy, input, pending, send, uploading]);
+
   if (!open) return null;
 
   return (
@@ -210,6 +249,7 @@ export function ExecutarChatDrawer({
                 }
               >
                 {m.text || (m.role === "assistant" && busy ? "…" : "")}
+                {m.attachments ? <AttachmentCards items={m.attachments} /> : null}
               </div>
             ))
           )}
@@ -218,32 +258,53 @@ export function ExecutarChatDrawer({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void send(input);
+            submit();
           }}
-          className="flex items-end gap-2 border-t border-border/60 p-3"
+          className="space-y-2 border-t border-border/60 p-3"
         >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send(input);
-              }
-            }}
-            rows={1}
-            placeholder="Fala com a WiMi…"
-            className="min-h-[40px] flex-1 resize-none rounded-xl border border-border bg-charcoal-800/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ember/60 focus:outline-none"
+          <AttachChips
+            items={pending}
+            onRemove={(id) =>
+              setPending((prev) => {
+                const gone = prev.filter((a) => a.id === id);
+                releasePending(gone);
+                return prev.filter((a) => a.id !== id);
+              })
+            }
           />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            aria-label="Enviar"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ember text-charcoal-900 disabled:opacity-40"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
+          <div className="flex items-end gap-2">
+            <AttachButton
+              disabled={busy || uploading}
+              onPick={(files) => setPending((prev) => [...prev, ...files])}
+            />
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              rows={1}
+              placeholder="Fala com a WiMi…"
+              className="min-h-[40px] flex-1 resize-none rounded-xl border border-border bg-charcoal-800/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ember/60 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={busy || uploading || (!input.trim() && pending.length === 0)}
+              aria-label="Enviar"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ember text-charcoal-900 disabled:opacity-40"
+            >
+              {busy || uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </form>
+
       </div>
     </div>
   );
