@@ -979,6 +979,28 @@ export function LivePanel({
   // 3.9.3 — sem espelhamento no composer: o texto ao vivo aparece no fluxo
   // (linha "ouvindo") e vira bloco na pausa.
 
+  // ANTI-ECO GLOBAL: enquanto a WiMi fala (TTS do servidor, voz nativa,
+  // manifestações, rituais, leitura de bloco), o reconhecedor é FECHADO —
+  // não apenas ignorado. Reabre ~300ms depois do fim do áudio.
+  const micPaused = actuators.speaking || readingId !== null;
+  const micResumeRef = useRef(false);
+  useEffect(() => {
+    if (actuators.speaking) {
+      if (speechRef.current.listening) {
+        micResumeRef.current = true;
+        speechRef.current.stop();
+      }
+      return;
+    }
+    if (!micResumeRef.current) return;
+    const t = window.setTimeout(() => {
+      micResumeRef.current = false;
+      if (!readAbortRef.current) speechRef.current.start();
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [actuators.speaking]);
+
+
 
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
