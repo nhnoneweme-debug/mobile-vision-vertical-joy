@@ -276,12 +276,32 @@ export function LivePanel({
   /** Regime corrente lido de dentro de callbacks estáveis (manual vs dinâmico). */
   const dynamicRef = useRef(false);
   dynamicRef.current = dynamic;
-  // DITADO NO COMPOSER (regime manual): o texto nasce dentro da caixa de
-  // edição enquanto a pessoa fala. base = rascunho antes do bloco atual;
-  // live = último trecho espelhado; suppress = usuário reescreveu à mão.
-  const dictBaseRef = useRef<string | null>(null);
-  const dictLiveRef = useRef("");
-  const dictSuppressRef = useRef(false);
+  // TEMPOS DO OUVIDO (3.9.3): respiro do bloco e silêncio do handover, ambos
+  // editáveis, persistidos e lidos por ref (aplicação a quente, sem reiniciar).
+  const [silenceMs, setSilenceMs] = useState(DEFAULT_SILENCE_MS);
+  const [handoverMs, setHandoverMs] = useState(DEFAULT_HANDOVER_MS);
+  const silenceMsRef = useRef(DEFAULT_SILENCE_MS);
+  const handoverMsRef = useRef(DEFAULT_HANDOVER_MS);
+  silenceMsRef.current = silenceMs;
+  handoverMsRef.current = handoverMs;
+  const [showTimings, setShowTimings] = useState(false);
+
+  useEffect(() => {
+    setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS));
+    setHandoverMs(loadTiming(HANDOVER_KEY, DEFAULT_HANDOVER_MS));
+  }, []);
+
+  const changeTiming = useCallback((which: "block" | "handover", ms: number) => {
+    const clamped = Math.min(TIMING_MAX_MS, Math.max(TIMING_MIN_MS, Math.round(ms)));
+    if (which === "block") setSilenceMs(clamped);
+    else setHandoverMs(clamped);
+    try {
+      localStorage.setItem(which === "block" ? SILENCE_KEY : HANDOVER_KEY, String(clamped));
+    } catch {
+      /* storage opcional */
+    }
+  }, []);
+
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
