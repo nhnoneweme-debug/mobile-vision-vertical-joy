@@ -17,9 +17,12 @@ import {
   Radio,
   Loader2,
   Send,
+  Sparkles,
+  Square,
   SwitchCamera,
   Vibrate,
   Volume2,
+
   WifiOff,
   X,
 } from "lucide-react";
@@ -73,6 +76,8 @@ import {
   setEngine,
   setServerVoice,
   speakUnified,
+  stopSpeaking,
+
   type DegradeReason,
   type TtsEngine,
 } from "@/lib/tts-engine";
@@ -169,6 +174,9 @@ type FeedEntry = {
   persona?: Persona;
   label?: string;
   attachments?: AttachmentRef[];
+  /** blocos do fluxo que originaram esta entrada (âncora visual) */
+  refIds?: string[];
+
 };
 
 type ChatItem =
@@ -488,13 +496,23 @@ export function LivePanel({
 
   /** Manifestação assinada: entra no fluxo e é lida com a voz da identidade. */
   const manifest = useCallback(
-    (text: string, persona: Persona, opts?: { onEnd?: () => void; lang?: string | null }) => {
-      pushFeed({ kind: "assistant", text, persona });
+    (
+      text: string,
+      persona: Persona,
+      opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[] },
+    ) => {
+      pushFeed({
+        kind: "assistant",
+        text,
+        persona,
+        ...(opts?.refIds?.length ? { refIds: opts.refIds } : {}),
+      });
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
       speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
     },
     [pushFeed, speakLive],
   );
+
 
   const speech = useSpeechToText(onFinalText, { lang });
   const speechRef = useRef(speech);
@@ -624,6 +642,141 @@ export function LivePanel({
     }
     await askSession(text, refs.length ? refs : undefined);
   }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
+
+  // ------------------------------- BLOCOS ACIONÁVEIS (interagir / ler / agrupar)
+  //
+  // Cada bloco capturado é insumo: pode ser SELECIONADO e LIDO, ou SELECIONADO
+  // e ACIONADO — individualmente ou em grupo (um único envio).
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [actedIds, setActedIds] = useState<string[]>([]);
+  const [readingId, setReadingId] = useState<string | null>(null);
+  const readAbortRef = useRef(false);
+  const longPressRef = useRef<number | null>(null);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds([]);
+    setSelectMode(false);
+  }, []);
+
+  /** Leitura sequencial com proteção anti-eco: a escuta pausa enquanto lê. */
+  const stopReading = useCallback(() => {
+    readAbortRef.current = true;
+    stopSpeaking();
+    setReadingId(null);
+  }, []);
+
+  const readBlocks = useCallback(
+    (list: TranscriptBlock[]) => {
+      const ordered = [...list].sort((a, b) => a.at - b.at);
+      if (ordered.length === 0) return;
+      readAbortRef.current = false;
+      const wasListening = speechRef.current.listening;
+      if (wasListening) speechRef.current.stop();
+      const step = (i: number) => {
+        if (readAbortRef.current || i >= ordered.length) {
+          setReadingId(null);
+          readAbortRef.current = false;
+          if (wasListening) speechRef.current.start();
+          return;
+        }
+        const b = ordered[i]!;
+        setReadingId(b.id);
+        speakLive(b.text, {
+          lang: detectLang(b.text) ?? langRef.current,
+          onEnd: () => step(i + 1),
+        });
+      };
+      step(0);
+    },
+    [speakLive],
+  );
+
+  /** UM único envio com os blocos concatenados em ordem cronológica. */
+  const interactWithBlocks = useCallback(
+    async (list: TranscriptBlock[]) => {
+      const ordered = [...list].sort((a, b) => a.at - b.at);
+      if (ordered.length === 0 || chatBusy) return;
+      const refIds = ordered.map((b) => b.id);
+      const body = ordered.map((b) => `[${clock(b.at)}] ${b.text}`).join("\n");
+      const question =
+        ordered.length > 1
+          ? `Reaja a estes ${ordered.length} trechos que capturei na sessão (ordem cronológica). Analise em conjunto, oriente e sugira UMA próxima ação:\n${body}`
+          : `Reaja a este trecho que capturei na sessão. Analise, oriente e sugira UMA próxima ação:\n${body}`;
+      setActedIds((prev) => Array.from(new Set([...prev, ...refIds])));
+      clearSelection();
+      pushFeed({
+        kind: "typed",
+        text:
+          ordered.length > 1
+            ? `interagir com ${ordered.length} blocos (${clock(ordered[0]!.at)} → ${clock(ordered[ordered.length - 1]!.at)})`
+            : `interagir com o bloco de ${clock(ordered[0]!.at)}`,
+        refIds,
+      });
+      chatHistoryRef.current = [
+        ...chatHistoryRef.current.slice(-12),
+        { role: "user", text: question },
+      ];
+      setChatBusy(true);
+      try {
+        const res = await liveSessionChat({
+          data: {
+            session_context: sessionContent(),
+            history: chatHistoryRef.current.slice(-10),
+            question: question.slice(0, 4000),
+            ...personaExtras(),
+          },
+        });
+        const persona = normalizePersona(res.persona);
+        manifest(res.message, persona, { lang: res.reply_lang, refIds });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "manual",
+          note: question.slice(0, 4000),
+          meta: {
+            session_id: sessionId,
+            role: "user",
+            source: "live_block_action",
+            block_ids: refIds,
+          },
+        });
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "dialog_turn",
+          channel: "foreground",
+          note: res.message.slice(0, 4000),
+          meta: {
+            session_id: sessionId,
+            role: "assistant",
+            source: "live_block_action",
+            persona,
+            block_ids: refIds,
+          },
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao responder.");
+      } finally {
+        setChatBusy(false);
+      }
+    },
+    [
+      chatBusy,
+      clearSelection,
+      manifest,
+      missionId,
+      persist,
+      personaExtras,
+      pushFeed,
+      sessionContent,
+      sessionId,
+    ],
+  );
+
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
@@ -1236,6 +1389,20 @@ export function LivePanel({
     setUnread(false);
   }, []);
 
+  // Âncora visual: guarda a hora de cada bloco mesmo depois que ele sai da tela.
+  const blockClockRef = useRef<Record<string, string>>({});
+  for (const b of blocks) blockClockRef.current[b.id] = clock(b.at);
+  const refLabel = (ids?: string[]) => {
+    if (!ids?.length) return null;
+    const times = ids.map((id) => blockClockRef.current[id]).filter(Boolean);
+    if (!times.length) return null;
+    return times.length > 2
+      ? `↳ sobre ${times.length} blocos (${times[0]} → ${times[times.length - 1]})`
+      : `↳ sobre o bloco ${times.join(", ")}`;
+  };
+  const selectedBlocks = blocks.filter((b) => selectedIds.includes(b.id));
+
+
   const flowItems = (
     <>
       {chatItems.length === 0 && !currentLine ? (
@@ -1266,11 +1433,13 @@ export function LivePanel({
               className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
             />
           ) : (
-            <button
+            <div
               key={item.key}
-              type="button"
-              onClick={() => startEdit(item.block)}
-              className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
+              className={`rounded-lg border px-2.5 py-1.5 ${
+                selectedIds.includes(item.block.id)
+                  ? "border-ember/60 bg-ember/10"
+                  : "border-border/40 bg-charcoal-900/50"
+              }`}
             >
               <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                 <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
@@ -1283,10 +1452,82 @@ export function LivePanel({
                 ) : (
                   <span className="opacity-70">· registrado · não enviado</span>
                 )}
+                {actedIds.includes(item.block.id) ? (
+                  <span className="text-ember">· acionado</span>
+                ) : null}
+                {readingId === item.block.id ? (
+                  <span className="text-ember">· lendo…</span>
+                ) : null}
               </span>
-              <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectMode) toggleSelected(item.block.id);
+                  else startEdit(item.block);
+                }}
+                onPointerDown={() => {
+                  longPressRef.current = window.setTimeout(() => {
+                    setSelectMode(true);
+                    toggleSelected(item.block.id);
+                  }, 500);
+                }}
+                onPointerUp={() => {
+                  if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                }}
+                onPointerLeave={() => {
+                  if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                }}
+                className="mt-0.5 block w-full text-left text-muted-foreground active:opacity-70"
+              >
+                {item.block.text}
+              </button>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void interactWithBlocks([item.block])}
+                  disabled={chatBusy}
+                  aria-label="Interagir com este bloco"
+                  className="inline-flex min-w-0 items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-2 py-0.5 text-[10px] text-ember active:scale-95 disabled:opacity-50"
+                >
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">interagir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    readingId === item.block.id ? stopReading() : readBlocks([item.block])
+                  }
+                  aria-label={readingId === item.block.id ? "Parar leitura" : "Ler em voz alta"}
+                  className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground active:scale-95"
+                >
+                  {readingId === item.block.id ? (
+                    <Square className="h-3 w-3 shrink-0" />
+                  ) : (
+                    <Volume2 className="h-3 w-3 shrink-0" />
+                  )}
+                  <span className="truncate">{readingId === item.block.id ? "parar" : "ler"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectMode(true);
+                    toggleSelected(item.block.id);
+                  }}
+                  aria-pressed={selectedIds.includes(item.block.id)}
+                  className={`inline-flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] active:scale-95 ${
+                    selectedIds.includes(item.block.id)
+                      ? "border-ember/50 text-ember"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  <span className="truncate">
+                    {selectedIds.includes(item.block.id) ? "selecionado" : "selecionar"}
+                  </span>
+                </button>
+              </div>
+            </div>
           )
+
         ) : item.entry.kind === "system" ? (
           <p
             key={item.key}
@@ -1300,6 +1541,9 @@ export function LivePanel({
               <span className="block text-[10px] uppercase tracking-wide opacity-80">
                 você · {clock(item.at)}
               </span>
+              {refLabel(item.entry.refIds) ? (
+                <span className="block text-[10px] opacity-80">{refLabel(item.entry.refIds)}</span>
+              ) : null}
               {item.entry.text ? (
                 <span className="block whitespace-pre-wrap">{item.entry.text}</span>
               ) : null}
@@ -1315,10 +1559,16 @@ export function LivePanel({
               {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
               {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
             </span>
+            {refLabel(item.entry.refIds) ? (
+              <span className="block text-[10px] text-muted-foreground">
+                {refLabel(item.entry.refIds)}
+              </span>
+            ) : null}
             <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
           </div>
         ),
       )}
+
 
       {currentLine && dynamic ? (
         <p className="text-foreground">
@@ -1345,6 +1595,45 @@ export function LivePanel({
       >
         {flowItems}
       </div>
+
+      {selectMode || selectedIds.length > 0 ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-ember/40 bg-ember/5 px-2.5 py-2">
+          <span className="min-w-0 truncate text-[11px] text-ember">
+            {selectedIds.length} selecionado{selectedIds.length === 1 ? "" : "s"}
+          </span>
+          <button
+            type="button"
+            disabled={selectedBlocks.length === 0 || chatBusy}
+            onClick={() => void interactWithBlocks(selectedBlocks)}
+            className="inline-flex min-w-0 items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-2.5 py-1 text-[11px] text-ember active:scale-95 disabled:opacity-50"
+          >
+            <Sparkles className="h-3 w-3 shrink-0" />
+            <span className="truncate">Interagir</span>
+          </button>
+          <button
+            type="button"
+            disabled={selectedBlocks.length === 0}
+            onClick={() => (readingId ? stopReading() : readBlocks(selectedBlocks))}
+            className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground active:scale-95 disabled:opacity-50"
+          >
+            {readingId ? (
+              <Square className="h-3 w-3 shrink-0" />
+            ) : (
+              <Volume2 className="h-3 w-3 shrink-0" />
+            )}
+            <span className="truncate">{readingId ? "Parar" : "Ler"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="inline-flex min-w-0 items-center rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground active:scale-95"
+          >
+            <span className="truncate">Limpar</span>
+          </button>
+        </div>
+      ) : null}
+
+
 
       {unread && !stick ? (
         <button
