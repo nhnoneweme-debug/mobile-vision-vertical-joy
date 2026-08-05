@@ -2,7 +2,7 @@
 // versões (append-only) e estatísticas por ação.
 // A avaliação em tempo real continua acontecendo no painel Live.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
