@@ -958,13 +958,14 @@ export function LivePanel({
         lastSpeechAtRef.current = Date.now();
         return;
       }
-      if (Date.now() - lastSpeechAtRef.current < HANDOVER_MS) return;
+      if (Date.now() - lastSpeechAtRef.current < handoverMsRef.current) return;
       const turn = turnRef.current.join(" ").trim();
       lastSpeechAtRef.current = Date.now();
       if (!turn) return;
       turnRef.current = [];
       // o evento continua existindo para gatilhos de evento "silêncio".
-      emitEvent("silence", { silence_ms: HANDOVER_MS });
+      emitEvent("silence", { silence_ms: handoverMsRef.current });
+
       void handleHandover(turn);
     }, 400);
     return () => window.clearInterval(id);
