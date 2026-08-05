@@ -97,7 +97,11 @@ export function ExecutarChatDrawer({
           body: JSON.stringify({
             messages: next
               .filter((m, i) => !(i === next.length - 1 && m.role === "assistant"))
-              .map((m) => ({ role: m.role, text: m.text })),
+              .map((m, i) => ({
+                role: m.role,
+                text: i === next.length - 2 && m.role === "user" ? label : m.text,
+              })),
+
             effort: loadEffort(),
           }),
         });
