@@ -1706,6 +1706,41 @@ export function LivePanel({
               </span>
             ) : null}
             <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
+            {/* 3.9.6 — toda resposta nasce com botão de ler: parar ou reler. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (textOnly) {
+                  toast("Modo somente texto ativo — a WiMi não fala agora.");
+                  return;
+                }
+                if (readingFeedId === item.entry.id) stopFeedReading();
+                else readFeedEntry(item.entry as FeedEntry);
+              }}
+              aria-label={
+                readingFeedId === item.entry.id ? "Parar leitura" : "Ler resposta em voz alta"
+              }
+              className={`mt-1 inline-flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] active:scale-95 ${
+                textOnly
+                  ? "border-border/60 text-muted-foreground opacity-60"
+                  : readingFeedId === item.entry.id
+                    ? "border-ember/50 bg-ember/10 text-ember"
+                    : "border-border text-muted-foreground"
+              }`}
+            >
+              {readingFeedId === item.entry.id ? (
+                <Square className="h-3 w-3 shrink-0" />
+              ) : (
+                <Volume2 className="h-3 w-3 shrink-0" />
+              )}
+              <span className="truncate">
+                {textOnly
+                  ? "somente texto"
+                  : readingFeedId === item.entry.id
+                    ? "lendo… (tocar para parar)"
+                    : "ler novamente"}
+              </span>
+            </button>
           </div>
         ),
       )}
@@ -2251,6 +2286,28 @@ export function LivePanel({
                 Quanto ela espera calada antes de tomar a palavra.
               </p>
             </div>
+            {/* 3.9.6 — volta atrás em todos os "não mostrar mais". */}
+            <div className="border-t border-border/60 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!window.confirm("Restaurar todas as explicações dos ícones?")) return;
+                  const n = resetHints();
+                  toast.success(
+                    n > 0
+                      ? `${n} explicação(ões) restaurada(s).`
+                      : "Nenhuma explicação estava oculta.",
+                  );
+                }}
+                className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground active:scale-95"
+              >
+                <RotateCcw className="h-3 w-3 shrink-0" />
+                <span className="truncate">Restaurar instruções</span>
+              </button>
+              <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+                Faz os popups explicativos dos ícones voltarem a aparecer.
+              </p>
+            </div>
           </div>
         ) : null}
 
@@ -2358,6 +2415,41 @@ export function LivePanel({
             onConfig={actuators.setAudioConfig}
             showSound
           />
+        </div>
+        {/* 3.9.6 — TRAVA SOMENTE TEXTO, colada no bloco de emissão de áudio. */}
+        <div className="mt-3 flex items-center gap-2">
+          <HintIcon
+            id="text-only-lock"
+            ariaLabel="Modo somente texto (sem fala)"
+            title="Somente texto, sem fala"
+            description={
+              <>
+                Com a trava ligada, a WiMi <strong>nunca fala</strong>: nenhuma manifestação,
+                resposta ou leitura automática emite som. Ela continua ouvindo, transcrevendo e
+                registrando normalmente, e o diálogo segue por texto. Os botões de “ler” ficam
+                visíveis, mas inativos.
+              </>
+            }
+            active={textOnly}
+            action={{
+              label: textOnly ? "Desligar a trava (voltar a falar)" : "Ligar trava (silêncio)",
+              onClick: () => {
+                const next = !isTextOnly();
+                setTextOnly(next);
+                if (next) {
+                  stopSpeaking();
+                  setReadingFeedId(null);
+                  setReadingId(null);
+                }
+              },
+            }}
+          >
+            <BellOff className="h-3.5 w-3.5" />
+            <span className="truncate">{textOnly ? "SEM FALA" : "fala ON"}</span>
+          </HintIcon>
+          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+            {textOnly ? "silêncio absoluto — só texto" : "a WiMi pode responder falando"}
+          </span>
         </div>
         <VoiceRow
           on={actuators.speechOn}
