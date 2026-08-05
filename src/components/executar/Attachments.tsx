@@ -179,7 +179,7 @@ export function AttachChips({
 }
 
 /** Cards discretos no fluxo, depois do envio. Nunca inline gigante. */
-export function AttachmentCards({ items }: { items: AttachmentRef[] }) {
+export function AttachmentCards({ items }: { items?: AttachmentRef[] }) {
   if (!items || items.length === 0) return null;
   return (
     <div className="mt-1 flex flex-wrap gap-1.5">
