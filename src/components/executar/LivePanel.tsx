@@ -177,7 +177,6 @@ function humanElapsed(ms: number) {
   return m > 0 ? `${m}min${String(s).padStart(2, "0")}s` : `${s}s`;
 }
 
-
 const LANGS = [
   { code: "pt-BR", label: "PT" },
   { code: "en-US", label: "EN" },
@@ -373,7 +372,6 @@ export function LivePanel({
     }
   }, []);
 
-
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
     setAddressMode(loadAddressMode());
@@ -438,7 +436,6 @@ export function LivePanel({
   const interactRef = useRef<((list: TranscriptBlock[]) => Promise<void>) | null>(null);
   /** tique de 1s só enquanto há buffer aberto (indicador "buffer aberto — 2min18s") */
   const [bufferTick, setBufferTick] = useState(0);
-
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
 
@@ -551,7 +548,8 @@ export function LivePanel({
           closed_by: opts?.interact ? "manual_interact" : "auto",
         },
       }).then((ok) => {
-        if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
+        if (ok)
+          setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
       });
       emitEvent("transcript_block", { block_id: blockId, chars: text.length });
       if (opts?.interact) void interactRef.current?.([block]);
@@ -572,7 +570,6 @@ export function LivePanel({
     },
     [flushTranscript],
   );
-
 
   const onFinalText = useCallback(
     (text: string) => {
@@ -604,10 +601,7 @@ export function LivePanel({
       silenceTimerRef.current = null;
       // RESPIRO ILIMITADO: o bloco só fecha no envio manual.
       if (silenceMsRef.current !== BLOCK_UNLIMITED) {
-        silenceTimerRef.current = window.setTimeout(
-          () => flushTranscript(),
-          silenceMsRef.current,
-        );
+        silenceTimerRef.current = window.setTimeout(() => flushTranscript(), silenceMsRef.current);
       }
     },
     [changeLang, flushTranscript],
@@ -948,8 +942,6 @@ export function LivePanel({
   );
   interactRef.current = interactWithBlocks;
 
-
-
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
   // A cada 2 blocos fechados, uma chamada leve atualiza o "entendimento da
@@ -1124,11 +1116,9 @@ export function LivePanel({
 
   /** Idade do buffer aberto (recalculada a cada tique de 1s). */
   const bufferElapsed = useMemo(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     () => (blockStartRef.current ? Date.now() - blockStartRef.current : 0),
     [bufferTick, liveLine],
   );
-
 
   // 3.9.3 — sem espelhamento no composer: o texto ao vivo aparece no fluxo
   // (linha "ouvindo") e vira bloco na pausa.
@@ -1178,7 +1168,6 @@ export function LivePanel({
     const id = window.setInterval(() => setBufferTick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
   }, [liveLine, speech.interim]);
-
 
   const toggleListening = useCallback(() => {
     if (speech.listening) {
@@ -2343,8 +2332,6 @@ export function LivePanel({
           </div>
         ) : null}
 
-
-
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
@@ -2365,7 +2352,9 @@ export function LivePanel({
               <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
                 <span>Respiro do bloco</span>
                 <span className="text-ember">
-                  {silenceMs === BLOCK_UNLIMITED ? "ilimitado" : `${(silenceMs / 1000).toFixed(1)}s`}
+                  {silenceMs === BLOCK_UNLIMITED
+                    ? "ilimitado"
+                    : `${(silenceMs / 1000).toFixed(1)}s`}
                 </span>
               </label>
               <input
