@@ -15,6 +15,7 @@ import {
   MicOff,
   Pencil,
   Radio,
+  Loader2,
   Send,
   SwitchCamera,
   Vibrate,
@@ -82,7 +83,17 @@ import { setLiveSessionStart } from "@/hooks/useLiveSession";
 import { LiveClock } from "./LiveClock";
 import { useTodayEntries } from "./TodayTimeline";
 import { ExecutionLogCard } from "./ExecutionLogCard";
-import { DualInput } from "./DualInput";
+import {
+  AttachButton,
+  AttachChips,
+  AttachmentCards,
+  releasePending,
+  uploadAttachments,
+  type AttachmentRef,
+  type PendingAttachment,
+} from "./Attachments";
+import { ExpandButton, ExpandedSheet } from "./ScrollBox";
+
 import { liveHandoverReply, liveSessionChat, liveUnderstanding } from "@/lib/live-dialog.functions";
 import {
   DEFAULT_PERSONA,
@@ -145,6 +156,7 @@ type FeedEntry = {
   at: number;
   persona?: Persona;
   label?: string;
+  attachments?: AttachmentRef[];
 };
 
 type ChatItem =
@@ -218,6 +230,14 @@ export function LivePanel({
   const turnRef = useRef<string[]>([]);
   addressModeRef.current = addressMode;
   callCodesRef.current = callCodes;
+
+  // Anexos pendentes no composer + containment do fluxo.
+  const [pending, setPending] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [expandFlow, setExpandFlow] = useState(false);
+  /** Regime corrente lido de dentro de callbacks estáveis (manual vs dinâmico). */
+  const dynamicRef = useRef(false);
+  dynamicRef.current = dynamic;
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -315,7 +335,6 @@ export function LivePanel({
     [],
   );
 
-
   const changeLang = useCallback((code: string) => {
     setLang(code);
     try {
@@ -389,6 +408,13 @@ export function LivePanel({
       if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
     });
     emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+
+    // REGIME MANUAL (Dinâmico OFF): o bloco fechado cai DENTRO do composer,
+    // acumulando e editável. Nada é enviado sozinho — mas o bloco já foi
+    // persistido acima, então nada se perde se o usuário não enviar.
+    if (!dynamicRef.current) {
+      setComposer((prev) => `${prev} ${text}`.trim().replace(/\s+/g, " "));
+    }
   }, [emitEvent, lang, missionId, persist, sessionId]);
 
   const onFinalText = useCallback(
@@ -422,7 +448,6 @@ export function LivePanel({
     },
     [changeLang, flushTranscript],
   );
-
 
   /** Fala sempre no idioma da sessão, com voz explícita do idioma. */
   const speakLive = useCallback(
@@ -492,11 +517,12 @@ export function LivePanel({
    * Chamar "Wi" ou "Mi" diretamente força a identidade; senão o modelo decide.
    */
   const askSession = useCallback(
-    async (question: string) => {
+    async (question: string, attachments?: AttachmentRef[]) => {
       const q = question.trim();
-      if (!q || chatBusy) return;
+      if ((!q && !attachments?.length) || chatBusy) return;
       const forced = detectDirectPersona(q);
-      pushFeed({ kind: "typed", text: q });
+      pushFeed({ kind: "typed", text: q, attachments });
+
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
       setChatBusy(true);
       try {
@@ -533,6 +559,38 @@ export function LivePanel({
     },
     [chatBusy, manifest, missionId, persist, pushFeed, sessionContent, sessionId],
   );
+
+  /**
+   * ÚNICO PONTO DE ENVIO da tela: sobe os anexos pendentes (bucket privado do
+   * usuário) e manda texto + referências pra WiMi.
+   */
+  const submitComposer = useCallback(async () => {
+    const text = composer.trim();
+    if ((!text && pending.length === 0) || chatBusy || uploading) return;
+    let refs: AttachmentRef[] = [];
+    if (pending.length > 0) {
+      setUploading(true);
+      try {
+        refs = await uploadAttachments(pending);
+        releasePending(pending);
+        setPending([]);
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "manual_log",
+          channel: "manual",
+          note: text.slice(0, 4000) || `${refs.length} anexo(s)`,
+          meta: { session_id: sessionId, source: "live_composer", attachments: refs },
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao anexar.");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+    setComposer("");
+    await askSession(text, refs.length ? refs : undefined);
+  }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
@@ -1132,8 +1190,98 @@ export function LivePanel({
     setUnread(false);
   }, []);
 
+  const flowItems = (
+    <>
+      {chatItems.length === 0 && !currentLine ? (
+        <p className="text-muted-foreground">
+          {speech.listening
+            ? "ouvindo…"
+            : "nada ainda — fale, escreva ou ligue o microfone. Tudo entra aqui."}
+        </p>
+      ) : null}
+
+      {chatItems.map((item) =>
+        item.type === "mic" ? (
+          editingId === item.block.id ? (
+            <textarea
+              key={item.key}
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  commitEdit();
+                }
+                if (e.key === "Escape") setEditingId(null);
+              }}
+              rows={2}
+              className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
+            />
+          ) : (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => startEdit(item.block)}
+              className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
+            >
+              <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
+                {item.block.durationMs != null && item.block.durationMs > 1500 ? (
+                  <span>· {Math.round(item.block.durationMs / 1000)}s</span>
+                ) : null}
+                {item.block.revision > 0 ? <span className="text-ember">· corrigido</span> : null}
+                {!item.block.saved ? <span className="text-amber-400">· não salvo</span> : null}
+              </span>
+              <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
+            </button>
+          )
+        ) : item.entry.kind === "system" ? (
+          <p
+            key={item.key}
+            className="text-center text-[10px] uppercase tracking-wide text-muted-foreground"
+          >
+            {clock(item.at)} · {item.entry.text}
+          </p>
+        ) : item.entry.kind === "typed" ? (
+          <div key={item.key} className="flex justify-end">
+            <div className="max-w-[85%] rounded-xl rounded-br-sm bg-ember px-3 py-1.5 text-ember-foreground">
+              <span className="block text-[10px] uppercase tracking-wide opacity-80">
+                você · {clock(item.at)}
+              </span>
+              {item.entry.text ? (
+                <span className="block whitespace-pre-wrap">{item.entry.text}</span>
+              ) : null}
+              <AttachmentCards items={item.entry.attachments} />
+            </div>
+          </div>
+        ) : (
+          <div key={item.key} className="max-w-[92%]">
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-ember/20 text-[8px] font-bold">
+                {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]}
+              </span>
+              {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
+              {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
+            </span>
+            <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
+          </div>
+        ),
+      )}
+
+      {currentLine ? (
+        <p className="text-foreground">
+          <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
+          {currentLine}
+        </p>
+      ) : null}
+      {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
+    </>
+  );
+
   const chatView = (
-    <div className="relative mt-3">
+    <div className="relative mt-2">
       <div
         ref={scrollRef}
         onScroll={(e) => {
@@ -1142,91 +1290,10 @@ export function LivePanel({
           setStick(atEnd);
           if (atEnd) setUnread(false);
         }}
-        // altura fixa ≈ 3 blocos: o histórico fica acessível por rolagem.
-        className="h-64 space-y-2 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
+        // altura fixa ≈ 5 linhas: rolagem interna, o card não empurra a página.
+        className="h-40 space-y-2 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
       >
-        {chatItems.length === 0 && !currentLine ? (
-          <p className="text-muted-foreground">
-            {speech.listening
-              ? "ouvindo…"
-              : "nada ainda — fale, escreva ou ligue o microfone. Tudo entra aqui."}
-          </p>
-        ) : null}
-
-        {chatItems.map((item) =>
-          item.type === "mic" ? (
-            editingId === item.block.id ? (
-              <textarea
-                key={item.key}
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={commitEdit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    commitEdit();
-                  }
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-                rows={2}
-                className="w-full rounded-lg border border-ember/50 bg-charcoal-900 px-2 py-1 text-[13px] text-foreground outline-none"
-              />
-            ) : (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => startEdit(item.block)}
-                className="block w-full rounded-lg border border-border/40 bg-charcoal-900/50 px-2.5 py-1.5 text-left active:opacity-70"
-              >
-                <span className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <Mic className="h-3 w-3 shrink-0" /> {clock(item.block.at)}
-                  {item.block.durationMs != null && item.block.durationMs > 1500 ? (
-                    <span>· {Math.round(item.block.durationMs / 1000)}s</span>
-                  ) : null}
-                  {item.block.revision > 0 ? <span className="text-ember">· corrigido</span> : null}
-                  {!item.block.saved ? <span className="text-amber-400">· não salvo</span> : null}
-                </span>
-                <span className="mt-0.5 block text-muted-foreground">{item.block.text}</span>
-              </button>
-            )
-          ) : item.entry.kind === "system" ? (
-            <p
-              key={item.key}
-              className="text-center text-[10px] uppercase tracking-wide text-muted-foreground"
-            >
-              {clock(item.at)} · {item.entry.text}
-            </p>
-          ) : item.entry.kind === "typed" ? (
-            <div key={item.key} className="flex justify-end">
-              <div className="max-w-[85%] rounded-xl rounded-br-sm bg-ember px-3 py-1.5 text-ember-foreground">
-                <span className="block text-[10px] uppercase tracking-wide opacity-80">
-                  você · {clock(item.at)}
-                </span>
-                <span className="block whitespace-pre-wrap">{item.entry.text}</span>
-              </div>
-            </div>
-          ) : (
-            <div key={item.key} className="max-w-[92%]">
-              <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ember">
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-ember/20 text-[8px] font-bold">
-                  {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]}
-                </span>
-                {PERSONA_LABEL[item.entry.persona ?? DEFAULT_PERSONA]} ·{" "}
-                {PERSONA_ROLE[item.entry.persona ?? DEFAULT_PERSONA]} · {clock(item.at)}
-              </span>
-              <p className="mt-0.5 whitespace-pre-wrap text-foreground">{item.entry.text}</p>
-            </div>
-          ),
-        )}
-
-        {currentLine ? (
-          <p className="text-foreground">
-            <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
-            {currentLine}
-          </p>
-        ) : null}
-        {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
+        {flowItems}
       </div>
 
       {unread && !stick ? (
@@ -1241,27 +1308,66 @@ export function LivePanel({
     </div>
   );
 
+  // COMPOSER ÚNICO — o único microfone e o único ponto de envio da tela.
+  // O mic aqui é o mesmo ouvido da sessão (toggleListening): não existe
+  // segundo reconhecedor nem segunda caixa.
   const composerView = (
-    <div className="mt-3">
-      <DualInput
+    <div className="mt-3 space-y-2 rounded-2xl border border-border/60 bg-charcoal-950/40 p-2.5">
+      <textarea
         value={composer}
-        onChange={setComposer}
+        onChange={(e) => setComposer(e.target.value)}
         rows={2}
-        lang={lang}
-        placeholder="Fale ou escreva com a WiMi sobre a sessão…"
+        placeholder={
+          dynamic
+            ? "Escreva pra WiMi — ou fale, que ela responde sozinha."
+            : "Fale e o texto cai aqui — revise e envie quando quiser retorno."
+        }
+        className="min-h-[56px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none focus:border-ember/50"
       />
-      <button
-        type="button"
-        disabled={!composer.trim() || chatBusy}
-        onClick={() => {
-          const q = composer;
-          setComposer("");
-          void askSession(q);
-        }}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
-      >
-        <Send className="h-4 w-4" /> {chatBusy ? "respondendo…" : "Enviar para a WiMi"}
-      </button>
+      <AttachChips
+        items={pending}
+        onRemove={(id) =>
+          setPending((prev) => {
+            releasePending(prev.filter((a) => a.id === id));
+            return prev.filter((a) => a.id !== id);
+          })
+        }
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleListening}
+          disabled={!speech.supported || offline}
+          aria-pressed={speech.listening}
+          aria-label={speech.listening ? "Parar de ouvir" : "Ouvir"}
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
+            speech.listening
+              ? "animate-pulse border-ember bg-ember/20 text-ember"
+              : "border-border text-muted-foreground"
+          }`}
+        >
+          {speech.listening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+        </button>
+        <AttachButton
+          disabled={uploading || chatBusy}
+          onPick={(files) => setPending((prev) => [...prev, ...files])}
+        />
+        <button
+          type="button"
+          disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
+          onClick={() => void submitComposer()}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
+        >
+          {chatBusy || uploading ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4 shrink-0" />
+          )}
+          <span className="truncate">
+            {uploading ? "anexando…" : chatBusy ? "respondendo…" : "Enviar"}
+          </span>
+        </button>
+      </div>
     </div>
   );
 
@@ -1363,35 +1469,21 @@ export function LivePanel({
 
       {/* OUVIDOS */}
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Ear className="h-3.5 w-3.5" /> Ouvidos
-            </h3>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              {!speech.supported
-                ? "Transcrição não suportada neste navegador."
-                : speech.listening
-                  ? "Microfone ativo — transcrevendo e salvando em blocos."
-                  : "Microfone desligado."}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={toggleListening}
-            disabled={!speech.supported || offline}
-            aria-pressed={speech.listening}
-            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
-              speech.listening
-                ? "animate-pulse border-ember bg-ember/20 text-ember"
-                : "border-border bg-charcoal-800 text-muted-foreground"
-            }`}
-          >
-            {speech.listening ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
-          </button>
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <Ear className="h-3.5 w-3.5" /> Ouvidos
+          </h3>
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            {!speech.supported
+              ? "Transcrição não suportada neste navegador."
+              : speech.listening
+                ? "Microfone ativo — transcrevendo em blocos."
+                : "Microfone desligado — use o mic do campo abaixo."}
+          </p>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
+        {/* Uma linha só: idioma + regime (economia de área vertical). */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-[11px] text-muted-foreground">idioma</span>
           {LANGS.map((l) => (
             <button
@@ -1408,44 +1500,44 @@ export function LivePanel({
               {l.label}
             </button>
           ))}
-          {langNote ? (
-            <span className="text-[10px] text-ember" role="status">
-              {langNote}
-            </span>
-          ) : null}
-        </div>
 
-
-        {/* LIVE DINÂMICO — análise contínua + endereçamento + handover. */}
-        <button
-          type="button"
-          onClick={() => setDynamic((v) => !v)}
-          aria-pressed={dynamic}
-          className={`mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left active:scale-[0.99] ${
-            dynamic ? "border-ember/50 bg-ember/5" : "border-border bg-charcoal-950/30"
-          }`}
-        >
-          <Radio
-            className={`h-4 w-4 shrink-0 ${dynamic ? "text-ember" : "text-muted-foreground"}`}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm text-foreground">Live dinâmico</span>
-            <span className="block text-[11px] text-muted-foreground">
-              {dynamic
-                ? addressMode === "free"
-                  ? "modo livre: ela acompanha e responde ao fim do seu turno."
-                  : "ela acompanha tudo e só responde quando você usa o código de chamada."
-                : "conversa por turnos: ela analisa enquanto você fala e responde no handover."}
-            </span>
-          </span>
-          <span
-            className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
-              dynamic ? "bg-ember/20 text-ember" : "bg-charcoal-800 text-muted-foreground"
+          {/* LIVE DINÂMICO — toggle compacto na mesma linha. */}
+          <button
+            type="button"
+            onClick={() => setDynamic((v) => !v)}
+            aria-pressed={dynamic}
+            className={`ml-auto inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] active:scale-95 ${
+              dynamic
+                ? "border-ember bg-ember/20 text-ember"
+                : "border-border bg-charcoal-950/40 text-muted-foreground"
             }`}
           >
-            {dynamic ? "on" : "off"}
-          </span>
-        </button>
+            <Radio className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Dinâmico</span>
+            <span
+              className={`shrink-0 rounded-full px-1.5 text-[9px] uppercase tracking-wide ${
+                dynamic ? "bg-ember text-charcoal-900" : "bg-charcoal-800"
+              }`}
+            >
+              {dynamic ? "on" : "off"}
+            </span>
+          </button>
+        </div>
+
+        {langNote ? (
+          <p className="mt-1 text-[10px] text-ember" role="status">
+            {langNote}
+          </p>
+        ) : null}
+
+        {/* O que cada regime faz, em uma linha. */}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {dynamic
+            ? addressMode === "free"
+              ? "Dinâmico ON · modo livre: ela acompanha e responde sozinha no fim do seu turno."
+              : "Dinâmico ON: ela acompanha tudo e se manifesta sozinha quando você usa o código de chamada."
+            : "Dinâmico OFF (manual): cada bloco falado cai no campo acima pronto pra editar — só responde quando você enviar."}
+        </p>
 
         {dynamic ? (
           <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
@@ -1517,19 +1609,32 @@ export function LivePanel({
           </div>
         ) : null}
 
-        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <MessagesSquare className="h-3.5 w-3.5 shrink-0" /> Fluxo único: o que você fala, o que
-          você escreve e o que a Wi ou o Mi respondem — tudo aqui, em ordem.
-        </p>
+        {/* (a) COMPOSER ÚNICO no topo · (b) FLUXO CONSOLIDADO abaixo. */}
+        {composerView}
+
+        <div className="mt-3 flex items-center gap-2">
+          <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 truncate">
+              Fluxo consolidado: fala, texto e respostas da Wi/Mi em ordem.
+            </span>
+          </p>
+          <ExpandButton onClick={() => setExpandFlow(true)} />
+        </div>
 
         {chatView}
-        {composerView}
 
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
         </p>
       </section>
+
+      {expandFlow ? (
+        <ExpandedSheet title="Fluxo do ouvido" onClose={() => setExpandFlow(false)}>
+          <div className="space-y-2 text-[13px] leading-relaxed">{flowItems}</div>
+        </ExpandedSheet>
+      ) : null}
 
       {/* CÂMERA */}
       <section className="rounded-2xl border border-border bg-charcoal-900/60 p-4">

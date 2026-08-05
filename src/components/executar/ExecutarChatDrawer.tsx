@@ -7,12 +7,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Send, Sparkles, X } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { clientMomentHeaders } from "@/lib/client-moment";
 import { loadEffort } from "@/lib/ai-effort";
 import { playAssistantTts, stopAssistantTts } from "@/lib/tts-play";
+import { logExecutionEvent } from "@/lib/execution.functions";
+import {
+  AttachButton,
+  AttachChips,
+  AttachmentCards,
+  releasePending,
+  uploadAttachments,
+  type AttachmentRef,
+  type PendingAttachment,
+} from "./Attachments";
 
-type Msg = { role: "user" | "assistant"; text: string };
+type Msg = { role: "user" | "assistant"; text: string; attachments?: AttachmentRef[] };
 
 export function ExecutarChatDrawer({
   open,
@@ -32,6 +43,8 @@ export function ExecutarChatDrawer({
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const seededRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -43,10 +56,18 @@ export function ExecutarChatDrawer({
   }, [messages, busy]);
 
   const send = useCallback(
-    async (userText: string) => {
+    async (userText: string, attachRefs?: AttachmentRef[]) => {
       const text = userText.trim();
-      if (!text || busy) return;
-      const next: Msg[] = [...messages, { role: "user", text }, { role: "assistant", text: "" }];
+      const attachments = attachRefs ?? [];
+      if ((!text && attachments.length === 0) || busy) return;
+      const label = attachments.length
+        ? `${text}${text ? "\n" : ""}[anexos: ${attachments.map((a) => a.name).join(", ")}]`
+        : text;
+      const next: Msg[] = [
+        ...messages,
+        { role: "user", text, ...(attachments.length ? { attachments } : {}) },
+        { role: "assistant", text: "" },
+      ];
       setMessages(next);
       setInput("");
       setBusy(true);
@@ -74,7 +95,11 @@ export function ExecutarChatDrawer({
           body: JSON.stringify({
             messages: next
               .filter((m, i) => !(i === next.length - 1 && m.role === "assistant"))
-              .map((m) => ({ role: m.role, text: m.text })),
+              .map((m, i) => ({
+                role: m.role,
+                text: i === next.length - 2 && m.role === "user" ? label : m.text,
+              })),
+
             effort: loadEffort(),
           }),
         });
@@ -146,6 +171,45 @@ export function ExecutarChatDrawer({
     stopAssistantTts();
   }, [open]);
 
+  /** Sobe os anexos e dispara o envio — texto vazio com anexo também vale. */
+  const submit = useCallback(() => {
+    if (busy || uploading) return;
+    const text = input;
+    if (!text.trim() && pending.length === 0) return;
+    if (pending.length === 0) {
+      void send(text);
+      return;
+    }
+    const list = pending;
+    setUploading(true);
+    void uploadAttachments(list)
+      .then(async (refs) => {
+        setPending([]);
+        await logExecutionEvent({
+          data: {
+            kind: "manual_log",
+            channel: "manual",
+            note: (text || "anexos enviados na conversa").slice(0, 4000),
+            meta: {
+              source: "executar_chat",
+              attachments: refs.map((r) => ({
+                path: r.path,
+                name: r.name,
+                size: r.size,
+                mime: r.mime,
+                kind: r.kind,
+              })),
+            },
+          },
+        }).catch(() => {});
+        void send(text, refs);
+      })
+      .catch((e: unknown) => {
+        toast.error(e instanceof Error ? e.message : "Não consegui anexar.");
+      })
+      .finally(() => setUploading(false));
+  }, [busy, input, pending, send, uploading]);
+
   if (!open) return null;
 
   return (
@@ -183,6 +247,7 @@ export function ExecutarChatDrawer({
                 }
               >
                 {m.text || (m.role === "assistant" && busy ? "…" : "")}
+                {m.attachments ? <AttachmentCards items={m.attachments} /> : null}
               </div>
             ))
           )}
@@ -191,31 +256,51 @@ export function ExecutarChatDrawer({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void send(input);
+            submit();
           }}
-          className="flex items-end gap-2 border-t border-border/60 p-3"
+          className="space-y-2 border-t border-border/60 p-3"
         >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send(input);
-              }
-            }}
-            rows={1}
-            placeholder="Fala com a WiMi…"
-            className="min-h-[40px] flex-1 resize-none rounded-xl border border-border bg-charcoal-800/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ember/60 focus:outline-none"
+          <AttachChips
+            items={pending}
+            onRemove={(id) =>
+              setPending((prev) => {
+                const gone = prev.filter((a) => a.id === id);
+                releasePending(gone);
+                return prev.filter((a) => a.id !== id);
+              })
+            }
           />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            aria-label="Enviar"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ember text-charcoal-900 disabled:opacity-40"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
+          <div className="flex items-end gap-2">
+            <AttachButton
+              disabled={busy || uploading}
+              onPick={(files) => setPending((prev) => [...prev, ...files])}
+            />
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              rows={1}
+              placeholder="Fala com a WiMi…"
+              className="min-h-[40px] flex-1 resize-none rounded-xl border border-border bg-charcoal-800/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ember/60 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={busy || uploading || (!input.trim() && pending.length === 0)}
+              aria-label="Enviar"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ember text-charcoal-900 disabled:opacity-40"
+            >
+              {busy || uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
