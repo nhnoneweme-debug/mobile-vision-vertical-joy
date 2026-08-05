@@ -26,7 +26,6 @@ import {
   SwitchCamera,
   Vibrate,
   Volume2,
-
   WifiOff,
   X,
   BellOff,
@@ -85,7 +84,6 @@ import {
   setServerVoice,
   speakUnified,
   stopSpeaking,
-
   type DegradeReason,
   type TtsEngine,
 } from "@/lib/tts-engine";
@@ -167,7 +165,6 @@ function loadTiming(key: string, fallback: number) {
   return fallback;
 }
 
-
 const LANGS = [
   { code: "pt-BR", label: "PT" },
   { code: "en-US", label: "EN" },
@@ -211,7 +208,6 @@ type FeedEntry = {
   attachments?: AttachmentRef[];
   /** blocos do fluxo que originaram esta entrada (âncora visual) */
   refIds?: string[];
-
 };
 
 type ChatItem =
@@ -358,7 +354,6 @@ export function LivePanel({
       /* storage opcional */
     }
   }, []);
-
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
@@ -536,7 +531,6 @@ export function LivePanel({
     // transcrição; ele volta a ser apenas o campo de digitação livre.
   }, [emitEvent, lang, missionId, persist, sessionId]);
 
-
   const onFinalText = useCallback(
     (text: string) => {
       if (blockStartRef.current == null) blockStartRef.current = Date.now();
@@ -614,7 +608,6 @@ export function LivePanel({
     },
     [pushFeed, speakLive],
   );
-
 
   const speech = useSpeechToText(onFinalText, { lang });
   const speechRef = useRef(speech);
@@ -904,7 +897,6 @@ export function LivePanel({
     ],
   );
 
-
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
   // A cada 2 blocos fechados, uma chamada leve atualiza o "entendimento da
@@ -1100,8 +1092,6 @@ export function LivePanel({
     }, 300);
     return () => window.clearTimeout(t);
   }, [actuators.speaking]);
-
-
 
   // Códigos de comunicação: detectados no texto parcial, sem esperar o bloco.
   useEffect(() => {
@@ -1543,7 +1533,6 @@ export function LivePanel({
   };
   const selectedBlocks = blocks.filter((b) => selectedIds.includes(b.id));
 
-
   const flowItems = (
     <>
       {chatItems.length === 0 && !currentLine ? (
@@ -1596,9 +1585,7 @@ export function LivePanel({
                 {actedIds.includes(item.block.id) ? (
                   <span className="text-ember">· acionado</span>
                 ) : null}
-                {readingId === item.block.id ? (
-                  <span className="text-ember">· lendo…</span>
-                ) : null}
+                {readingId === item.block.id ? <span className="text-ember">· lendo…</span> : null}
               </span>
               <button
                 type="button"
@@ -1668,7 +1655,6 @@ export function LivePanel({
               </div>
             </div>
           )
-
         ) : item.entry.kind === "system" ? (
           <p
             key={item.key}
@@ -1745,7 +1731,6 @@ export function LivePanel({
         ),
       )}
 
-
       {currentLine && dynamic ? (
         <p className="text-foreground">
           <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
@@ -1808,8 +1793,6 @@ export function LivePanel({
           </button>
         </div>
       ) : null}
-
-
 
       {unread && !stick ? (
         <button
@@ -2150,7 +2133,6 @@ export function LivePanel({
           </p>
         ) : null}
 
-
         {dynamic ? (
           <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-charcoal-950/30 p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -2310,7 +2292,6 @@ export function LivePanel({
             </div>
           </div>
         ) : null}
-
       </section>
 
       {expandFlow ? (

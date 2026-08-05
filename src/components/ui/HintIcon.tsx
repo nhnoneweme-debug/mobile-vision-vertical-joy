@@ -13,14 +13,7 @@
 // horizontal (clamp nas margens, só a setinha se move). Recalcula ao rolar e
 // ao redimensionar/rotacionar; fecha se o ícone sair de vista.
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
