@@ -296,6 +296,19 @@ export function LivePanel({
   const [stick, setStick] = useState(true);
   const [unread, setUnread] = useState(false);
 
+  // 4.0 — CRIAR AÇÕES PELA CONVERSA (texto ou voz, mesma regra dual).
+  const qc = useQueryClient();
+  const [actionDraft, setActionDraft] = useState<ActionDraft | null>(null);
+  const [actionAuditId, setActionAuditId] = useState<string | null>(null);
+  const [actionSaving, setActionSaving] = useState(false);
+  const [actionSpoken, setActionSpoken] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
+  useEffect(() => {
+    void hasActivePushSubscription().then(setPushOn);
+  }, []);
+
+
+
   const addressModeRef = useRef<AddressMode>("addressed");
   const callCodesRef = useRef<string[]>([]);
   const understandingRef = useRef<string | null>(null);
