@@ -1596,6 +1596,45 @@ export function LivePanel({
         {flowItems}
       </div>
 
+      {selectMode || selectedIds.length > 0 ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-ember/40 bg-ember/5 px-2.5 py-2">
+          <span className="min-w-0 truncate text-[11px] text-ember">
+            {selectedIds.length} selecionado{selectedIds.length === 1 ? "" : "s"}
+          </span>
+          <button
+            type="button"
+            disabled={selectedBlocks.length === 0 || chatBusy}
+            onClick={() => void interactWithBlocks(selectedBlocks)}
+            className="inline-flex min-w-0 items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-2.5 py-1 text-[11px] text-ember active:scale-95 disabled:opacity-50"
+          >
+            <Sparkles className="h-3 w-3 shrink-0" />
+            <span className="truncate">Interagir</span>
+          </button>
+          <button
+            type="button"
+            disabled={selectedBlocks.length === 0}
+            onClick={() => (readingId ? stopReading() : readBlocks(selectedBlocks))}
+            className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground active:scale-95 disabled:opacity-50"
+          >
+            {readingId ? (
+              <Square className="h-3 w-3 shrink-0" />
+            ) : (
+              <Volume2 className="h-3 w-3 shrink-0" />
+            )}
+            <span className="truncate">{readingId ? "Parar" : "Ler"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="inline-flex min-w-0 items-center rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground active:scale-95"
+          >
+            <span className="truncate">Limpar</span>
+          </button>
+        </div>
+      ) : null}
+
+
+
       {unread && !stick ? (
         <button
           type="button"
