@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateText } from "ai";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { ambientBlock } from "@/lib/client-moment.server";
 
 export type Exercise = {
   name: string;
@@ -69,7 +70,7 @@ export const parseTrainingPlan = createServerFn({ method: "POST" })
 
     const res = await generateText({
       model,
-      system: sys,
+      system: `${sys}\n\n${ambientBlock()}`,
       messages: [{ role: "user", content: data.raw_text }],
     });
 

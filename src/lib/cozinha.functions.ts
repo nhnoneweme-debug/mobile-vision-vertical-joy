@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateText } from "ai";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { ambientBlock } from "@/lib/client-moment.server";
 
 export type Meal = {
   time: string; // "HH:MM"
@@ -79,7 +80,7 @@ export const parseDietPlan = createServerFn({ method: "POST" })
 
     const res = await generateText({
       model,
-      system: sys,
+      system: `${sys}\n\n${ambientBlock()}`,
       messages: [{ role: "user", content: data.raw_text }],
     });
 
@@ -151,7 +152,7 @@ export const generateDietFromProfile = createServerFn({ method: "POST" })
 
     const res = await generateText({
       model,
-      system: sys,
+      system: `${sys}\n\n${ambientBlock()}`,
       messages: [{ role: "user", content: userPrompt }],
     });
 
