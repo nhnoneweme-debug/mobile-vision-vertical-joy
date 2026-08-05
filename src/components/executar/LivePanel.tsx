@@ -270,6 +270,10 @@ export function LivePanel({
 
   // Chat fluido: tudo que não vem do microfone entra aqui e é mesclado por hora.
   const [feed, setFeed] = useState<FeedEntry[]>([]);
+  /** manifestação da Wi/Mi sendo lida agora (botão de ler de cada resposta). */
+  const [readingFeedId, setReadingFeedId] = useState<string | null>(null);
+  const [textOnly, setTextOnlyState] = useState<boolean>(() => isTextOnly());
+  useEffect(() => onTextOnlyChange(setTextOnlyState), []);
   const [composer, setComposer] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const [stick, setStick] = useState(true);
@@ -750,10 +754,6 @@ export function LivePanel({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actedIds, setActedIds] = useState<string[]>([]);
   const [readingId, setReadingId] = useState<string | null>(null);
-  /** manifestação da Wi/Mi sendo lida agora (botão de ler de cada resposta). */
-  const [readingFeedId, setReadingFeedId] = useState<string | null>(null);
-  const [textOnly, setTextOnlyState] = useState<boolean>(() => isTextOnly());
-  useEffect(() => onTextOnlyChange(setTextOnlyState), []);
   const readAbortRef = useRef(false);
   const longPressRef = useRef<number | null>(null);
 
