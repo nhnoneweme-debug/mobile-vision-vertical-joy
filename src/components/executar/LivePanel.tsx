@@ -1389,6 +1389,20 @@ export function LivePanel({
     setUnread(false);
   }, []);
 
+  // Âncora visual: guarda a hora de cada bloco mesmo depois que ele sai da tela.
+  const blockClockRef = useRef<Record<string, string>>({});
+  for (const b of blocks) blockClockRef.current[b.id] = clock(b.at);
+  const refLabel = (ids?: string[]) => {
+    if (!ids?.length) return null;
+    const times = ids.map((id) => blockClockRef.current[id]).filter(Boolean);
+    if (!times.length) return null;
+    return times.length > 2
+      ? `↳ sobre ${times.length} blocos (${times[0]} → ${times[times.length - 1]})`
+      : `↳ sobre o bloco ${times.join(", ")}`;
+  };
+  const selectedBlocks = blocks.filter((b) => selectedIds.includes(b.id));
+
+
   const flowItems = (
     <>
       {chatItems.length === 0 && !currentLine ? (
