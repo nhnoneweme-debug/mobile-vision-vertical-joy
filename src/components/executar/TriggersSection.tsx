@@ -54,6 +54,8 @@ import {
   type ActionResult,
   type LiveEventName,
 } from "@/lib/triggers";
+import { guaranteeLabel, refreshActionSchedule } from "@/lib/action-schedule";
+import { enablePush, hasActivePushSubscription, isPushSupported } from "@/lib/push";
 import { GeneralReportSheet, TriggerReportSheet } from "./TriggerReport";
 import { useActuators } from "@/providers/ActuatorsProvider";
 import { useLiveSessionStart, useSecondsTick } from "@/hooks/useLiveSession";
@@ -313,6 +315,13 @@ export function TriggersSection() {
   const tick = useSecondsTick();
 
   const triggersQ = useQuery({ queryKey: ["triggers"], queryFn: listTriggers });
+
+  // 4.0 — SEGUNDO PLANO: opt-in de notificação + agenda no servidor.
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    void hasActivePushSubscription().then(setPushOn);
+  }, []);
   const firingsQ = useQuery({ queryKey: ["trigger-firings"], queryFn: () => listFirings(200) });
 
   const triggers = useMemo(
@@ -321,6 +330,12 @@ export function TriggersSection() {
   );
 
   const stats = useMemo(() => computeStats(firingsQ.data ?? []), [firingsQ.data]);
+
+  // A agenda do servidor acompanha a lista de ações (criar, ligar, desligar).
+  useEffect(() => {
+    if (!pushOn || !triggersQ.data) return;
+    void refreshActionSchedule(triggersQ.data).catch(() => {});
+  }, [pushOn, triggersQ.data]);
 
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ["triggers"] });
@@ -501,6 +516,27 @@ export function TriggersSection() {
             <p className="mt-1 text-[12px] text-muted-foreground">
               Avaliados na ordem, de cima pra baixo, enquanto o painel Live está aberto.
             </p>
+            {isPushSupported() && !pushOn ? (
+              <button
+                type="button"
+                disabled={pushBusy}
+                onClick={async () => {
+                  setPushBusy(true);
+                  const r = await enablePush();
+                  setPushBusy(false);
+                  if (!r.ok) {
+                    toast.error(r.error ?? "Não consegui ativar as notificações.");
+                    return;
+                  }
+                  setPushOn(true);
+                  void refreshActionSchedule().catch(() => {});
+                  toast.success("Ações com hora marcada agora avisam com o app fechado.");
+                }}
+                className="mt-2 rounded-full border border-ember/40 bg-ember/10 px-3 py-1.5 text-[11px] text-ember disabled:opacity-40 active:scale-95"
+              >
+                {pushBusy ? "ativando…" : "Ativar notificações (app fechado)"}
+              </button>
+            ) : null}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <button
@@ -644,6 +680,16 @@ export function TriggersSection() {
                                   armado — esperando a frase
                                 </p>
                               ) : null}
+                              {(() => {
+                                const g = guaranteeLabel(t, pushOn);
+                                return (
+                                  <p
+                                    className={`mt-0.5 text-[10px] ${g.strong ? "text-emerald-400" : "text-muted-foreground"}`}
+                                  >
+                                    {g.text}
+                                  </p>
+                                );
+                              })()}
                               <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                                 cooldown {formatCooldown(t.cooldown_seconds)} · {s?.total ?? 0}{" "}
                                 total · {s?.today ?? 0} hoje
