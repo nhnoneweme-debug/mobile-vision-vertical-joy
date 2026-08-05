@@ -9,6 +9,7 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
+  Clock,
   MapPin,
   CameraOff,
   Ear,
