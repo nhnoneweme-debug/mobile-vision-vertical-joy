@@ -1739,55 +1739,8 @@ export function LivePanel({
     </div>
   );
 
-  const composerLegacyTail = (
-    <div className="hidden">
 
-      <AttachChips
-        items={pending}
-        onRemove={(id) =>
-          setPending((prev) => {
-            releasePending(prev.filter((a) => a.id === id));
-            return prev.filter((a) => a.id !== id);
-          })
-        }
-      />
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={toggleListening}
-          disabled={!speech.supported || offline}
-          aria-pressed={speech.listening}
-          aria-label={speech.listening ? "Parar de ouvir" : "Ouvir"}
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
-            speech.listening
-              ? "animate-pulse border-ember bg-ember/20 text-ember"
-              : "border-border text-muted-foreground"
-          }`}
-        >
-          {speech.listening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-        </button>
-        <AttachButton
-          disabled={uploading || chatBusy}
-          onPick={(files) => setPending((prev) => [...prev, ...files])}
-        />
-        <button
-          type="button"
-          disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
-          onClick={() => void submitComposer()}
-          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
-        >
-          {chatBusy || uploading ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4 shrink-0" />
-          )}
-          <span className="truncate">
-            {uploading ? "anexando…" : chatBusy ? "respondendo…" : "Enviar"}
-          </span>
-        </button>
-      </div>
-    </div>
-  );
+
 
   const cameraVideo = (
     <video
