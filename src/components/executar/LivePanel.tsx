@@ -601,7 +601,14 @@ export function LivePanel({
         }
       }
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = window.setTimeout(flushTranscript, silenceMsRef.current);
+      silenceTimerRef.current = null;
+      // RESPIRO ILIMITADO: o bloco só fecha no envio manual.
+      if (silenceMsRef.current !== BLOCK_UNLIMITED) {
+        silenceTimerRef.current = window.setTimeout(
+          () => flushTranscript(),
+          silenceMsRef.current,
+        );
+      }
     },
     [changeLang, flushTranscript],
   );
