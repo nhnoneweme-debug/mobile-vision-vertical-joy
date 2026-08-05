@@ -374,10 +374,9 @@ export function LivePanel({
   }, []);
 
   const pushFeed = useCallback((entry: Omit<FeedEntry, "id" | "at"> & { at?: number }) => {
-    setFeed((prev) => [
-      ...prev.slice(-60),
-      { id: newId("fd"), at: entry.at ?? Date.now(), ...entry },
-    ]);
+    const id = newId("fd");
+    setFeed((prev) => [...prev.slice(-60), { id, at: entry.at ?? Date.now(), ...entry }]);
+    return id;
   }, []);
 
   const [liveEvent, setLiveEvent] = useState<{
@@ -586,7 +585,7 @@ export function LivePanel({
       persona: Persona,
       opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[]; speak?: boolean },
     ) => {
-      pushFeed({
+      const entryId = pushFeed({
         kind: "assistant",
         text,
         persona,
@@ -596,7 +595,15 @@ export function LivePanel({
       // 3.9.6 — ESPELHAMENTO DE MODALIDADE: quem escreveu recebe resposta
       // escrita (sem voz automática); quem falou recebe resposta falada.
       if (opts?.speak !== false) {
-        speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
+        setReadingFeedId(entryId);
+        speakLive(text, {
+          persona,
+          onEnd: () => {
+            setReadingFeedId((cur) => (cur === entryId ? null : cur));
+            opts?.onEnd?.();
+          },
+          ...(opts?.lang ? { lang: opts.lang } : {}),
+        });
       } else {
         opts?.onEnd?.();
       }
