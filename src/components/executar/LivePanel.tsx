@@ -1251,29 +1251,69 @@ export function LivePanel({
     </div>
   );
 
+  // COMPOSER ÚNICO — o único microfone e o único ponto de envio da tela.
+  // O mic aqui é o mesmo ouvido da sessão (toggleListening): não existe
+  // segundo reconhecedor nem segunda caixa.
   const composerView = (
-    <div className="mt-3">
-      <DualInput
+    <div className="mt-3 space-y-2 rounded-2xl border border-border/60 bg-charcoal-950/40 p-2.5">
+      <textarea
         value={composer}
-        onChange={setComposer}
+        onChange={(e) => setComposer(e.target.value)}
         rows={2}
-        lang={lang}
-        placeholder="Fale ou escreva com a WiMi sobre a sessão…"
+        placeholder={
+          dynamic
+            ? "Escreva pra WiMi — ou fale, que ela responde sozinha."
+            : "Fale e o texto cai aqui — revise e envie quando quiser retorno."
+        }
+        className="min-h-[56px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none focus:border-ember/50"
       />
-      <button
-        type="button"
-        disabled={!composer.trim() || chatBusy}
-        onClick={() => {
-          const q = composer;
-          setComposer("");
-          void askSession(q);
-        }}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
-      >
-        <Send className="h-4 w-4" /> {chatBusy ? "respondendo…" : "Enviar para a WiMi"}
-      </button>
+      <AttachChips
+        items={pending}
+        onRemove={(id) =>
+          setPending((prev) => {
+            releasePending(prev.filter((a) => a.id === id));
+            return prev.filter((a) => a.id !== id);
+          })
+        }
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleListening}
+          disabled={!speech.supported || offline}
+          aria-pressed={speech.listening}
+          aria-label={speech.listening ? "Parar de ouvir" : "Ouvir"}
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
+            speech.listening
+              ? "animate-pulse border-ember bg-ember/20 text-ember"
+              : "border-border text-muted-foreground"
+          }`}
+        >
+          {speech.listening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+        </button>
+        <AttachButton
+          disabled={uploading || chatBusy}
+          onPick={(files) => setPending((prev) => [...prev, ...files])}
+        />
+        <button
+          type="button"
+          disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
+          onClick={() => void submitComposer()}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-ember/40 bg-ember/10 py-2 text-[12px] text-ember disabled:opacity-40 active:scale-95"
+        >
+          {chatBusy || uploading ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4 shrink-0" />
+          )}
+          <span className="truncate">
+            {uploading ? "anexando…" : chatBusy ? "respondendo…" : "Enviar"}
+          </span>
+        </button>
+      </div>
     </div>
   );
+
 
   const cameraVideo = (
     <video
