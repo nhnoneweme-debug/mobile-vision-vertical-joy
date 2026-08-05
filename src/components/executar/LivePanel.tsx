@@ -1748,14 +1748,73 @@ export function LivePanel({
           })
         }
       />
-      <div className="flex items-end gap-2">
+      {/* 3.9.4 — área de texto de LARGURA TOTAL, botões numa linha própria. */}
+      <div ref={composerBoxRef}>
+        <textarea
+          value={composer}
+          onChange={(e) => setComposer(e.target.value)}
+          onFocus={() => {
+            if (expandMode === "dynamic") setComposerOpen(true);
+          }}
+          rows={composerOpen ? 5 : 1}
+          placeholder="Escreva pra WiMi…"
+          className="w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 text-sm text-foreground outline-none transition-[height] duration-200 focus:border-ember/50"
+        />
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setComposerOpen((v) => !v)}
+            aria-expanded={composerOpen}
+            aria-label={composerOpen ? "Recolher campo" : "Expandir campo"}
+            className="flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground active:scale-95"
+          >
+            {composerOpen ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+            {composerOpen ? "recolher" : "expandir"}
+          </button>
+          {composer ? (
+            <button
+              type="button"
+              onClick={() => setComposer("")}
+              className="text-[10px] text-muted-foreground underline underline-offset-2 active:scale-95"
+            >
+              limpar
+            </button>
+          ) : null}
+        </div>
+        {composerOpen ? (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span>modo:</span>
+            {(["manual", "dynamic"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => changeExpandMode(mode)}
+                aria-pressed={expandMode === mode}
+                className={`rounded-full border px-2 py-0.5 active:scale-95 ${
+                  expandMode === mode
+                    ? "border-ember/50 bg-ember/10 text-ember"
+                    : "border-border/60"
+                }`}
+              >
+                {mode === "manual" ? "manual" : "dinâmico"}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2">
         <button
           type="button"
           onClick={toggleListening}
           disabled={!speech.supported || offline}
           aria-pressed={speech.listening}
           aria-label={speech.listening ? "Parar de ouvir" : "Ouvir"}
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border transition disabled:opacity-40 active:scale-95 ${
             speech.listening
               ? "animate-pulse border-ember bg-ember/20 text-ember"
               : "border-border text-muted-foreground"
@@ -1767,25 +1826,9 @@ export function LivePanel({
           disabled={uploading || chatBusy}
           onPick={(files) => setPending((prev) => [...prev, ...files])}
         />
-        <div className="relative min-w-0 flex-1">
-          <textarea
-            value={composer}
-            onChange={(e) => setComposer(e.target.value)}
-            rows={1}
-            placeholder="Escreva pra WiMi…"
-            className="min-h-[40px] w-full resize-none rounded-xl border border-border bg-charcoal-950/60 px-3 py-2 pr-8 text-sm text-foreground outline-none focus:border-ember/50"
-          />
-          {composer ? (
-            <button
-              type="button"
-              onClick={() => setComposer("")}
-              aria-label="Limpar rascunho"
-              className="absolute right-1 top-1.5 grid h-6 w-6 place-items-center rounded-full text-muted-foreground hover:text-foreground active:scale-95"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
-        </div>
+        <span className="min-w-0 truncate text-[10px] text-muted-foreground">
+          compartilhado: {describeSharedContext()}
+        </span>
         <button
           type="button"
           disabled={(!composer.trim() && pending.length === 0) || chatBusy || uploading}
@@ -1800,11 +1843,25 @@ export function LivePanel({
           )}
         </button>
       </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (geo.status === "granted") {
+            clearClientLocation();
+            setGeo({ status: "denied" });
+          } else {
+            void requestClientLocation().then(setGeo);
+          }
+        }}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground underline underline-offset-2 active:scale-95"
+      >
+        <MapPin className="h-3 w-3" />
+        {geo.status === "granted"
+          ? "parar de compartilhar localização"
+          : "compartilhar localização aproximada (contexto de planejamento)"}
+      </button>
     </div>
   );
-
-
-
 
   const cameraVideo = (
     <video
