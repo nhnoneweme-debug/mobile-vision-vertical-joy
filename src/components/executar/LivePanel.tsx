@@ -1150,15 +1150,24 @@ export function LivePanel({
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
 
-  // Flush periódico (~15s) enquanto estiver ouvindo.
+  // Flush periódico (~15s) enquanto estiver ouvindo — desligado no modo ILIMITADO,
+  // em que o buffer só fecha pelo botão de enviar.
   useEffect(() => {
-    if (!speech.listening) return;
-    flushTimerRef.current = window.setInterval(flushTranscript, FLUSH_MS);
+    if (!speech.listening || silenceMs === BLOCK_UNLIMITED) return;
+    flushTimerRef.current = window.setInterval(() => flushTranscript(), FLUSH_MS);
     return () => {
       if (flushTimerRef.current) window.clearInterval(flushTimerRef.current);
       flushTimerRef.current = null;
     };
-  }, [speech.listening, flushTranscript]);
+  }, [speech.listening, flushTranscript, silenceMs]);
+
+  // Tique do indicador "buffer aberto — 2min18s".
+  useEffect(() => {
+    if (!liveLine && !speech.interim) return;
+    const id = window.setInterval(() => setBufferTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [liveLine, speech.interim]);
+
 
   const toggleListening = useCallback(() => {
     if (speech.listening) {
