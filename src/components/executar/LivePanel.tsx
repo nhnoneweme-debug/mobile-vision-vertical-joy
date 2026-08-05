@@ -1230,14 +1230,32 @@ export function LivePanel({
           ),
         )}
 
-        {currentLine ? (
-          <p className="text-foreground">
-            <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
-            {currentLine}
-          </p>
-        ) : null}
-        {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
+      {currentLine ? (
+        <p className="text-foreground">
+          <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
+          {currentLine}
+        </p>
+      ) : null}
+      {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
+    </>
+  );
+
+  const chatView = (
+    <div className="relative mt-2">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+          setStick(atEnd);
+          if (atEnd) setUnread(false);
+        }}
+        // altura fixa ≈ 5 linhas: rolagem interna, o card não empurra a página.
+        className="h-40 space-y-2 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
+      >
+        {flowItems}
       </div>
+
 
       {unread && !stick ? (
         <button
