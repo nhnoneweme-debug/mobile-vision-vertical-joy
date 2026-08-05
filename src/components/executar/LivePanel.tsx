@@ -1122,6 +1122,14 @@ export function LivePanel({
     [liveLine, speech.interim],
   );
 
+  /** Idade do buffer aberto (recalculada a cada tique de 1s). */
+  const bufferElapsed = useMemo(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => (blockStartRef.current ? Date.now() - blockStartRef.current : 0),
+    [bufferTick, liveLine],
+  );
+
+
   // 3.9.3 — sem espelhamento no composer: o texto ao vivo aparece no fluxo
   // (linha "ouvindo") e vira bloco na pausa.
 
