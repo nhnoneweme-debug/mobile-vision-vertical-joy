@@ -353,20 +353,26 @@ export function LivePanel({
   }, []);
 
   useEffect(() => {
-    setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS));
+    setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS, BLOCK_MAX_MS));
     setHandoverMs(loadTiming(HANDOVER_KEY, DEFAULT_HANDOVER_MS));
   }, []);
 
   const changeTiming = useCallback((which: "block" | "handover", ms: number) => {
-    const clamped = Math.min(TIMING_MAX_MS, Math.max(TIMING_MIN_MS, Math.round(ms)));
-    if (which === "block") setSilenceMs(clamped);
+    const isBlock = which === "block";
+    const rounded = Math.round(ms);
+    const clamped =
+      isBlock && rounded === BLOCK_UNLIMITED
+        ? BLOCK_UNLIMITED
+        : Math.min(isBlock ? BLOCK_MAX_MS : TIMING_MAX_MS, Math.max(TIMING_MIN_MS, rounded));
+    if (isBlock) setSilenceMs(clamped);
     else setHandoverMs(clamped);
     try {
-      localStorage.setItem(which === "block" ? SILENCE_KEY : HANDOVER_KEY, String(clamped));
+      localStorage.setItem(isBlock ? SILENCE_KEY : HANDOVER_KEY, String(clamped));
     } catch {
       /* storage opcional */
     }
   }, []);
+
 
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
