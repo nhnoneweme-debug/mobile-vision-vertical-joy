@@ -314,6 +314,17 @@ export function LivePanel({
     setGeo(loadGeoPref());
   }, []);
 
+  // Modo dinâmico: recolhe ao tocar fora do bloco do composer.
+  useEffect(() => {
+    if (expandMode !== "dynamic" || !composerOpen) return;
+    const onDown = (ev: PointerEvent) => {
+      const box = composerBoxRef.current;
+      if (box && ev.target instanceof Node && !box.contains(ev.target)) setComposerOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [expandMode, composerOpen]);
+
   const changeExpandMode = useCallback((mode: "manual" | "dynamic") => {
     setExpandMode(mode);
     try {
