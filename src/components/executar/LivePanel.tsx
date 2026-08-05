@@ -411,7 +411,15 @@ export function LivePanel({
       if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
     });
     emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+
+    // REGIME MANUAL (Dinâmico OFF): o bloco fechado cai DENTRO do composer,
+    // acumulando e editável. Nada é enviado sozinho — mas o bloco já foi
+    // persistido acima, então nada se perde se o usuário não enviar.
+    if (!dynamicRef.current) {
+      setComposer((prev) => `${prev} ${text}`.trim().replace(/\s+/g, " "));
+    }
   }, [emitEvent, lang, missionId, persist, sessionId]);
+
 
   const onFinalText = useCallback(
     (text: string) => {
