@@ -660,9 +660,6 @@ export function LivePanel({
       setUploading(false);
     }
     setComposer("");
-    dictBaseRef.current = null;
-    dictLiveRef.current = "";
-    dictSuppressRef.current = false;
     // SEM DUPLICATA: o que já subiu ao contexto como bloco discreto e está
     // contido na versão enviada some da tela (segue persistido no histórico).
     if (text) {
