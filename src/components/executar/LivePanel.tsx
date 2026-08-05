@@ -231,6 +231,15 @@ export function LivePanel({
   addressModeRef.current = addressMode;
   callCodesRef.current = callCodes;
 
+  // Anexos pendentes no composer + containment do fluxo.
+  const [pending, setPending] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [expandFlow, setExpandFlow] = useState(false);
+  /** Regime corrente lido de dentro de callbacks estáveis (manual vs dinâmico). */
+  const dynamicRef = useRef(false);
+  dynamicRef.current = dynamic;
+
+
   // Preferências de endereçamento persistem por ambiente.
   useEffect(() => {
     setAddressMode(loadAddressMode());
