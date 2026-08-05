@@ -154,15 +154,27 @@ const SILENCE_KEY = "wimi.live.blockSilenceMs.v1";
 const HANDOVER_KEY = "wimi.live.handoverMs.v1";
 const TIMING_MIN_MS = 1_000;
 const TIMING_MAX_MS = 15_000;
+/** 3.9.7 — o respiro do bloco vai até 60s e admite ILIMITADO (sentinela 0). */
+const BLOCK_MAX_MS = 60_000;
+const BLOCK_UNLIMITED = 0;
 
-function loadTiming(key: string, fallback: number) {
+function loadTiming(key: string, fallback: number, max = TIMING_MAX_MS) {
   try {
     const raw = Number(localStorage.getItem(key));
-    if (Number.isFinite(raw) && raw >= TIMING_MIN_MS && raw <= TIMING_MAX_MS) return raw;
+    if (raw === BLOCK_UNLIMITED && max === BLOCK_MAX_MS) return BLOCK_UNLIMITED;
+    if (Number.isFinite(raw) && raw >= TIMING_MIN_MS && raw <= max) return raw;
   } catch {
     /* storage opcional */
   }
   return fallback;
+}
+
+/** "2min18s" / "42s" — assinatura viva do buffer aberto. */
+function humanElapsed(ms: number) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return m > 0 ? `${m}min${String(s).padStart(2, "0")}s` : `${s}s`;
 }
 
 const LANGS = [
@@ -340,16 +352,21 @@ export function LivePanel({
   }, []);
 
   useEffect(() => {
-    setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS));
+    setSilenceMs(loadTiming(SILENCE_KEY, DEFAULT_SILENCE_MS, BLOCK_MAX_MS));
     setHandoverMs(loadTiming(HANDOVER_KEY, DEFAULT_HANDOVER_MS));
   }, []);
 
   const changeTiming = useCallback((which: "block" | "handover", ms: number) => {
-    const clamped = Math.min(TIMING_MAX_MS, Math.max(TIMING_MIN_MS, Math.round(ms)));
-    if (which === "block") setSilenceMs(clamped);
+    const isBlock = which === "block";
+    const rounded = Math.round(ms);
+    const clamped =
+      isBlock && rounded === BLOCK_UNLIMITED
+        ? BLOCK_UNLIMITED
+        : Math.min(isBlock ? BLOCK_MAX_MS : TIMING_MAX_MS, Math.max(TIMING_MIN_MS, rounded));
+    if (isBlock) setSilenceMs(clamped);
     else setHandoverMs(clamped);
     try {
-      localStorage.setItem(which === "block" ? SILENCE_KEY : HANDOVER_KEY, String(clamped));
+      localStorage.setItem(isBlock ? SILENCE_KEY : HANDOVER_KEY, String(clamped));
     } catch {
       /* storage opcional */
     }
@@ -415,6 +432,10 @@ export function LivePanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSpeechAtRef = useRef<number>(Date.now());
   const [liveLine, setLiveLine] = useState("");
+  /** 3.9.7 — ponte para "Interagir" no envio manual (definido mais abaixo). */
+  const interactRef = useRef<((list: TranscriptBlock[]) => Promise<void>) | null>(null);
+  /** tique de 1s só enquanto há buffer aberto (indicador "buffer aberto — 2min18s") */
+  const [bufferTick, setBufferTick] = useState(0);
 
   const blocksSaved = useMemo(() => blocks.filter((b) => b.saved).length, [blocks]);
 
@@ -487,49 +508,68 @@ export function LivePanel({
     }
   }, []);
 
-  const flushTranscript = useCallback(() => {
-    const text = bufferRef.current.join(" ").trim();
-    const startedAt = blockStartRef.current;
-    bufferRef.current = [];
-    blockStartRef.current = null;
-    setLiveLine("");
-    if (!text) return;
-    const endedAt = Date.now();
-    const blockId = newId("blk");
-    setBlocks((prev) => [
-      ...prev.slice(-40),
-      {
+  /**
+   * 3.9.7 — fecha o BUFFER AO VIVO e o transforma em bloco do fluxo.
+   * `interact` decide se a WiMi é acionada; sem ele, o bloco é só contexto.
+   */
+  const flushTranscript = useCallback(
+    (opts?: { interact?: boolean }) => {
+      const text = bufferRef.current.join(" ").trim();
+      const startedAt = blockStartRef.current;
+      bufferRef.current = [];
+      blockStartRef.current = null;
+      setLiveLine("");
+      if (!text) return;
+      const endedAt = Date.now();
+      const blockId = newId("blk");
+      const block: TranscriptBlock = {
         id: blockId,
         text,
         saved: false,
         revision: 0,
         at: endedAt,
-        durationMs: startedAt ? endedAt - startedAt : undefined,
-      },
-    ]);
-    setLastBlock({ id: blockId, text });
-    void persist({
-      mission_id: missionId ?? null,
-      kind: "live_transcript",
-      channel: "voice",
-      note: text.slice(0, 4000),
-      meta: {
-        session_id: sessionId,
-        block_id: blockId,
-        revision: 0,
-        lang,
-        block_started_at: new Date(startedAt ?? endedAt).toISOString(),
-        block_ended_at: new Date(endedAt).toISOString(),
-        chars: text.length,
-      },
-    }).then((ok) => {
-      if (ok) setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
-    });
-    emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+        ...(startedAt ? { durationMs: endedAt - startedAt } : {}),
+      };
+      setBlocks((prev) => [...prev.slice(-40), block]);
+      setLastBlock({ id: blockId, text });
+      void persist({
+        mission_id: missionId ?? null,
+        kind: "live_transcript",
+        channel: "voice",
+        note: text.slice(0, 4000),
+        meta: {
+          session_id: sessionId,
+          block_id: blockId,
+          revision: 0,
+          lang,
+          block_started_at: new Date(startedAt ?? endedAt).toISOString(),
+          block_ended_at: new Date(endedAt).toISOString(),
+          chars: text.length,
+          closed_by: opts?.interact ? "manual_interact" : "auto",
+        },
+      }).then((ok) => {
+        if (ok)
+          setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, saved: true } : b)));
+      });
+      emitEvent("transcript_block", { block_id: blockId, chars: text.length });
+      if (opts?.interact) void interactRef.current?.([block]);
 
-    // 3.9.3 — REVERSÃO: a escrita nasce NO BLOCO. O composer não recebe mais a
-    // transcrição; ele volta a ser apenas o campo de digitação livre.
-  }, [emitEvent, lang, missionId, persist, sessionId]);
+      // 3.9.3 — REVERSÃO: a escrita nasce NO BLOCO. O composer não recebe mais a
+      // transcrição; ele volta a ser apenas o campo de digitação livre.
+    },
+    [emitEvent, lang, missionId, persist, sessionId],
+  );
+
+  /** Envio manual do buffer, sem esperar o respiro. */
+  const sendBuffer = useCallback(
+    (mode: "register" | "interact") => {
+      if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+      turnRef.current = [];
+      flushTranscript({ interact: mode === "interact" });
+    },
+    [flushTranscript],
+  );
 
   const onFinalText = useCallback(
     (text: string) => {
@@ -558,7 +598,11 @@ export function LivePanel({
         }
       }
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = window.setTimeout(flushTranscript, silenceMsRef.current);
+      silenceTimerRef.current = null;
+      // RESPIRO ILIMITADO: o bloco só fecha no envio manual.
+      if (silenceMsRef.current !== BLOCK_UNLIMITED) {
+        silenceTimerRef.current = window.setTimeout(() => flushTranscript(), silenceMsRef.current);
+      }
     },
     [changeLang, flushTranscript],
   );
@@ -896,6 +940,7 @@ export function LivePanel({
       sessionId,
     ],
   );
+  interactRef.current = interactWithBlocks;
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
@@ -1069,6 +1114,12 @@ export function LivePanel({
     [liveLine, speech.interim],
   );
 
+  /** Idade do buffer aberto (recalculada a cada tique de 1s). */
+  const bufferElapsed = useMemo(
+    () => (blockStartRef.current ? Date.now() - blockStartRef.current : 0),
+    [bufferTick, liveLine],
+  );
+
   // 3.9.3 — sem espelhamento no composer: o texto ao vivo aparece no fluxo
   // (linha "ouvindo") e vira bloco na pausa.
 
@@ -1100,15 +1151,23 @@ export function LivePanel({
     handleCodes(currentLine);
   }, [currentLine, dynamic, handleCodes]);
 
-  // Flush periódico (~15s) enquanto estiver ouvindo.
+  // Flush periódico (~15s) enquanto estiver ouvindo — desligado no modo ILIMITADO,
+  // em que o buffer só fecha pelo botão de enviar.
   useEffect(() => {
-    if (!speech.listening) return;
-    flushTimerRef.current = window.setInterval(flushTranscript, FLUSH_MS);
+    if (!speech.listening || silenceMs === BLOCK_UNLIMITED) return;
+    flushTimerRef.current = window.setInterval(() => flushTranscript(), FLUSH_MS);
     return () => {
       if (flushTimerRef.current) window.clearInterval(flushTimerRef.current);
       flushTimerRef.current = null;
     };
-  }, [speech.listening, flushTranscript]);
+  }, [speech.listening, flushTranscript, silenceMs]);
+
+  // Tique do indicador "buffer aberto — 2min18s".
+  useEffect(() => {
+    if (!liveLine && !speech.interim) return;
+    const id = window.setInterval(() => setBufferTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [liveLine, speech.interim]);
 
   const toggleListening = useCallback(() => {
     if (speech.listening) {
@@ -1731,12 +1790,8 @@ export function LivePanel({
         ),
       )}
 
-      {currentLine && dynamic ? (
-        <p className="text-foreground">
-          <span className="mr-1 text-[10px] uppercase tracking-wide text-ember">ouvindo</span>
-          {currentLine}
-        </p>
-      ) : null}
+      {/* 3.9.7 — a transcrição ao vivo mora na faixa própria de buffer, abaixo. */}
+
       {chatBusy ? <p className="text-[11px] text-ember">WiMi está pensando…</p> : null}
     </>
   );
@@ -2216,6 +2271,67 @@ export function LivePanel({
 
         {chatView}
 
+        {/* 3.9.7 — BUFFER DE TRANSCRIÇÃO AO VIVO: sempre visível enquanto o
+            ouvido está aberto, nos DOIS regimes (dinâmico e manual). Editável
+            em tempo real — a correção humana prevalece — e fechável na hora. */}
+        {speech.listening || currentLine ? (
+          <div className="mt-2 rounded-2xl border border-ember/40 bg-ember/5 p-2.5">
+            <div className="flex items-center gap-1.5">
+              <Radio className="h-3 w-3 shrink-0 animate-pulse text-ember" />
+              <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-wide text-ember">
+                {silenceMs === BLOCK_UNLIMITED
+                  ? `buffer aberto — ${humanElapsed(bufferElapsed)}`
+                  : "transcrição ao vivo"}
+              </span>
+              <span className="shrink-0 text-[10px] text-muted-foreground">
+                {silenceMs === BLOCK_UNLIMITED
+                  ? "só fecha no envio"
+                  : `respiro ${(silenceMs / 1000).toFixed(1)}s`}
+              </span>
+            </div>
+            <textarea
+              value={liveLine}
+              onChange={(e) => {
+                const v = e.target.value;
+                bufferRef.current = [v];
+                if (blockStartRef.current == null) blockStartRef.current = Date.now();
+                setLiveLine(v);
+              }}
+              rows={2}
+              placeholder="as palavras aparecem aqui enquanto você fala — toque para corrigir"
+              className="mt-1.5 w-full resize-none bg-transparent text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/70"
+            />
+            {speech.interim ? (
+              <p className="text-[12px] italic leading-tight text-muted-foreground">
+                {speech.interim}
+              </p>
+            ) : null}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                disabled={!currentLine}
+                onClick={() => sendBuffer("register")}
+                className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-charcoal-950/60 px-2.5 py-1 text-[11px] text-muted-foreground active:scale-95 disabled:opacity-50"
+              >
+                <Send className="h-3 w-3 shrink-0" />
+                <span className="truncate">Registrar</span>
+              </button>
+              <button
+                type="button"
+                disabled={!currentLine || chatBusy}
+                onClick={() => sendBuffer("interact")}
+                className="inline-flex min-w-0 items-center gap-1 rounded-full border border-ember/40 bg-ember/10 px-2.5 py-1 text-[11px] text-ember active:scale-95 disabled:opacity-50"
+              >
+                <Sparkles className="h-3 w-3 shrink-0" />
+                <span className="truncate">Interagir</span>
+              </button>
+              <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
+                registrar = só contexto · interagir = a WiMi responde
+              </span>
+            </div>
+          </div>
+        ) : null}
+
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
@@ -2235,21 +2351,40 @@ export function LivePanel({
             <div>
               <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
                 <span>Respiro do bloco</span>
-                <span className="text-ember">{(silenceMs / 1000).toFixed(1)}s</span>
+                <span className="text-ember">
+                  {silenceMs === BLOCK_UNLIMITED
+                    ? "ilimitado"
+                    : `${(silenceMs / 1000).toFixed(1)}s`}
+                </span>
               </label>
               <input
                 type="range"
                 min={TIMING_MIN_MS}
-                max={TIMING_MAX_MS}
+                max={BLOCK_MAX_MS}
                 step={500}
-                value={silenceMs}
+                value={silenceMs === BLOCK_UNLIMITED ? BLOCK_MAX_MS : silenceMs}
+                disabled={silenceMs === BLOCK_UNLIMITED}
                 onChange={(e) => changeTiming("block", Number(e.target.value))}
-                className="mt-1 w-full accent-ember"
+                className="mt-1 w-full accent-ember disabled:opacity-50"
               />
+              <label className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={silenceMs === BLOCK_UNLIMITED}
+                  onChange={(e) =>
+                    changeTiming("block", e.target.checked ? BLOCK_UNLIMITED : DEFAULT_SILENCE_MS)
+                  }
+                  className="h-3.5 w-3.5 accent-ember"
+                />
+                <span className="min-w-0 truncate">
+                  Ilimitado — só fecha no botão Registrar/Interagir
+                </span>
+              </label>
               <p className="text-[10px] leading-tight text-muted-foreground">
-                Quanto tempo de silêncio fecha um bloco de fala.
+                Quanto tempo de silêncio fecha um bloco de fala (até 60s).
               </p>
             </div>
+
             <div>
               <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
                 <span>Silêncio do modo dinâmico</span>
