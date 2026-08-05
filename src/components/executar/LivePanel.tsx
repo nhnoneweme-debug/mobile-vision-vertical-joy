@@ -33,6 +33,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { detectLang, langName, type ReplyLang } from "@/lib/lang-detect";
+import { HintIcon } from "@/components/ui/HintIcon";
 import { buildPersonaDirective, getActivePersonaModel } from "@/lib/persona-studio";
 
 import { useSpeechToText } from "@/hooks/useSpeechToText";
