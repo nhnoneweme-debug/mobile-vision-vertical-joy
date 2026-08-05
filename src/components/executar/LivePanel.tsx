@@ -556,6 +556,39 @@ export function LivePanel({
     [chatBusy, manifest, missionId, persist, pushFeed, sessionContent, sessionId],
   );
 
+  /**
+   * ÚNICO PONTO DE ENVIO da tela: sobe os anexos pendentes (bucket privado do
+   * usuário) e manda texto + referências pra WiMi.
+   */
+  const submitComposer = useCallback(async () => {
+    const text = composer.trim();
+    if ((!text && pending.length === 0) || chatBusy || uploading) return;
+    let refs: AttachmentRef[] = [];
+    if (pending.length > 0) {
+      setUploading(true);
+      try {
+        refs = await uploadAttachments(pending);
+        releasePending(pending);
+        setPending([]);
+        void persist({
+          mission_id: missionId ?? null,
+          kind: "manual_log",
+          channel: "manual",
+          note: text.slice(0, 4000) || `${refs.length} anexo(s)`,
+          meta: { session_id: sessionId, source: "live_composer", attachments: refs },
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao anexar.");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+    setComposer("");
+    await askSession(text, refs.length ? refs : undefined);
+  }, [askSession, chatBusy, composer, missionId, pending, persist, sessionId, uploading]);
+
+
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
   // A cada 2 blocos fechados, uma chamada leve atualiza o "entendimento da
