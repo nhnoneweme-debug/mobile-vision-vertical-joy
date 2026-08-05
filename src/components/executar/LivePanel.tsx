@@ -2002,9 +2002,7 @@ export function LivePanel({
           </div>
         ) : null}
 
-        {/* (a) COMPOSER ÚNICO no topo · (b) FLUXO CONSOLIDADO abaixo. */}
-        {composerView}
-
+        {/* 3.9.3 — (a) FLUXO CONSOLIDADO acima · (b) COMPOSER embaixo. */}
         <div className="mt-3 flex items-center gap-2">
           <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] text-muted-foreground">
             <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
@@ -2021,6 +2019,57 @@ export function LivePanel({
           <Pencil className="h-3 w-3" /> toque numa fala transcrita para corrigir — o mic continua
           ouvindo. {blocksSaved} bloco(s) salvos{saving ? " · salvando…" : ""}
         </p>
+
+        {composerView}
+
+        <button
+          type="button"
+          onClick={() => setShowTimings((v) => !v)}
+          className="mt-2 text-[11px] text-muted-foreground underline underline-offset-2 active:scale-95"
+        >
+          {showTimings ? "ocultar tempos do ouvido" : "ajustar tempos do ouvido"}
+        </button>
+        {showTimings ? (
+          <div className="mt-2 space-y-3 rounded-2xl border border-border/60 bg-charcoal-950/40 p-3">
+            <div>
+              <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
+                <span>Respiro do bloco</span>
+                <span className="text-ember">{(silenceMs / 1000).toFixed(1)}s</span>
+              </label>
+              <input
+                type="range"
+                min={TIMING_MIN_MS}
+                max={TIMING_MAX_MS}
+                step={500}
+                value={silenceMs}
+                onChange={(e) => changeTiming("block", Number(e.target.value))}
+                className="mt-1 w-full accent-ember"
+              />
+              <p className="text-[10px] leading-tight text-muted-foreground">
+                Quanto tempo de silêncio fecha um bloco de fala.
+              </p>
+            </div>
+            <div>
+              <label className="flex items-center justify-between gap-2 text-[12px] text-foreground">
+                <span>Silêncio do modo dinâmico</span>
+                <span className="text-ember">{(handoverMs / 1000).toFixed(1)}s</span>
+              </label>
+              <input
+                type="range"
+                min={TIMING_MIN_MS}
+                max={TIMING_MAX_MS}
+                step={500}
+                value={handoverMs}
+                onChange={(e) => changeTiming("handover", Number(e.target.value))}
+                className="mt-1 w-full accent-ember"
+              />
+              <p className="text-[10px] leading-tight text-muted-foreground">
+                Quanto ela espera calada antes de tomar a palavra.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
       </section>
 
       {expandFlow ? (
