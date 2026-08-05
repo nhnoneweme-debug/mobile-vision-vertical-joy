@@ -2291,7 +2291,7 @@ export function LivePanel({
               <Radio className="h-3 w-3 shrink-0 animate-pulse text-ember" />
               <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-wide text-ember">
                 {silenceMs === BLOCK_UNLIMITED
-                  ? `buffer aberto — ${humanElapsed(Date.now() - (blockStartRef.current ?? Date.now()))}`
+                  ? `buffer aberto — ${humanElapsed(bufferElapsed)}`
                   : "transcrição ao vivo"}
               </span>
               <span className="shrink-0 text-[10px] text-muted-foreground">
