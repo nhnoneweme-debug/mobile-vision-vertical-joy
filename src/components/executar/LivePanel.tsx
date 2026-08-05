@@ -836,7 +836,7 @@ export function LivePanel({
         setChatBusy(false);
       }
     },
-    [chatBusy, manifest, missionId, persist, pushFeed, sessionContent, sessionId],
+    [chatBusy, manifest, missionId, persist, proposeAction, pushFeed, sessionContent, sessionId],
   );
 
   /**
