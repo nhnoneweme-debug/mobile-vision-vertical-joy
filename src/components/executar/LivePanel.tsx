@@ -17,9 +17,12 @@ import {
   Radio,
   Loader2,
   Send,
+  Sparkles,
+  Square,
   SwitchCamera,
   Vibrate,
   Volume2,
+
   WifiOff,
   X,
 } from "lucide-react";
