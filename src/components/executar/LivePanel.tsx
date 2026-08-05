@@ -1142,19 +1142,9 @@ export function LivePanel({
     setUnread(false);
   }, []);
 
-  const chatView = (
-    <div className="relative mt-3">
-      <div
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
-          setStick(atEnd);
-          if (atEnd) setUnread(false);
-        }}
-        // altura fixa ≈ 3 blocos: o histórico fica acessível por rolagem.
-        className="h-64 space-y-2 overflow-y-auto rounded-xl border border-border/60 bg-charcoal-950/40 px-3 py-2 text-[13px] leading-relaxed"
-      >
+  const flowItems = (
+    <>
+
         {chatItems.length === 0 && !currentLine ? (
           <p className="text-muted-foreground">
             {speech.listening
