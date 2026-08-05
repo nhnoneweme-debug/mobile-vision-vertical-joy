@@ -946,6 +946,9 @@ export function LivePanel({
       sessionId,
     ],
   );
+  interactRef.current = interactWithBlocks;
+
+
 
   // ---------------------------------- (1) ANÁLISE CONTÍNUA (pré-aquecimento)
   //
