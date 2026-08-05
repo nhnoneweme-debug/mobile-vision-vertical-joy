@@ -154,16 +154,29 @@ const SILENCE_KEY = "wimi.live.blockSilenceMs.v1";
 const HANDOVER_KEY = "wimi.live.handoverMs.v1";
 const TIMING_MIN_MS = 1_000;
 const TIMING_MAX_MS = 15_000;
+/** 3.9.7 — o respiro do bloco vai até 60s e admite ILIMITADO (sentinela 0). */
+const BLOCK_MAX_MS = 60_000;
+const BLOCK_UNLIMITED = 0;
 
-function loadTiming(key: string, fallback: number) {
+function loadTiming(key: string, fallback: number, max = TIMING_MAX_MS) {
   try {
     const raw = Number(localStorage.getItem(key));
-    if (Number.isFinite(raw) && raw >= TIMING_MIN_MS && raw <= TIMING_MAX_MS) return raw;
+    if (raw === BLOCK_UNLIMITED && max === BLOCK_MAX_MS) return BLOCK_UNLIMITED;
+    if (Number.isFinite(raw) && raw >= TIMING_MIN_MS && raw <= max) return raw;
   } catch {
     /* storage opcional */
   }
   return fallback;
 }
+
+/** "2min18s" / "42s" — assinatura viva do buffer aberto. */
+function humanElapsed(ms: number) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return m > 0 ? `${m}min${String(s).padStart(2, "0")}s` : `${s}s`;
+}
+
 
 const LANGS = [
   { code: "pt-BR", label: "PT" },
