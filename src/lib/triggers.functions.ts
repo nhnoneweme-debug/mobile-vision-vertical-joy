@@ -8,6 +8,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { ambientBlock } from "@/lib/client-moment.server";
 
 const SYSTEM = `Você é a WiMi interpretando pedidos de automação de um app de execução pessoal.
 Responda SEMPRE apenas com um objeto JSON válido, sem markdown e sem comentários.
@@ -102,7 +103,7 @@ const promptSchema = z.object({
 
 async function ask(system: string, prompt: string) {
   const model = createChatModelWithFallback();
-  const { text } = await generateText({ model, system, prompt });
+  const { text } = await generateText({ model, system: `${system}\n\n${ambientBlock()}`, prompt });
   return parseJson(text);
 }
 
@@ -200,7 +201,7 @@ export const runTriggerPrompt = createServerFn({ method: "POST" })
       .join("\n\n");
     const { text } = await generateText({
       model,
-      system: promptSystem(data.persona_directive, data.session_lang),
+      system: `${promptSystem(data.persona_directive, data.session_lang)}\n\n${ambientBlock()}`,
       prompt,
     });
     const parsed = parsePersonaReply(text);
@@ -262,7 +263,7 @@ export const summarizeTriggerReport = createServerFn({ method: "POST" })
     const model = createChatModelWithFallback();
     const { text } = await generateText({
       model,
-      system: REPORT_SYSTEM,
+      system: `${REPORT_SYSTEM}\n\n${ambientBlock()}`,
       prompt: `Relatório bruto:\n${data.report_json}`,
     });
     const message = text.trim();
