@@ -496,13 +496,23 @@ export function LivePanel({
 
   /** Manifestação assinada: entra no fluxo e é lida com a voz da identidade. */
   const manifest = useCallback(
-    (text: string, persona: Persona, opts?: { onEnd?: () => void; lang?: string | null }) => {
-      pushFeed({ kind: "assistant", text, persona });
+    (
+      text: string,
+      persona: Persona,
+      opts?: { onEnd?: () => void; lang?: string | null; refIds?: string[] },
+    ) => {
+      pushFeed({
+        kind: "assistant",
+        text,
+        persona,
+        ...(opts?.refIds?.length ? { refIds: opts.refIds } : {}),
+      });
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "assistant", text }];
       speakLive(text, { persona, onEnd: opts?.onEnd, ...(opts?.lang ? { lang: opts.lang } : {}) });
     },
     [pushFeed, speakLive],
   );
+
 
   const speech = useSpeechToText(onFinalText, { lang });
   const speechRef = useRef(speech);
