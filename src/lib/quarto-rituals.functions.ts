@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateText } from "ai";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { ambientBlock } from "@/lib/client-moment.server";
 
 export type SuggestedRitual = {
   title: string;
@@ -85,7 +86,7 @@ export const suggestQuartoRituals = createServerFn({ method: "POST" })
 
     const res = await generateText({
       model,
-      system: sys,
+      system: `${sys}\n\n${ambientBlock()}`,
       messages: [{ role: "user", content: user }],
     });
 

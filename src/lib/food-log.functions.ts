@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateText } from "ai";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { ambientBlock } from "@/lib/client-moment.server";
 import { checkRateLimit } from "@/lib/ai-guardrails.server";
 
 export type FoodLogEntry = {
@@ -86,7 +87,7 @@ export const logFoodFromPhoto = createServerFn({ method: "POST" })
 
     const res = await generateText({
       model,
-      system: sys,
+      system: `${sys}\n\n${ambientBlock()}`,
       messages: [
         {
           role: "user",
@@ -200,7 +201,7 @@ export const logFoodFromText = createServerFn({ method: "POST" })
 
     const res = await generateText({
       model,
-      system: sys,
+      system: `${sys}\n\n${ambientBlock()}`,
       messages: [{ role: "user", content: data.description }],
     });
 

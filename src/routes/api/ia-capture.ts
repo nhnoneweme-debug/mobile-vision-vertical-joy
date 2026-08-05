@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { formatMomentBlock, readClientMoment } from "@/lib/client-moment.server";
 import type { Database } from "@/integrations/supabase/types";
 import {
   ACTION_TO_TABLE,
@@ -189,7 +190,7 @@ export const Route = createFileRoute("/api/ia-capture")({
         try {
           const result = await generateText({
             model,
-            system: sys,
+            system: `${sys}\n\n${formatMomentBlock(readClientMoment(request))}`,
             messages: messages.map((m) => ({ role: m.role, content: m.content })),
             tools: { propose_writes: propose },
             stopWhen: stepCountIs(10),

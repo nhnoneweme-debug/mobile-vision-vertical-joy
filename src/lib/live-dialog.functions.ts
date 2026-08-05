@@ -6,6 +6,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createChatModelWithFallback } from "@/lib/ai-gateway.server";
+import { ambientBlock } from "@/lib/client-moment.server";
 
 /** Marcador de "não é comigo": o cliente registra e não interrompe. */
 export const SILENCE_TOKEN = "[SILENCIO]";
@@ -83,7 +84,7 @@ export const liveUnderstanding = createServerFn({ method: "POST" })
     const model = createChatModelWithFallback();
     const { text } = await generateText({
       model,
-      system: UNDERSTANDING_SYSTEM,
+      system: `${UNDERSTANDING_SYSTEM}\n\n${ambientBlock()}`,
       prompt: `Transcrição corrente:\n${data.transcript}`,
     });
     return { understanding: text.trim().slice(0, 600) };
@@ -137,7 +138,7 @@ export const liveHandoverReply = createServerFn({ method: "POST" })
       .join("\n\n");
     const { text } = await generateText({
       model,
-      system: replySystem(data.persona_directive),
+      system: `${replySystem(data.persona_directive)}\n\n${ambientBlock()}`,
       prompt,
     });
     const parsed = parsePersonaReply(text);
@@ -211,7 +212,7 @@ export const liveSessionChat = createServerFn({ method: "POST" })
       .join("\n\n");
     const { text } = await generateText({
       model,
-      system: chatSystem(data.persona_directive),
+      system: `${chatSystem(data.persona_directive)}\n\n${ambientBlock()}`,
       prompt,
     });
     const parsed = parsePersonaReply(text);
