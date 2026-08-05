@@ -76,6 +76,14 @@ function ExecutarPage() {
     setManifest(m);
   }, []);
 
+  // Deep-link do push das AÇÕES: ?seed=action:<triggerId> — abre o Studio de
+  // Ações já na aba certa, com o Live montado para executar o que faltava.
+  useEffect(() => {
+    const seed = search.seed;
+    if (!seed || !seed.startsWith("action:")) return;
+    setTab("gatilhos");
+  }, [search.seed]);
+
   // Deep-link do push: ?seed=manifest:<missionId>:<phase>
   useEffect(() => {
     if (seedProcessedRef.current) return;
