@@ -5,11 +5,7 @@
 // Tudo que depende dos sinais do Live (palavra-chave, blocos de fala, silêncio,
 // "a cada X min de sessão") só existe com o painel aberto — e a UI diz isso.
 
-import {
-  isWithinWindow,
-  type TriggerAction,
-  type TriggerDefinition,
-} from "@/lib/triggers";
+import { isWithinWindow, type TriggerAction, type TriggerDefinition } from "@/lib/triggers";
 
 export type ActionOccurrence = {
   trigger_id: string;
@@ -75,7 +71,10 @@ export function guaranteeLabel(
   if (isBackgroundCapable(t) && pushOn)
     return { text: "avisa mesmo com o app fechado (notificação)", strong: true };
   if (isBackgroundCapable(t))
-    return { text: "anuncia com o app aberto · ative as notificações para o app fechado", strong: false };
+    return {
+      text: "anuncia com o app aberto · ative as notificações para o app fechado",
+      strong: false,
+    };
   return { text: "anuncia só com o app aberto (depende dos sinais do Live)", strong: false };
 }
 

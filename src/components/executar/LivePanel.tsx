@@ -61,7 +61,6 @@ import {
   runTriggerPrompt,
 } from "@/lib/triggers.functions";
 
-
 import { useCamera } from "@/hooks/useCamera";
 import {
   useActuators,
@@ -309,8 +308,6 @@ export function LivePanel({
   useEffect(() => {
     void hasActivePushSubscription().then(setPushOn);
   }, []);
-
-
 
   const addressModeRef = useRef<AddressMode>("addressed");
   const callCodesRef = useRef<string[]>([]);
@@ -801,8 +798,6 @@ export function LivePanel({
         void proposeAction(q, opts?.spoken !== false);
         return;
       }
-
-
 
       chatHistoryRef.current = [...chatHistoryRef.current.slice(-12), { role: "user", text: q }];
       setChatBusy(true);

@@ -7,7 +7,8 @@
 const CREATE_VERB =
   /\b(cri(a|e|ar)|monta|montar|programa|programar|agenda|agendar|configura|configurar|adiciona|adicionar|coloca|colocar|faz|fazer)\b/i;
 
-const ACTION_NOUN = /\b(a[çc][ãa]o|a[çc][õo]es|alarme|lembrete|gatilho|comando|rotina|automa[çc][ãa]o|timer|pomodoro)\b/i;
+const ACTION_NOUN =
+  /\b(a[çc][ãa]o|a[çc][õo]es|alarme|lembrete|gatilho|comando|rotina|automa[çc][ãa]o|timer|pomodoro)\b/i;
 
 const TIME_HINT =
   /(\b[àa]s?\s*\d{1,2}\s*(h|:|horas?\b)|\ba cada\s+\d+\s*(min|minuto|segundo|s\b|h\b|hora)|daqui a\s+\d+|todo dia|todos os dias|toda\s+(segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo))/i;
